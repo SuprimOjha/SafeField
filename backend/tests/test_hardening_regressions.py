@@ -260,3 +260,9 @@ def test_polygon_accepts_an_open_ring_and_closes_it_geometrically(tmp_path):
     open_ring = [(84.95, 26.95), (85.05, 26.95), (85.05, 27.05), (84.95, 27.05)]
     result = cache.get_recent_rain(27.0, 85.0, 72, open_ring)
     assert result.status == "AVAILABLE"
+
+
+def test_polygon_parser_closes_an_open_ring():
+    points = parse_field_polygon("[[85,27],[85.1,27],[85.1,27.1]]")
+    assert points[0] == points[-1]
+    assert len(points) == 4
