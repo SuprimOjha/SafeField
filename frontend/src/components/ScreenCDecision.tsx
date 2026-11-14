@@ -149,6 +149,8 @@ export default function ScreenCDecision({
       {/* Transparent "Why?" Drawer */}
       <div className="bg-white rounded-2xl border border-emerald-200 shadow-sm overflow-hidden">
         <button
+          aria-expanded={whyOpen}
+          aria-controls="decision-explanation"
           onClick={() => setWhyOpen(!whyOpen)}
           className="w-full px-6 py-4 bg-emerald-50/70 hover:bg-emerald-50 flex items-center justify-between text-left transition"
         >
@@ -168,7 +170,7 @@ export default function ScreenCDecision({
         </button>
 
         {whyOpen && (
-          <div className="p-6 space-y-3 border-t border-emerald-100">
+          <div id="decision-explanation" className="p-6 space-y-3 border-t border-emerald-100">
             {decision.rule_contributions.map((rule, idx) => {
               const isRisky = rule.impact === "RISKY";
               return (

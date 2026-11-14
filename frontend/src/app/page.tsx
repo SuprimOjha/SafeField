@@ -122,7 +122,8 @@ export default function SafeFieldNepalApp() {
   const currentTab = NAV_ITEMS.find((item) => item.id === activeTab);
 
   return (
-    <main id="main-content" className="min-h-screen bg-[#f5f8f4] text-[#183326] flex flex-col">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-[#f5f8f4] text-[#183326] flex flex-col">
+      <a href="#main-content" className="sr-only z-[100] rounded-lg bg-white px-4 py-3 font-bold text-emerald-900 focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:ring-2 focus:ring-emerald-700">Skip to main content</a>
       {!isOnline && (
         <div className="bg-rose-800 text-white px-4 py-2.5 text-center text-xs font-semibold flex items-center justify-center gap-2">
           <WifiOff className="w-4 h-4 shrink-0" />
