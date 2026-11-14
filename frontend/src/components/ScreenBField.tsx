@@ -71,15 +71,15 @@ export default function ScreenBField({
         <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-semibold text-gray-600">
-              {lang === "ne" ? "उपलब्ध पछिल्ला ३ दैनिक वर्षा मान" : "Latest 3 Available Daily Rainfall Values"}
+              {lang === "ne" ? "उपलब्ध पछिल्ला ३ दैनिक वर्षा मान" : "Rainfall over latest 3 available UTC days"}
             </span>
             <CloudRain className="w-6 h-6 text-blue-600" />
           </div>
           <div>
-            <span className="text-3xl font-bold text-gray-900">{power_summary.rain_last_72h_mm ?? "N/A"}</span>
+            <span className="text-3xl font-bold text-gray-900">{data.rainfall_observation.amount_mm ?? "N/A"}</span>
             <span className="text-gray-500 ml-1">mm</span>
           </div>
-          <span className="text-xs text-gray-400 mt-2">NASA POWER PRECTOTCORR · coarse reanalysis-based grid; latest records may be delayed 2–4 days</span>
+          <span className="text-xs text-gray-400 mt-2">{data.rainfall_observation.provenance ? data.rainfall_observation.provenance.source_name + " · " + data.rainfall_observation.provenance.kind + " · observed through " + data.rainfall_observation.provenance.observed_end_utc.slice(0, 10) : data.rainfall_observation.unavailable_reason}</span>
         </div>
 
         {/* Soil Wetness */}

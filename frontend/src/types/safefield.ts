@@ -105,7 +105,31 @@ export interface TrendAnalysisResult {
   plain_language_summary: string;
 }
 
+export interface RainfallProvenance {
+  source_name: string;
+  kind: "observation" | "model" | "forecast" | "fallback" | "farmer_input" | "assumption";
+  observed_start_utc: string;
+  observed_end_utc: string;
+  fetched_at_utc: string;
+  spatial_resolution: string | null;
+  latency_note: string;
+  dataset: string;
+  version: string;
+  stream?: string | null;
+  granule_ids: string[];
+  units: string;
+}
+
+export interface RainfallObservation {
+  status: "AVAILABLE" | "UNAVAILABLE";
+  amount_mm: number | null;
+  window_hours: number;
+  provenance: RainfallProvenance | null;
+  unavailable_reason: string | null;
+}
+
 export interface FieldAssessmentResponse {
+  rainfall_observation: RainfallObservation;
   latitude: number;
   longitude: number;
   power_summary: PowerSummaryResponse;
