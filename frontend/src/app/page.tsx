@@ -17,8 +17,6 @@ import {
   Globe2,
   WifiOff,
   Sprout,
-  Menu,
-  X,
   Leaf,
 } from "lucide-react";
 
@@ -36,7 +34,6 @@ export default function SafeFieldNepalApp() {
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [lang, setLang] = useState<"en" | "ne">("en");
   const [isOnline, setIsOnline] = useState(true);
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [partnerLogoVisible, setPartnerLogoVisible] = useState(true);
 
   const [selectedLat, setSelectedLat] = useState<number>(26.45);
@@ -80,7 +77,6 @@ export default function SafeFieldNepalApp() {
 
   const selectTab = (tab: TabId) => {
     setActiveTab(tab);
-    setMobileNavOpen(false);
   };
 
   const currentTab = NAV_ITEMS.find((item) => item.id === activeTab);
@@ -152,16 +148,6 @@ export default function SafeFieldNepalApp() {
               <Globe2 className="h-4 w-4 text-emerald-700" />
               <span>{lang === "en" ? "नेपाली" : "English"}</span>
             </button>
-            <button
-              type="button"
-              onClick={() => setMobileNavOpen((open) => !open)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-emerald-50 lg:hidden"
-              aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"}
-              aria-expanded={mobileNavOpen}
-              aria-controls="mobile-navigation"
-            >
-              {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
           </div>
         </div>
 
@@ -198,41 +184,10 @@ export default function SafeFieldNepalApp() {
           </div>
         </nav>
 
-        {mobileNavOpen && (
-          <nav id="mobile-navigation" aria-label="Mobile navigation" className="border-t border-slate-100 bg-white px-3 py-3 shadow-lg lg:hidden">
-            <div className="mx-auto grid max-w-xl grid-cols-1 gap-1.5 sm:grid-cols-2">
-              {NAV_ITEMS.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => selectTab(item.id)}
-                    aria-current={isActive ? "page" : undefined}
-                    className={`flex min-h-12 items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm font-semibold transition ${
-                      isActive ? "bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200" : "text-slate-600 hover:bg-slate-50"
-                    }`}
-                  >
-                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isActive ? "bg-emerald-700 text-white" : "bg-slate-100 text-slate-500"}`}>
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <span className="flex-1">{lang === "ne" ? item.labelNe : item.labelEn}</span>
-                    {isActive && <span className="h-2 w-2 rounded-full bg-emerald-600" />}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mx-auto mt-3 flex max-w-xl items-center gap-2 border-t border-slate-100 px-2 pt-3 text-xs text-slate-500">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              {isOnline ? "All systems reachable" : "Offline mode"}
-              <span className="ml-auto">NASA Earth data</span>
-            </div>
-          </nav>
-        )}
+}
       </header>
 
-      <section className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-3 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-9">
+      <section className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-3 py-5 pb-28 sm:px-6 sm:py-7 sm:pb-28 lg:px-8 lg:py-9 lg:pb-9">
         <div className="mb-5 flex items-center justify-between gap-3 px-1">
           <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700 sm:text-[11px]">SAFE FIELD NEPAL / 2026</p>
@@ -292,6 +247,28 @@ export default function SafeFieldNepalApp() {
         {activeTab === "methods" && <ScreenEMethods data={assessmentData} lang={lang} />}
       </section>
 
+      <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-[60] border-t border-emerald-900/10 bg-white/95 px-1 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-8px_28px_rgba(15,55,35,0.10)] backdrop-blur-xl lg:hidden">
+        <div className="mx-auto grid max-w-xl grid-cols-5 gap-0.5">
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => selectTab(item.id)}
+                aria-current={isActive ? "page" : undefined}
+                className={`flex min-w-0 min-h-[58px] flex-col items-center justify-center gap-1 rounded-xl px-1 py-1 text-[10px] font-semibold transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600 ${isActive ? "bg-emerald-50 text-emerald-800" : "text-slate-500 hover:bg-slate-50"}`}
+              >
+                <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${isActive ? "bg-emerald-700 text-white shadow-sm" : "text-slate-500"}`}>
+                  <Icon className="h-[17px] w-[17px]" />
+                </span>
+                <span className="max-w-full truncate">{lang === "ne" ? item.labelNe : item.shortEn}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
       <footer className="mt-auto border-t border-emerald-950/10 bg-white">
         <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-4 py-6 text-center sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8 lg:text-left">
           <div>
