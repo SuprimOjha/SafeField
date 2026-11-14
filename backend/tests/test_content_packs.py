@@ -107,3 +107,47 @@ def test_expert_review_status_requires_a_named_reviewer(tmp_path):
     report = validate_content(tmp_path)
     assert report["fertilizer_references"] == 0
     assert report["skipped"]["fertilizer"] == 1
+
+
+def test_non_object_source_registry_fails_closed(tmp_path):
+    (tmp_path / "sources.json").write_text(json.dumps([]), encoding="utf-8")
+    for filename in ["fertilizer_reference.json", "conversions.json", "home_remedies.json"]:
+        (tmp_path / filename).write_text(json.dumps({"records": []}), encoding="utf-8")
+    report = validate_content(tmp_path)
+    assert report["status"] == "error"
+    assert report["sources"] == 0
+
+
+def test_malformed_source_record_is_not_used_by_guidance(tmp_path):
+    write_pack(tmp_path, sources={"official-guide": {"title": "incomplete"}})
+    report = validate_content(tmp_path)
+    assert report["sources"] == 0
+    assert report["fertilizer_references"] == 0
+    assert report["status"] == "partial"
+
+
+def test_missing_content_file_is_reported_without_fabricating_records(tmp_path):
+    (tmp_path / "sources.json").write_text(json.dumps({"official-guide": source()}), encoding="utf-8")
+    report = validate_content(tmp_path)
+    assert report["status"] == "partial"
+    assert report["fertilizer_references"] == 0
+    assert report["home_remedies"] == 0
+
+
+def test_malformed_content_json_is_reported_without_crashing(tmp_path):
+    (tmp_path / "sources.json").write_text(json.dumps({"official-guide": source()}), encoding="utf-8")
+    (tmp_path / "fertilizer_reference.json").write_text("{invalid", encoding="utf-8")
+    (tmp_path / "conversions.json").write_text(json.dumps({"records": []}), encoding="utf-8")
+    (tmp_path / "home_remedies.json").write_text(json.dumps({"records": []}), encoding="utf-8")
+    report = validate_content(tmp_path)
+    assert report["status"] == "partial"
+    assert report["fertilizer_references"] == 0
+    assert any("fertilizer_reference.json" in warning for warning in report["warnings"])
+
+
+def test_non_array_content_records_are_rejected(tmp_path):
+    write_pack(tmp_path)
+    (tmp_path / "home_remedies.json").write_text(json.dumps({"records": {}}), encoding="utf-8")
+    report = validate_content(tmp_path)
+    assert report["home_remedies"] == 0
+    assert report["status"] == "partial"
