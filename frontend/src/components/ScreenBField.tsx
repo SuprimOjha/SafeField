@@ -11,6 +11,7 @@ interface ScreenBFieldProps {
   setFertilizerType: (val: string) => void;
   cropStage: string;
   setCropStage: (val: string) => void;
+  sandPercentOverride: number | null;
   onSandOverrideChange: (val: number | null) => void;
   onRunAssessment: () => void;
   onProceedToDecision: () => void;
@@ -24,12 +25,13 @@ export default function ScreenBField({
   setFertilizerType,
   cropStage,
   setCropStage,
+  sandPercentOverride,
   onSandOverrideChange,
   onRunAssessment,
   onProceedToDecision,
   lang,
 }: ScreenBFieldProps) {
-  const [customSand, setCustomSand] = useState<number | null>(null);
+
 
   if (loading || !data) {
     return (
@@ -48,8 +50,8 @@ export default function ScreenBField({
   }
 
   const { power_summary, elevation, soil_texture, forecast } = data;
-  const sandVal = customSand !== null ? customSand : (soil_texture.sand_percent ?? 40);
-  const sandLabel = customSand !== null ? `${customSand}% (farmer override)` : soil_texture.sand_percent !== null ? `${soil_texture.sand_percent}% (SoilGrids estimate)` : "Not available — enter a local estimate";
+  const sandVal = sandPercentOverride !== null ? sandPercentOverride : (soil_texture.sand_percent ?? 40);
+  const sandLabel = sandPercentOverride !== null ? `${sandPercentOverride}% (farmer override)` : soil_texture.sand_percent !== null ? `${soil_texture.sand_percent}% (SoilGrids estimate)` : "Not available — enter a local estimate";
 
   return (
     <div className="space-y-6">
@@ -179,7 +181,7 @@ export default function ScreenBField({
               min="10"
               max="80"
               value={sandVal}
-              onChange={(e) => { const value = Number(e.target.value); setCustomSand(value); onSandOverrideChange(value); }}
+              onChange={(e) => { const value = Number(e.target.value); onSandOverrideChange(value); }}
               className="w-full accent-emerald-700 h-2 bg-gray-200 rounded-lg cursor-pointer mt-3"
             />
             <span className="text-xs text-gray-500 mt-1 block">
