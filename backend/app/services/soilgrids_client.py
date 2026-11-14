@@ -144,7 +144,7 @@ class SoilGridsClient:
                     typical_latency="Static global model",
                     spatial_resolution="250 meter",
                     caveat=(
-                        "SoilGrids returned no complete usable texture estimate. "
+                        f"SoilGrids request failed or returned incomplete data: {exc}. "
                         "No regional or default value is substituted. Confirm locally."
                     ),
                     docs_url=SOILGRIDS_DOCS,
