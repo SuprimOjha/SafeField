@@ -99,3 +99,9 @@ def test_cache_rejects_future_observation_dates(tmp_path):
     future_day = datetime.now(timezone.utc).date() + timedelta(days=1)
     cache.store_daily_grid(future_day, [27.0], [85.0], [[1.0]], [[48]], "future", datetime.now(timezone.utc))
     assert cache.has_fresh_data() is False
+
+
+def test_cache_does_not_store_negative_precipitation(tmp_path):
+    cache = ImergGridCache(str(tmp_path / "negative.sqlite"))
+    inserted = cache.store_daily_grid(date.today(), [27.0], [85.0], [[-0.1]], [[48]], "negative", datetime.now(timezone.utc))
+    assert inserted == 0
