@@ -8,9 +8,9 @@ from pydantic import BaseModel
 class SoilTextureResponse(BaseModel):
     latitude: float
     longitude: float
-    clay_percent: float
-    silt_percent: float
-    sand_percent: float
+    clay_percent: float | None
+    silt_percent: float | None
+    sand_percent: float | None
     texture_class: str  # "Sandy", "Loamy", "Clayey"
     freshness: FreshnessBadge
 
@@ -57,11 +57,13 @@ class SoilGridsClient:
                     val_mean = depths[0].get("values", {}).get("mean", 300)
                     props[name] = round(float(val_mean) / 10.0, 1)
 
-            clay = props.get("clay", 25.0)
-            silt = props.get("silt", 35.0)
-            sand = props.get("sand", 40.0)
+            clay = props.get("clay")
+            silt = props.get("silt")
+            sand = props.get("sand")
 
-            # Classify texture
+            # Classify only when all modelled fractions are present.
+            if sand is None or clay is None or silt is None:
+                raise ValueError("SoilGrids omitted one or more texture layers")
             if sand > 55.0:
                 t_class = "Sandy"
             elif clay > 35.0:
@@ -97,24 +99,24 @@ class SoilGridsClient:
             return response
 
         except Exception:
-            # Fallback for Indo-Gangetic alluvial loam (common in Terai pilot districts)
+            # Never replace unavailable point data with a regional guess.
             response = SoilTextureResponse(
                 latitude=lat_r,
                 longitude=lon_r,
-                clay_percent=22.0,
-                silt_percent=42.0,
-                sand_percent=36.0,
-                texture_class="Loamy",
+                clay_percent=None,
+                silt_percent=None,
+                sand_percent=None,
+                texture_class="Unavailable",
                 freshness=FreshnessBadge(
                     dataset_name="ISRIC SoilGrids 250m Topsoil Properties",
                     source_org="ISRIC (CC BY 4.0)",
                     is_nasa=False,
-                    status="CACHED_FALLBACK",
+                    status="UNAVAILABLE",
                     latest_observation_date="Static Model",
                     fetched_at_utc=utc_now_iso(),
                     typical_latency="Static dataset",
                     spatial_resolution="250 meter",
-                    caveat="Using fallback alluvial loam texture (SoilGrids service unreachable).",
+                    caveat="SoilGrids unavailable; no regional default is substituted. Confirm texture with a soil test or local technician.",
                     docs_url=SOILGRIDS_DOCS,
                 ),
             )
