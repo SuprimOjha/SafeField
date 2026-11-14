@@ -100,6 +100,8 @@ class ImergGridCache:
         if any(day.isoformat() not in by_date for day in dates):
             return RainfallObservation(status="UNAVAILABLE", window_hours=hours, unavailable_reason="The nearest IMERG grid cell is missing one or more daily values.")
         selected = [by_date[day.isoformat()] for day in dates]
+        if any(int(row["valid_samples"]) < MIN_VALID_DAILY_SAMPLES for row in selected):
+            return RainfallObservation(status="UNAVAILABLE", window_hours=hours, unavailable_reason="A point grid cell has fewer than 39 valid half-hour samples in at least one daily granule; no low-coverage daily total is used.")
         amount = sum(float(row["precipitation_mm_day"]) for row in selected)
         return self._build_observation(
             dates, hours, amount, selected, "nearest_grid_cell", None,
@@ -163,8 +165,10 @@ class ImergGridCache:
                 overlap = projected_field.intersection(transform_geometry(project, cell)).area
                 if overlap <= 0:
                     continue
-                valid_area += overlap
-                weighted_total += float(row["precipitation_mm_day"]) * overlap
+                sample_fraction = min(int(row["valid_samples"]) / TOTAL_DAILY_SAMPLES, 1.0)
+                effective_area = overlap * sample_fraction
+                valid_area += effective_area
+                weighted_total += float(row["precipitation_mm_day"]) * effective_area
                 selected_granules.add(row["granule_id"])
                 fetched_values.append(datetime.fromisoformat(row["fetched_at_utc"]))
             coverage = min(valid_area / field_area, 1.0)
