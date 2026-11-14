@@ -277,3 +277,7 @@ def test_polygon_parser_does_not_duplicate_an_existing_closing_point():
 def test_polygon_parser_rejects_invalid_json_text():
     with pytest.raises(HTTPException):
         parse_field_polygon("not-a-json-array")
+
+
+def test_polygon_parser_allows_point_selection_without_boundary():
+    assert parse_field_polygon(None) is None
