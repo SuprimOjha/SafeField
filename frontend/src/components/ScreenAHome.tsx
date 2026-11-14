@@ -11,7 +11,7 @@ import {
   type MapMouseEvent,
   type GeoJSONSource,
 } from "maplibre-gl";
-import type { Feature, FeatureCollection, Polygon, MultiPolygon } from "geojson";
+import type { Feature, FeatureCollection, Geometry, Polygon, MultiPolygon } from "geojson";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
   MapPin, Navigation, Compass, ArrowRight, Pencil, Undo2, Trash2,
@@ -32,18 +32,30 @@ type DistrictFeature = Feature<Polygon | MultiPolygon, DistrictProperties>;
 
 const NEPAL_BOUNDS: [[number, number], [number, number]] = [[79.8, 26.2], [88.5, 30.6]];
 const EMPTY_FEATURES: FeatureCollection<Polygon> = { type: "FeatureCollection", features: [] };
-const OSM_STYLE = {
-  version: 8 as const,
-  sources: {
-    osm: {
-      type: "raster" as const,
-      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-      tileSize: 256,
-      attribution: "© OpenStreetMap contributors",
+function rasterStyle(tileUrl: string, attribution: string) {
+  return {
+    version: 8 as const,
+    sources: {
+      basemap: {
+        type: "raster" as const,
+        tiles: [tileUrl],
+        tileSize: 256,
+        maxzoom: 19,
+        attribution,
+      },
     },
-  },
-  layers: [{ id: "osm-tiles", type: "raster" as const, source: "osm" }],
-};
+    layers: [{ id: "basemap-tiles", type: "raster" as const, source: "basemap" }],
+  };
+}
+
+const STREET_STYLE = rasterStyle(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+  "© Esri, HERE, Garmin, OpenStreetMap contributors",
+);
+const SATELLITE_STYLE = rasterStyle(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  "Imagery © Esri, Maxar, Earthstar Geographics and the GIS community",
+);
 
 function getCoordinates(geometry: DistrictFeature["geometry"]): number[][] {
   const points: number[][] = [];
@@ -137,7 +149,20 @@ export default function ScreenAHome({
   }, []);
 
   const updateDrawLayer = useCallback((map: MapLibreMap, points: [number, number][]) => {
-    const features: Feature<Polygon>[] = [];
+    const features: Feature<Geometry>[] = points.map((coordinates, index) => ({
+      type: "Feature",
+      properties: { pointIndex: index + 1 },
+      geometry: { type: "Point", coordinates },
+    }));
+
+    if (points.length >= 2) {
+      features.push({
+        type: "Feature",
+        properties: {},
+        geometry: { type: "LineString", coordinates: points },
+      });
+    }
+
     if (points.length >= 3) {
       features.push({
         type: "Feature",
@@ -145,6 +170,7 @@ export default function ScreenAHome({
         geometry: { type: "Polygon", coordinates: [[...points, points[0]]] },
       });
     }
+
     const source = map.getSource("user-field") as GeoJSONSource | undefined;
     source?.setData({ type: "FeatureCollection", features });
   }, []);
@@ -153,16 +179,10 @@ export default function ScreenAHome({
     const container = mapContainerRef.current;
     if (!container) return;
 
-    const apiKey = process.env.NEXT_PUBLIC_MAPTILER_KEY;
-    // Streets use OpenStreetMap directly so field selection does not depend on a MapTiler key.
-    const styleUrl = mapStyle === "satellite"
-      ? (apiKey ? `https://api.maptiler.com/maps/satellite-v2/style.json?key=${encodeURIComponent(apiKey)}` : null)
-      : null;
-
     setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
     const map = new MapLibreMap({
       container,
-      style: styleUrl ?? OSM_STYLE,
+      style: mapStyle === "satellite" ? SATELLITE_STYLE : STREET_STYLE,
       center: [selectedLon, selectedLat],
       zoom: 7,
       minZoom: 5,
@@ -203,14 +223,22 @@ export default function ScreenAHome({
           id: "user-field-outline", type: "line", source: "user-field",
           paint: { "line-color": "#047857", "line-width": 3, "line-dasharray": [2, 1] },
         });
+        map.addLayer({
+          id: "user-field-points", type: "circle", source: "user-field",
+          filter: ["==", ["geometry-type"], "Point"],
+          paint: {
+            "circle-radius": 6,
+            "circle-color": "#ffffff",
+            "circle-stroke-color": "#047857",
+            "circle-stroke-width": 3,
+          },
+        });
       }
     };
 
     map.on("load", () => {
       setMapReady(true);
-      setMapError(mapStyle === "satellite" && !apiKey
-        ? "Satellite imagery needs a valid MapTiler key. Streets remain available without a key."
-        : null);
+      setMapError(null);
       installLayers();
     });
 
@@ -290,20 +318,34 @@ export default function ScreenAHome({
   };
 
   const beginDrawing = () => {
+    drawModeRef.current = "draw";
+    drawPointsRef.current = [];
     setDrawMode("draw");
     setDrawPoints([]);
     setFieldArea(null);
     setDistrictName("");
+    if (mapRef.current) mapRef.current.getCanvas().style.cursor = "crosshair";
   };
 
-  const undoPoint = () => setDrawPoints((current) => current.slice(0, -1));
-  const clearDrawing = () => { setDrawPoints([]); setFieldArea(null); drawPointsRef.current = []; };
+  const undoPoint = () => {
+    const next = drawPointsRef.current.slice(0, -1);
+    drawPointsRef.current = next;
+    setDrawPoints(next);
+  };
+  const clearDrawing = () => {
+    drawPointsRef.current = [];
+    setDrawPoints([]);
+    setFieldArea(null);
+    if (mapRef.current) updateDrawLayer(mapRef.current, []);
+  };
 
   const finishDrawing = () => {
     if (drawPoints.length < 3) return;
     const area = polygonAreaHectares(drawPoints);
     setFieldArea(area);
+    drawModeRef.current = "select";
     setDrawMode("select");
+    if (mapRef.current) mapRef.current.getCanvas().style.cursor = "";
     const center = drawPoints.reduce((acc, point) => [acc[0] + point[0], acc[1] + point[1]], [0, 0]);
     const lon = center[0] / drawPoints.length;
     const lat = center[1] / drawPoints.length;
@@ -365,7 +407,7 @@ export default function ScreenAHome({
             </select>
           </label>
           <div className="flex flex-wrap gap-2">
-            <button onClick={() => { setDrawMode("select"); }} className={`inline-flex h-11 items-center gap-2 rounded-xl border px-4 text-sm font-bold transition ${drawMode === "select" ? "border-emerald-700 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white text-slate-600"}`}>
+            <button onClick={() => { drawModeRef.current = "select"; setDrawMode("select"); if (mapRef.current) mapRef.current.getCanvas().style.cursor = ""; }} className={`inline-flex h-11 items-center gap-2 rounded-xl border px-4 text-sm font-bold transition ${drawMode === "select" ? "border-emerald-700 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white text-slate-600"}`}>
               <MousePointer2 className="h-4 w-4" /> {copy.district}
             </button>
             <button onClick={beginDrawing} className={`inline-flex h-11 items-center gap-2 rounded-xl px-4 text-sm font-bold shadow-sm transition ${drawMode === "draw" ? "bg-emerald-950 text-white" : "bg-emerald-700 text-white hover:bg-emerald-800"}`}>
