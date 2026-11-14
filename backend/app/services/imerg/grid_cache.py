@@ -139,8 +139,8 @@ class ImergGridCache:
     def _get_polygon_rain(self, hours: int, field_polygon: list[tuple[float, float]]) -> RainfallObservation:
         try:
             from pyproj import Transformer
+            import shapely
             from shapely.geometry import Polygon, box
-            from shapely.ops import transform as transform_geometry
         except ImportError:
             return RainfallObservation(status="UNAVAILABLE", window_hours=hours, unavailable_reason="Polygon rainfall requires Shapely and pyproj; install backend requirements.")
         if len(field_polygon) < 4:
@@ -149,7 +149,19 @@ class ImergGridCache:
         if not field.is_valid or field.area <= 0:
             return RainfallObservation(status="UNAVAILABLE", window_hours=hours, unavailable_reason="The supplied field polygon is invalid or has zero area.")
         project = Transformer.from_crs("EPSG:4326", "EPSG:6933", always_xy=True).transform
-        projected_field = transform_geometry(project, field)
+
+        # Shapely 2.1 deprecates shapely.ops.transform. Use the vectorized
+        # top-level API when available, while retaining Shapely 2.0 support.
+        if hasattr(shapely, "transform"):
+            project_geometry = lambda geometry: shapely.transform(
+                geometry, project, interleaved=False
+            )
+        else:
+            from shapely.ops import transform as legacy_transform
+
+            project_geometry = lambda geometry: legacy_transform(project, geometry)
+
+        projected_field = project_geometry(field)
         field_area = projected_field.area
         if field_area <= 0:
             return RainfallObservation(status="UNAVAILABLE", window_hours=hours, unavailable_reason="The field polygon has no measurable area after equal-area projection.")
@@ -190,7 +202,7 @@ class ImergGridCache:
                     float(row["longitude"]) + lon_step / 2,
                     float(row["latitude"]) + lat_step / 2,
                 )
-                overlap = projected_field.intersection(transform_geometry(project, cell)).area
+                overlap = projected_field.intersection(project_geometry(cell)).area
                 if overlap <= 0:
                     continue
                 sample_fraction = min(int(row["valid_samples"]) / TOTAL_DAILY_SAMPLES, 1.0)
