@@ -1,5 +1,6 @@
 import sqlite3
 import math
+import re
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from statistics import median
@@ -10,6 +11,14 @@ TOTAL_DAILY_SAMPLES = 48
 MIN_VALID_DAILY_SAMPLES = 39  # ceil(80% of 48 half-hour slots); software quality gate, not a NASA flag.
 MIN_POLYGON_COVERAGE = 0.8
 MAX_CACHE_AGE_DAYS = 5
+
+
+def extract_product_version(granule_id: str) -> str:
+    """Return the product version encoded in a NASA IMERG granule identifier."""
+    match = re.search(r"\.V(\d{2}[A-Z])$", granule_id)
+    if not match:
+        raise ValueError(f"Cannot determine IMERG product version from granule ID: {granule_id}")
+    return match.group(1)
 
 
 class ImergGridCache:
@@ -27,6 +36,9 @@ class ImergGridCache:
                 PRIMARY KEY(date_utc, latitude, longitude, granule_id)
             )""")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_imerg_daily_location ON imerg_daily_cells(latitude, longitude, date_utc)")
+            # Correct legacy metadata only when the immutable granule ID proves V07C.
+            conn.execute("""UPDATE imerg_daily_cells SET version = '07C'
+                WHERE granule_id LIKE '%.V07C' AND version <> '07C'""")
 
     def _connect(self):
         connection = sqlite3.connect(str(self.db_path), timeout=20.0)
@@ -35,6 +47,7 @@ class ImergGridCache:
 
     def store_daily_grid(self, day: date, latitudes, longitudes, precipitation, valid_counts, granule_id: str, fetched_at: datetime) -> int:
         rows = []
+        product_version = extract_product_version(granule_id)
         for lat_index, latitude in enumerate(latitudes):
             for lon_index, longitude in enumerate(longitudes):
                 value = precipitation[lat_index][lon_index]
@@ -55,7 +68,7 @@ class ImergGridCache:
                     or not 1 <= sample_count <= TOTAL_DAILY_SAMPLES
                 ):
                     continue
-                rows.append((day.isoformat(), lat_value, lon_value, rain_value, int(sample_count), granule_id, "GPM_3IMERGDL", "07B", "LATE", fetched_at.isoformat()))
+                rows.append((day.isoformat(), lat_value, lon_value, rain_value, int(sample_count), granule_id, "GPM_3IMERGDL", product_version, "LATE", fetched_at.isoformat()))
         with self._connect() as conn:
             conn.executemany("""INSERT OR REPLACE INTO imerg_daily_cells
                 (date_utc, latitude, longitude, precipitation_mm_day, valid_samples, granule_id, product, version, stream, fetched_at_utc)
@@ -201,6 +214,11 @@ class ImergGridCache:
 
     def _build_observation(self, dates, hours, amount, rows, spatial_method, coverage, spatial_resolution, granule_ids=None, fetched_at=None):
         selected = rows
+        version_rows = [row for row in selected if not granule_ids or row["granule_id"] in granule_ids]
+        versions = {str(row["version"]) for row in version_rows}
+        if len(versions) != 1:
+            return RainfallObservation(status="UNAVAILABLE", window_hours=hours, unavailable_reason="Cached IMERG records contain mixed product versions; no cross-version rainfall total is reported.")
+        product_version = next(iter(versions))
         fetched_at = fetched_at or max(datetime.fromisoformat(row["fetched_at_utc"]) for row in selected)
         return RainfallObservation(
             status="AVAILABLE", amount_mm=round(amount, 2), window_hours=hours,
@@ -210,7 +228,7 @@ class ImergGridCache:
                 observed_end_utc=datetime.combine(dates[0] + timedelta(days=1), time.min, tzinfo=timezone.utc),
                 fetched_at_utc=fetched_at, spatial_resolution=spatial_resolution,
                 latency_note="Daily Late Run; NASA describes processing about 14 hours after observation. Expected daily-data lag is roughly 14–38 hours, but the actual observed UTC interval and fetch timestamp are authoritative.",
-                dataset="GPM_3IMERGDL", version="07B", stream="LATE",
+                dataset="GPM_3IMERGDL", version=product_version, stream="LATE",
                 granule_ids=granule_ids or sorted({row["granule_id"] for row in selected}),
                 units="mm/day summed over complete UTC days",
                 spatial_method=spatial_method, coverage_fraction=coverage,

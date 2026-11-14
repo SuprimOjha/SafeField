@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from typing import Any
 from app.config import get_settings
-from app.services.imerg.grid_cache import ImergGridCache
+from app.services.imerg.grid_cache import ImergGridCache, extract_product_version
 
 NEPAL_BBOX = (80.0, 26.3, 88.3, 30.5)
 COLLECTION = "GPM_3IMERGDL"
@@ -77,13 +77,17 @@ def fetch_imerg(days: int = 7, lookback_extra_days: int = 5, cache: ImergGridCac
     if len(downloaded) != len(found):
         raise RuntimeError(f"Downloaded {len(downloaded)} files for {len(found)} granules; refusing ambiguous date-to-file mapping.")
 
+    downloaded_paths = [Path(file_path) for file_path in downloaded]
+    product_versions = {extract_product_version(path.stem) for path in downloaded_paths}
+    if len(product_versions) != 1:
+        raise RuntimeError(f"Refusing to combine IMERG granules from different product versions: {sorted(product_versions)}")
+
     grid_cache = cache or ImergGridCache()
     fetched_at = datetime.now(timezone.utc)
     processed = []
-    for (observed_day, granule), file_path in zip(found, downloaded):
-        path = Path(file_path)
+    for (observed_day, granule), path in zip(found, downloaded_paths):
         latitudes, longitudes, values, counts = _read_daily_granule(path, observed_day)
         granule_id = path.stem
         cell_count = grid_cache.store_daily_grid(observed_day, latitudes, longitudes, values, counts, granule_id, fetched_at)
         processed.append({"date_utc": observed_day.isoformat(), "granule_id": granule_id, "valid_cells": cell_count, "file": path.name})
-    return {"collection": COLLECTION, "version": "07B", "stream": "LATE", "processed": processed}
+    return {"collection": COLLECTION, "version": next(iter(product_versions)), "stream": "LATE", "processed": processed}
