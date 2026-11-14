@@ -1,6 +1,9 @@
 import { FieldAssessmentResponse } from "@/types/safefield";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
+const DEFAULT_PRODUCTION_API_URL = "https://safefield-nepal-spaceapps-2026.onrender.com";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  (process.env.NODE_ENV === "production" ? DEFAULT_PRODUCTION_API_URL : "http://127.0.0.1:8000");
 const STORAGE_PREFIX = "safefield_cache_v2:";
 const MAX_OFFLINE_CACHE_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
