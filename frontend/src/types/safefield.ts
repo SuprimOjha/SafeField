@@ -128,6 +128,61 @@ export interface RainfallObservation {
   unavailable_reason: string | null;
 }
 
+export interface ContentSource {
+  title: string;
+  authority: string;
+  year: number;
+  url: string;
+  accessed: string;
+  official: boolean;
+  language: string;
+}
+
+export interface FertilizerReference {
+  id: string;
+  crop: string;
+  varietyType: string;
+  region: string;
+  nutrientOrProduct: string;
+  basis: "nutrient" | "product";
+  valueMin: number | null;
+  valueMax: number | null;
+  unitAsPrinted: string;
+  timingSplit: string;
+  sourceKey: string;
+  year: number;
+  page: string;
+  shortQuote: string;
+  confidence: "single-source" | "two-sources";
+  verified: boolean;
+  reviewStatus: "not-expert-reviewed" | "expert-reviewed";
+  reviewer: string | null;
+}
+
+export interface HomeRemedy {
+  id: string;
+  crop: string;
+  problem: string;
+  remedyText: string;
+  quantitiesAsPrinted: string | null;
+  preparationNotesAsPrinted: string | null;
+  sourceKey: string;
+  evidence: "official" | "research" | "extension";
+  verified: boolean;
+  safetyNotes: string;
+  reviewStatus: "not-expert-reviewed" | "expert-reviewed";
+}
+
+export interface FarmerContentResponse {
+  status: "ok" | "partial" | "error";
+  sources: Record<string, ContentSource>;
+  fertilizer_references: FertilizerReference[];
+  home_remedies: HomeRemedy[];
+  conversions: { unit: "ropani" | "bigha" | "kattha" | "hectare"; toHectare: number | null; sourceKey: string; verified: boolean }[];
+  skipped: Record<string, number>;
+  warnings: string[];
+}
+
 export interface FieldAssessmentResponse {
   rainfall_observation: RainfallObservation;
   latitude: number;
