@@ -28,8 +28,25 @@ export default function ScreenAHome({
   lang,
 }: ScreenAHomeProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
-  const markerRef = useRef<maplibregl.Marker | null>(null);
+  type GoogleLatLng = { lat(): number; lng(): number };
+  type GoogleMapInstance = {
+    setCenter(position: { lat: number; lng: number }): void;
+    setZoom(zoom: number): void;
+    addListener(eventName: string, handler: (event: { latLng?: GoogleLatLng }) => void): void;
+  };
+  type GoogleMarkerInstance = {
+    setPosition(position: { lat: number; lng: number }): void;
+  };
+  type GoogleMapsNamespace = {
+    maps: {
+      Map: new (element: HTMLElement, options: Record<string, unknown>) => GoogleMapInstance;
+      Marker: new (options: Record<string, unknown>) => GoogleMarkerInstance;
+      MapTypeId: { ROADMAP: string; SATELLITE: string; TERRAIN: string };
+    };
+  };
+  const mapRef = useRef<GoogleMapInstance | null>(null);
+  const markerRef = useRef<GoogleMarkerInstance | null>(null);
+  const googleRef = useRef<GoogleMapsNamespace | null>(null);
 
   const [locationName, setLocationName] = useState("Biratnagar, Morang");
   const [mapError, setMapError] = useState<string | null>(null);
@@ -37,52 +54,86 @@ export default function ScreenAHome({
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    if (!mapRef.current) {
-      mapRef.current = new maplibregl.Map({
-        container: mapContainerRef.current,
-        // OpenFreeMap provides a maintained, keyless basemap suitable for real applications.
-        style: "https://tiles.openfreemap.org/styles/liberty",
-        center: [selectedLon, selectedLat],
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+      setMapError("Google Maps API key is missing. Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to frontend/.env.local and restart the dev server.");
+      return;
+    }
+
+    const initializeMap = () => {
+      const googleMaps = (window as Window & { google?: GoogleMapsNamespace }).google;
+      if (!googleMaps || !mapContainerRef.current) {
+        setMapError("Google Maps could not initialize. Check that Maps JavaScript API is enabled for this key.");
+        return;
+      }
+
+      googleRef.current = googleMaps;
+      const map = new googleMaps.maps.Map(mapContainerRef.current, {
+        center: { lat: selectedLat, lng: selectedLon },
         zoom: 9,
-        attributionControl: true,
-        cooperativeGestures: true,
+        mapTypeId: googleMaps.maps.MapTypeId.ROADMAP,
+        mapTypeControl: true,
+        mapTypeControlOptions: {
+          mapTypeIds: [
+            googleMaps.maps.MapTypeId.ROADMAP,
+            googleMaps.maps.MapTypeId.SATELLITE,
+            googleMaps.maps.MapTypeId.TERRAIN,
+          ],
+        },
+        streetViewControl: false,
+        fullscreenControl: true,
+        clickableIcons: false,
+      });
+      mapRef.current = map;
+
+      markerRef.current = new googleMaps.maps.Marker({
+        map,
+        position: { lat: selectedLat, lng: selectedLon },
+        title: "Selected farm location",
+        animation: null,
       });
 
-      mapRef.current.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
-      mapRef.current.on("load", () => setMapError(null));
-      mapRef.current.on("error", (event) => {
-        console.error("MapLibre basemap/tile error:", event.error);
-        setMapError("Map tiles could not be loaded. Check your internet connection or try refreshing the map.");
-      });
-
-      markerRef.current = new maplibregl.Marker({ color: "#2e6930" })
-        .setLngLat([selectedLon, selectedLat])
-        .addTo(mapRef.current);
-
-      mapRef.current.on("click", (e: maplibregl.MapMouseEvent) => {
-        const { lng, lat } = e.lngLat;
-        if (lat >= 26.3 && lat <= 30.5 && lng >= 80.0 && lng <= 88.3) {
-          onLocationSelect(lat, lng, `Custom Point (${lat.toFixed(2)}°N, ${lng.toFixed(2)}°E)`);
-          setLocationName(`Custom Point (${lat.toFixed(2)}°N, ${lng.toFixed(2)}°E)`);
-          if (markerRef.current) {
-            markerRef.current.setLngLat([lng, lat]);
-          }
+      map.addListener("click", (event) => {
+        if (!event.latLng) return;
+        const lat = event.latLng.lat();
+        const lon = event.latLng.lng();
+        if (lat >= 26.3 && lat <= 30.5 && lon >= 80.0 && lon <= 88.3) {
+          onLocationSelect(lat, lon, `Custom Point (${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E)`);
+          setLocationName(`Custom Point (${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E)`);
+          markerRef.current?.setPosition({ lat, lng: lon });
         }
       });
+      setMapError(null);
+    };
+
+    const existingScript = document.getElementById("google-maps-javascript-api") as HTMLScriptElement | null;
+    if ((window as Window & { google?: GoogleMapsNamespace }).google) {
+      initializeMap();
+    } else if (existingScript) {
+      existingScript.addEventListener("load", initializeMap, { once: true });
+      existingScript.addEventListener("error", () => setMapError("Google Maps failed to load. Check your network and API key."), { once: true });
+    } else {
+      const script = document.createElement("script");
+      script.id = "google-maps-javascript-api";
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly`;
+      script.async = true;
+      script.defer = true;
+      script.onload = initializeMap;
+      script.onerror = () => setMapError("Google Maps failed to load. Check your API key, billing, enabled API and network.");
+      document.head.appendChild(script);
     }
 
     return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
+      mapRef.current = null;
+      markerRef.current = null;
     };
   }, []);
 
   useEffect(() => {
     if (markerRef.current && mapRef.current) {
-      markerRef.current.setLngLat([selectedLon, selectedLat]);
-      mapRef.current.flyTo({ center: [selectedLon, selectedLat], zoom: 10 });
+      markerRef.current.setPosition({ lat: selectedLat, lng: selectedLon });
+      mapRef.current.setCenter({ lat: selectedLat, lng: selectedLon });
+      mapRef.current.setZoom(10);
     }
   }, [selectedLat, selectedLon]);
 
@@ -164,6 +215,7 @@ export default function ScreenAHome({
           {mapError && (
             <div role="alert" className="absolute top-3 left-3 right-3 z-10 rounded-lg border border-amber-300 bg-amber-50/95 px-3 py-2 text-xs font-medium text-amber-950 shadow-sm">
               {mapError}
+     </button>
             </div>
           )}
           <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-lg shadow border border-gray-200 text-xs text-gray-700 font-medium flex items-center gap-2">
