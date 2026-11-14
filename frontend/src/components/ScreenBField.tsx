@@ -74,7 +74,7 @@ export default function ScreenBField({
             <span className="text-3xl font-bold text-gray-900">{power_summary.rain_last_72h_mm ?? 0}</span>
             <span className="text-gray-500 ml-1">mm</span>
           </div>
-          <span className="text-xs text-gray-400 mt-2">NASA POWER & IMERG</span>
+          <span className="text-xs text-gray-400 mt-2">NASA POWER Daily PRECTOTCORR</span>
         </div>
 
         {/* Soil Wetness */}
@@ -91,7 +91,7 @@ export default function ScreenBField({
             </span>
             <span className="text-gray-500 ml-1">%</span>
           </div>
-          <span className="text-xs text-gray-400 mt-2">SMAP & NASA POWER (0-5cm)</span>
+          <span className="text-xs text-gray-400 mt-2">NASA POWER GWETTOP (surface wetness proxy)</span>
         </div>
 
         {/* Temperature */}
