@@ -30,3 +30,14 @@ def test_grid_cache_does_not_store_missing_or_zero_sample_cells(tmp_path):
     assert inserted == 0
     result = cache.get_recent_rain(27.0, 85.0, 24)
     assert result.status == "UNAVAILABLE"
+
+
+
+def test_grid_cache_refuses_stale_daily_records(tmp_path):
+    cache = ImergGridCache(str(tmp_path / "cache.sqlite"))
+    fetched = datetime(2026, 11, 14, tzinfo=timezone.utc)
+    for day in [date(2026, 11, 1), date(2026, 11, 2), date(2026, 11, 3)]:
+        cache.store_daily_grid(day, [27.0], [85.0], [[1.0]], [[48]], f"granule-{day}", fetched)
+    result = cache.get_recent_rain(27.0, 85.0, 72)
+    assert result.status == "UNAVAILABLE"
+    assert result.amount_mm is None

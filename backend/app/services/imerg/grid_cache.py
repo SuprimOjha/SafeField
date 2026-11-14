@@ -57,6 +57,9 @@ class ImergGridCache:
             return RainfallObservation(status="UNAVAILABLE", window_hours=hours, unavailable_reason=f"Only {len(rows)} daily IMERG record(s) are cached; {required_days} consecutive days are required.")
         selected = rows[:required_days]
         dates = [date.fromisoformat(row["date_utc"]) for row in selected]
+        newest_age_days = (datetime.now(timezone.utc).date() - dates[0]).days
+        if newest_age_days < 0 or newest_age_days > 5:
+            return RainfallObservation(status="UNAVAILABLE", window_hours=hours, unavailable_reason="The newest cached IMERG day is outside the five-day freshness window; no stale rainfall total is used.")
         if any(dates[index] - dates[index + 1] != timedelta(days=1) for index in range(len(dates) - 1)):
             return RainfallObservation(status="UNAVAILABLE", window_hours=hours, unavailable_reason="Cached IMERG daily records contain a date gap; no rolling total is reported.")
         amount = sum(float(row["precipitation_mm_day"]) for row in selected)
