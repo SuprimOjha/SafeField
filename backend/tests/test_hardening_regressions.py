@@ -182,3 +182,11 @@ def test_polygon_rejects_effective_coverage_below_80_percent(tmp_path):
     result = cache.get_recent_rain(27.0, 85.0, 72, field_box())
     assert result.status == "UNAVAILABLE"
     assert "coverage" in (result.unavailable_reason or "")
+
+
+def test_polygon_rejects_unexpected_grid_spacing(tmp_path):
+    cache = make_cache(tmp_path, latitudes=(27.0, 27.2), longitudes=(85.0, 85.2))
+    polygon = field_box(84.9, 26.9, 85.3, 27.3)
+    result = cache.get_recent_rain(27.1, 85.1, 72, polygon)
+    assert result.status == "UNAVAILABLE"
+    assert "spacing" in (result.unavailable_reason or "")
