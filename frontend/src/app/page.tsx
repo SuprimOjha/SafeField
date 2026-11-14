@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState, useSyncExternalStore, useTransition } from "react";
+import React, { useCallback, useEffect, useState, useSyncExternalStore, useTransition, useRef } from "react";
 import { FieldAssessmentResponse } from "@/types/safefield";
 import { fetchFieldAssessment } from "@/lib/api";
 import ScreenAHome from "@/components/ScreenAHome";
@@ -49,6 +49,22 @@ const NAV_ITEMS = [
 export default function SafeFieldNepalApp() {
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [lang, setLang] = useState<"en" | "ne">("en");
+  const requestSequence = useRef(0);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("safefield_language");
+      if (saved === "en" || saved === "ne") setLang(saved);
+    } catch {
+      // Language preference remains session-only when storage is unavailable.
+    }
+  }, []);
+
+  useEffect(() => {
+    try { window.localStorage.setItem("safefield_language", lang); } catch {
+      // Ignore storage restrictions; the in-memory preference still works.
+    }
+  }, [lang]);
   const isOnline = useSyncExternalStore(subscribeToOnlineStatus, getOnlineStatus, getServerOnlineStatus);
   const [partnerLogoVisible, setPartnerLogoVisible] = useState(true);
 
@@ -65,6 +81,7 @@ export default function SafeFieldNepalApp() {
   // Fetching starts after the effect runs; state updates happen only after the
   // asynchronous request settles, avoiding synchronous state updates in effects.
   const refreshAssessment = useCallback(async () => {
+    const requestId = ++requestSequence.current;
     try {
       const data = await fetchFieldAssessment(
         selectedLat,
@@ -74,11 +91,11 @@ export default function SafeFieldNepalApp() {
         true,
         sandPercentOverride,
       );
-      startTransition(() => setAssessmentData(data));
+      if (requestId === requestSequence.current) startTransition(() => setAssessmentData(data));
     } catch (err) {
-      console.error("Failed to fetch field assessment:", err);
+      if (requestId === requestSequence.current) console.error("Failed to fetch field assessment:", err);
     } finally {
-      setLoading(false);
+      if (requestId === requestSequence.current) setLoading(false);
     }
   }, [selectedLat, selectedLon, fertilizerType, cropStage, sandPercentOverride, startTransition]);
 
