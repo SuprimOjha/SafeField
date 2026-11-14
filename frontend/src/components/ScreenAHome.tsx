@@ -48,14 +48,9 @@ function rasterStyle(tileUrl: string, attribution: string) {
   };
 }
 
-const STREET_STYLE = rasterStyle(
-  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
-  "© Esri, HERE, Garmin, OpenStreetMap contributors",
-);
-const SATELLITE_STYLE = rasterStyle(
-  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-  "Imagery © Esri, Maxar, Earthstar Geographics and the GIS community",
-);
+const STREET_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+const ESRI_IMAGERY_TILES =
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 
 function getCoordinates(geometry: DistrictFeature["geometry"]): number[][] {
   const points: number[][] = [];
@@ -182,7 +177,7 @@ export default function ScreenAHome({
     setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
     const map = new MapLibreMap({
       container,
-      style: mapStyle === "satellite" ? SATELLITE_STYLE : STREET_STYLE,
+      style: STREET_STYLE_URL,
       center: [selectedLon, selectedLat],
       zoom: 7,
       minZoom: 5,
@@ -199,6 +194,22 @@ export default function ScreenAHome({
     markerRef.current = marker;
 
     const installLayers = () => {
+      if (!map.getSource("esri-world-imagery")) {
+        map.addSource("esri-world-imagery", {
+          type: "raster",
+          tiles: [ESRI_IMAGERY_TILES],
+          tileSize: 256,
+          maxzoom: 19,
+          attribution: "Imagery © Esri, Maxar, Earthstar Geographics and the GIS community",
+        });
+        const firstLabelLayer = map.getStyle().layers?.find((layer) => layer.type === "symbol")?.id;
+        map.addLayer({
+          id: "esri-world-imagery-layer",
+          type: "raster",
+          source: "esri-world-imagery",
+          layout: { visibility: mapStyle === "satellite" ? "visible" : "none" },
+        }, firstLabelLayer);
+      }
       if (!map.getSource("nepal-districts") && districtsRef.current.length) {
         map.addSource("nepal-districts", {
           type: "geojson",
@@ -275,11 +286,7 @@ export default function ScreenAHome({
     map.on("error", (event) => {
       console.error("MapLibre map error:", event.error);
       setMapReady(true);
-      if (mapStyle === "satellite") {
-        setMapError("Satellite imagery failed to load. Check your MapTiler key and allowed website origins, or switch to Streets.");
-      } else {
-        setMapError("OpenStreetMap tiles could not load. Check your internet connection.");
-      }
+      setMapError("Map tiles could not be loaded. Check your internet connection, then refresh the map.");
     });
 
     return () => {
@@ -289,8 +296,15 @@ export default function ScreenAHome({
       markerRef.current = null;
       setMapReady(false);
     };
-  // Recreate only when basemap changes. District data is added after map load below.
-  }, [mapStyle, updateDrawLayer]);
+  // Keep one OpenFreeMap vector map; satellite imagery is toggled as a raster overlay.
+  }, [updateDrawLayer]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (map?.getLayer("esri-world-imagery-layer")) {
+      map.setLayoutProperty("esri-world-imagery-layer", "visibility", mapStyle === "satellite" ? "visible" : "none");
+    }
+  }, [mapStyle, mapReady]);
 
   useEffect(() => {
     if (markerRef.current && mapRef.current && drawMode === "select") {
@@ -466,7 +480,7 @@ export default function ScreenAHome({
             <Compass className="h-4 w-4 shrink-0 text-emerald-700" />
             <span className="truncate">Selected: <strong className="text-emerald-900">{locationName}</strong> · {selectedLat.toFixed(4)}°N, {selectedLon.toFixed(4)}°E</span>
           </div>
-          <div className="absolute bottom-3 right-3 z-[5] rounded-lg bg-white/95 px-3 py-2 text-[10px] font-semibold text-slate-500 shadow">© OpenStreetMap · MapTiler</div>
+          <div className="absolute bottom-3 right-3 z-[5] max-w-[75%] rounded-lg bg-white/95 px-3 py-2 text-[10px] font-semibold text-slate-600 shadow">© OpenFreeMap · © OpenStreetMap contributors{mapStyle === "satellite" ? " · Imagery © Esri" : ""}</div>
         </div>
 
         <div className="flex flex-col gap-3 px-4 pb-5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
