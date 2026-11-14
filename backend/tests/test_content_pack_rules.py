@@ -199,3 +199,13 @@ def test_source_accessed_field_requires_a_real_calendar_date(tmp_path):
     report = validate_content(tmp_path)
     assert report["sources"] == 0
     assert report["fertilizer_references"] == 0
+
+
+def test_pre_1900_fertilizer_reference_year_is_rejected(tmp_path):
+    write_pack(tmp_path, fertilizers=[fertilizer(year=1899)])
+    assert validate_content(tmp_path)["fertilizer_references"] == 0
+
+
+def test_non_finite_fertilizer_upper_bound_is_rejected(tmp_path):
+    write_pack(tmp_path, fertilizers=[fertilizer(valueMax=float("nan"))])
+    assert validate_content(tmp_path)["fertilizer_references"] == 0
