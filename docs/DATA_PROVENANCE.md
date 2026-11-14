@@ -27,3 +27,8 @@ A fetch timestamp is not the same as the observation date. Always show both wher
 The optional IMERG ingestion command uses the GPM_3IMERGDL daily Late collection (CMR version 07; NASA's current GPM directory describes the V07B algorithm line). The daily `precipitation` field is stored in mm/day, with `precipitation_cnt` used to exclude cells with no valid half-hourly samples. The code fails closed if the expected variables or units are absent. NASA's IMERG V07 FAQ identifies `precipitation` as the recommended multi-satellite field and documents its units; consult the current collection metadata before future upgrades.
 
 The fetch timestamp is distinct from the observation UTC day. The Late Run is intended for near-real-time monitoring, while Final Run is a retrospective research product with substantially longer latency. Do not mix Late and Final streams in one time series.
+
+
+## Browser offline assessment cache
+
+The browser stores a location-and-input-specific assessment snapshot in local storage after a successful API response. Offline fallback is limited to snapshots captured within the previous seven days; malformed, future-dated, expired, or inaccessible storage is treated as unavailable. A browser-cache response marks each provider freshness status as `CACHED_FALLBACK` and adds a capture-time caveat. Original observation and fetch timestamps are preserved and must not be presented as newly observed data. Browser storage is optional: disabling it does not prevent live assessments.
