@@ -1,13 +1,15 @@
 {
-  "version": "1.0.0",
-  "citation": "FAO Fertilizer Management Guidelines & Nepal Agricultural Research Council (NARC) Extension Standards",
+  "version": "1.1.0",
+  "status": "PROTOTYPE_ONLY",
+  "evidence_status": "All numeric thresholds are design assumptions pending review by Nepalese agronomists. They are not sourced recommendations, validated application rates, or safety limits.",
   "thresholds": {
     "recent_rain_heavy_mm": 15.0,
-    "recent_rain_moderate_mm": 5.0,
+    "recent_rain_window": "Latest three available NASA POWER daily records; not guaranteed to be the previous 72 clock-hours",
     "forecast_rain_heavy_mm": 10.0,
-    "soil_wetness_high": 0.70,
-    "soil_wetness_low": 0.30,
+    "forecast_window": "Next 48 hours from Open-Meteo (non-NASA)",
     "slope_steep_pct": 8.0,
     "sandy_soil_sand_pct": 55.0
-  }
+  },
+  "excluded_from_decision": ["save_money preference", "fertilizer rate", "crop nutrient requirement"],
+  "validation_required": ["Nepal Agricultural Research Council agronomist review", "crop- and fertilizer-specific field trials", "local extension review"]
 }

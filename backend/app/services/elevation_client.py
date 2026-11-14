@@ -1,4 +1,5 @@
 import math
+import httpx
 from typing import Any
 from app.cache.sqlite_cache import SQLiteCache
 from app.schemas import FreshnessBadge
@@ -17,8 +18,7 @@ class ElevationResponse(BaseModel):
 
 class ElevationClient:
     """
-    Computes field elevation and terrain slope (%) using NASADEM/SRTM 30m
-    sampled across a 3x3 point stencil.
+    Samples Open-Elevation API on a 3x3 stencil; underlying DEM lineage is not asserted.
     """
 
     def __init__(self, cache: SQLiteCache | None = None) -> None:
@@ -47,7 +47,10 @@ class ElevationClient:
         locations_payload = {"locations": [{"latitude": pt[0], "longitude": pt[1]} for pt in points]}
 
         try:
-            data = await fetch_json_with_retry(url, params=None, timeout_seconds=10.0)
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response_http = await client.post(url, json=locations_payload)
+                response_http.raise_for_status()
+                data = response_http.json()
             results = data.get("results", [])
             if len(results) != 9:
                 raise ValueError("Incomplete elevation grid returned")
@@ -83,16 +86,16 @@ class ElevationClient:
                 slope_percent=slope_pct,
                 terrain_category=category,
                 freshness=FreshnessBadge(
-                    dataset_name="NASADEM / SRTM 30m Global Elevation Model",
-                    source_org="NASA LP DAAC / USGS",
-                    is_nasa=True,
+                    dataset_name="Open-Elevation API (DEM lineage not verified)",
+                    source_org="Open-Elevation service",
+                    is_nasa=False,
                     status="LIVE",
                     latest_observation_date="Static Terrain Model (2000/2020)",
                     fetched_at_utc=fetched_at,
                     typical_latency="Static dataset (no recent change)",
-                    spatial_resolution="30 meter (1 arc-second)",
-                    caveat="Static terrain elevation model; slope derived from 3x3 neighborhood stencil (~90m).",
-                    docs_url="https://lpdaac.usgs.gov/products/nasadem_hgtv001/",
+                    spatial_resolution="Not verified by this integration",
+                    caveat="Elevation values are returned by Open-Elevation. Underlying DEM source and effective resolution are not verified; slope is estimated from a local 3x3 stencil.",
+                    docs_url="https://open-elevation.com/",
                 ),
             )
             self.cache.set(cache_key, response.model_dump(), fetched_at, 30 * 86400)
@@ -103,19 +106,19 @@ class ElevationClient:
             response = ElevationResponse(
                 latitude=lat_r,
                 longitude=lon_r,
-                elevation_meters=75.0,
-                slope_percent=0.5,
-                terrain_category="Flat (Terai)",
+                elevation_meters=None,
+                slope_percent=None,
+                terrain_category="Unavailable",
                 freshness=FreshnessBadge(
                     dataset_name="NASADEM / SRTM 30m Global Elevation Model",
-                    source_org="NASA LP DAAC",
+                    source_org="Open-Elevation service",
                     is_nasa=True,
                     status="CACHED_FALLBACK",
-                    latest_observation_date="Static Terrain Model",
+                    latest_observation_date=None,
                     fetched_at_utc=utc_now_iso(),
-                    typical_latency="Static dataset",
-                    spatial_resolution="30 meter",
-                    caveat="Using fallback terrain estimate (elevation service unreachable).",
+                    typical_latency="Unknown",
+                    spatial_resolution="Unknown",
+                    caveat="Elevation service unavailable. No default elevation or slope is substituted.",
                     docs_url="https://lpdaac.usgs.gov/products/nasadem_hgtv001/",
                 ),
             )

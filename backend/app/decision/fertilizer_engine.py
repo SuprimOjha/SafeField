@@ -4,8 +4,8 @@ from typing import Literal
 from pydantic import BaseModel
 
 
-DecisionSignal = Literal["APPLY NOW", "WAIT", "APPLY IN SMALLER SPLITS"]
-ConfidenceLevel = Literal["HIGH", "MODERATE", "CAUTION"]
+DecisionSignal = Literal["CONDITIONS LOOK SUITABLE", "WAIT AND RECHECK", "LOCAL REVIEW NEEDED"]
+ConfidenceLevel = Literal["MODERATE", "CAUTION"]
 
 
 class RuleContribution(BaseModel):
@@ -13,6 +13,7 @@ class RuleContribution(BaseModel):
     observed_value: str
     impact: Literal["FAVORABLE", "RISKY", "NEUTRAL"]
     explanation: str
+    evidence_status: str = "DESIGN ASSUMPTION — PENDING EXPERT REVIEW"
 
 
 class DecisionResult(BaseModel):
@@ -22,167 +23,109 @@ class DecisionResult(BaseModel):
     primary_reason: str
     detailed_explanation: str
     rule_contributions: list[RuleContribution]
-    disclaimer: str = "Decision support based on NASA satellite observations and cited agronomic rules. Not formal agronomic advice."
+    disclaimer: str = (
+        "Research prototype only. Thresholds are design assumptions pending review by "
+        "Nepalese agronomists. Check the fertilizer product label, soil test and local "
+        "agricultural extension advice. This is not a safety certification or application rate."
+    )
 
 
 class FertilizerDecisionEngine:
-    """
-    Transparent rule-based fertilizer timing decision engine.
-    No LLM is used for numbers or signals; all evaluations are deterministic.
-    """
+    """Deterministic prototype rules; thresholds are not validated agronomic advice."""
 
     def __init__(self) -> None:
         rules_path = Path(__file__).parent / "rules.json"
-        if rules_path.exists():
-            with open(rules_path, "r", encoding="utf-8") as f:
-                self.rules = json.load(f).get("thresholds", {})
-        else:
-            self.rules = {
-                "recent_rain_heavy_mm": 15.0,
-                "recent_rain_moderate_mm": 5.0,
-                "forecast_rain_heavy_mm": 10.0,
-                "soil_wetness_high": 0.70,
-                "soil_wetness_low": 0.30,
-                "slope_steep_pct": 8.0,
-                "sandy_soil_sand_pct": 55.0,
-            }
+        self.rules = json.loads(rules_path.read_text(encoding="utf-8")).get("thresholds", {}) if rules_path.exists() else {}
 
     def evaluate_timing(
         self,
-        rain_last_72h_mm: float,
-        expected_rain_next_48h_mm: float,
-        soil_wetness: float,
-        sand_percent: float,
-        slope_percent: float,
-        fertilizer_type: str,  # "Urea", "DAP", "Compost/FYM"
-        crop_stage: str,       # "Basal / Planting", "Vegetative / Tillering", "Flowering / Grain Filling"
+        rain_last_72h_mm: float | None,
+        expected_rain_next_48h_mm: float | None,
+        soil_wetness: float | None,
+        sand_percent: float | None,
+        slope_percent: float | None,
+        fertilizer_type: str,
+        crop_stage: str,
         priority_save_money: bool,
     ) -> DecisionResult:
         t = self.rules
         contributions: list[RuleContribution] = []
+        inputs = {
+            "Recent rainfall (nominal 72h)": rain_last_72h_mm,
+            "Open-Meteo forecast (48h)": expected_rain_next_48h_mm,
+            "NASA POWER modeled surface wetness": soil_wetness,
+            "SoilGrids predicted sand fraction": sand_percent,
+            "Elevation-derived slope": slope_percent,
+        }
+        missing = [name for name, value in inputs.items() if value is None]
+        for name, value in inputs.items():
+            contributions.append(RuleContribution(
+                parameter=name,
+                observed_value="Unavailable" if value is None else str(value),
+                impact="NEUTRAL" if value is None else "FAVORABLE",
+                explanation="No value was supplied; this input is not treated as zero or as favorable." if value is None else "Observed/modelled input is available; its threshold remains an unvalidated prototype assumption.",
+            ))
 
-        # Evaluate recent rain
-        if rain_last_72h_mm >= t["recent_rain_heavy_mm"]:
-            contributions.append(
-                RuleContribution(
-                    parameter="Recent Rainfall (72h)",
-                    observed_value=f"{rain_last_72h_mm} mm",
-                    impact="RISKY",
-                    explanation="Heavy rain in the last 72 hours means soil is saturated; applying now risks severe runoff/leaching.",
-                )
-            )
-        else:
-            contributions.append(
-                RuleContribution(
-                    parameter="Recent Rainfall (72h)",
-                    observed_value=f"{rain_last_72h_mm} mm",
-                    impact="FAVORABLE",
-                    explanation="Recent rainfall is moderate or low, providing adequate baseline soil moisture for nutrient uptake.",
-                )
-            )
-
-        # Evaluate 48h forecast rain
-        if expected_rain_next_48h_mm >= t["forecast_rain_heavy_mm"]:
-            contributions.append(
-                RuleContribution(
-                    parameter="2-Day Rain Forecast",
-                    observed_value=f"{expected_rain_next_48h_mm} mm expected",
-                    impact="RISKY",
-                    explanation="Significant rainfall is forecasted in the next 48 hours. Rain will wash surface-applied fertilizer away.",
-                )
-            )
-        else:
-            contributions.append(
-                RuleContribution(
-                    parameter="2-Day Rain Forecast",
-                    observed_value=f"{expected_rain_next_48h_mm} mm expected",
-                    impact="FAVORABLE",
-                    explanation="No heavy rain is forecasted in the immediate 48-hour window.",
-                )
+        if missing:
+            return DecisionResult(
+                signal="LOCAL REVIEW NEEDED",
+                confidence="CAUTION",
+                wait_days_recommended=0,
+                primary_reason="There is not enough reliable data to assess application timing.",
+                detailed_explanation="Unavailable inputs: " + ", ".join(missing) + ". Do not interpret missing values as zero rainfall, dry soil or safe conditions. Check local conditions and consult an agricultural technician.",
+                rule_contributions=contributions,
             )
 
-        # Evaluate soil wetness & texture
-        is_sandy = sand_percent >= t["sandy_soil_sand_pct"]
-        if is_sandy:
-            contributions.append(
-                RuleContribution(
-                    parameter="Soil Texture (Sand %)",
-                    observed_value=f"{sand_percent}% Sand (Sandy)",
-                    impact="RISKY",
-                    explanation="Sandy soils have high percolation rates, leading to rapid leaching of nitrogen fertilizers (like Urea).",
-                )
-            )
-        else:
-            contributions.append(
-                RuleContribution(
-                    parameter="Soil Texture",
-                    observed_value=f"{sand_percent}% Sand (Loamy/Clayey)",
-                    impact="FAVORABLE",
-                    explanation="Balanced loam or clay soil retains nutrients well without excessive leaching.",
-                )
-            )
+        assert rain_last_72h_mm is not None
+        assert expected_rain_next_48h_mm is not None
+        assert soil_wetness is not None
+        assert sand_percent is not None
+        assert slope_percent is not None
 
-        # Evaluate slope
-        is_steep = slope_percent >= t["slope_steep_pct"]
-        if is_steep:
-            contributions.append(
-                RuleContribution(
-                    parameter="Terrain Slope",
-                    observed_value=f"{slope_percent}% (Sloping)",
-                    impact="RISKY",
-                    explanation="Sloping terrain significantly increases surface runoff risk during rainfall events.",
-                )
-            )
-        else:
-            contributions.append(
-                RuleContribution(
-                    parameter="Terrain Slope",
-                    observed_value=f"{slope_percent}% (Flat/Gentle)",
-                    impact="FAVORABLE",
-                    explanation="Flat or gentle terrain minimizes surface runoff losses.",
-                )
-            )
-
-        # Decision Matrix Logic
-        # 1. WAIT if heavy rain expected soon or soil is flooded
-        if expected_rain_next_48h_mm >= t["forecast_rain_heavy_mm"] or rain_last_72h_mm > 25.0:
-            signal: DecisionSignal = "WAIT"
-            wait_days = 3 if expected_rain_next_48h_mm > 20.0 else 2
-            confidence = "HIGH" if expected_rain_next_48h_mm > 15.0 else "MODERATE"
-            primary = f"Wait {wait_days} days before applying fertilizer due to incoming heavy rain."
-            detailed = (
-                f"Open-Meteo forecasts {expected_rain_next_48h_mm} mm of rain in the next 48 hours. "
-                "Applying fertilizer now risks washing nutrients away before crop roots can absorb them."
-            )
-
-        # 2. APPLY IN SMALLER SPLITS if sandy soil, sloping terrain, or highly volatile fertilizer (Urea)
-        elif (is_sandy or is_steep) and fertilizer_type == "Urea":
-            signal = "APPLYIN SMALLER SPLITS" if False else "APPLY IN SMALLER SPLITS"
+        heavy_forecast = expected_rain_next_48h_mm >= t.get("forecast_rain_heavy_mm", 10.0)
+        recent_heavy = rain_last_72h_mm >= t.get("recent_rain_heavy_mm", 15.0)
+        if heavy_forecast or recent_heavy:
+            contributions.append(RuleContribution(
+                parameter="Rain-related caution",
+                observed_value=f"recent={rain_last_72h_mm} mm; forecast={expected_rain_next_48h_mm} mm",
+                impact="RISKY",
+                explanation="Prototype threshold indicates a reason to pause and recheck local weather and field conditions.",
+            ))
+            signal: DecisionSignal = "WAIT AND RECHECK"
+            wait_days = 2 if heavy_forecast else 1
+            primary = "Rain-related conditions suggest waiting and checking again."
+            detail = "This is a conservative screening flag, not a validated fertilizer schedule. Reassess after the rain event and follow the product label and local extension advice."
+        elif slope_percent >= t.get("slope_steep_pct", 8.0) or sand_percent >= t.get("sandy_soil_sand_pct", 55.0):
+            contributions.append(RuleContribution(
+                parameter="Field loss-risk screening",
+                observed_value=f"sand={sand_percent}%; slope={slope_percent}%",
+                impact="RISKY",
+                explanation="Texture and slope may affect nutrient movement; the numeric cut-offs are design assumptions pending expert review.",
+            ))
+            signal = "LOCAL REVIEW NEEDED"
             wait_days = 0
-            confidence = "HIGH"
-            primary = "Apply in smaller split doses to prevent leaching and runoff losses."
-            detailed = (
-                f"Your field has { 'sandy soil' if is_sandy else 'sloping terrain' } "
-                f"and you selected {fertilizer_type}. Applying all fertilizer at once risks heavy loss; "
-                "splitting the application across 2–3 smaller doses protects your investment."
-            )
-
-        # 3. APPLY NOW if conditions are favorable
+            primary = "Local soil and field review is recommended before deciding."
+            detail = "Do not infer a smaller fertilizer dose from this screen. Confirm crop nutrient needs, soil test results and recommended application rates with a local technician."
         else:
-            signal = "APPLY NOW"
+            signal = "CONDITIONS LOOK SUITABLE"
             wait_days = 0
-            confidence = "HIGH" if soil_wetness >= 0.35 else "MODERATE"
-            primary = "Conditions are favorable for fertilizer application today."
-            detailed = (
-                "Recent rainfall is low, no heavy storms are forecasted for the next 48 hours, "
-                "and soil moisture is within an optimal range for nutrient uptake."
-            )
+            primary = "The available indicators do not trigger the prototype's rain or terrain cautions."
+            detail = "This does not establish that fertilizer is needed or that application is safe. Check the product label, crop-specific recommendation, soil test and local conditions."
 
+        # The cost-priority flag is intentionally non-operative: it must never reduce
+        # a recommended rate, suppress a warning, or alter this prototype's signal.
+        contributions.append(RuleContribution(
+            parameter="Save-money preference",
+            observed_value="Selected" if priority_save_money else "Not selected",
+            impact="NEUTRAL",
+            explanation="This preference does not change timing, nutrient rate, warnings or the decision signal.",
+            evidence_status="USER PREFERENCE ONLY — NO DECISION EFFECT",
+        ))
         return DecisionResult(
             signal=signal,
-            confidence=confidence,
+            confidence="CAUTION",
             wait_days_recommended=wait_days,
             primary_reason=primary,
-            detailed_explanation=detailed,
+            detailed_explanation=detail,
             rule_contributions=contributions,
         )

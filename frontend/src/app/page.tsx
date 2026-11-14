@@ -39,6 +39,7 @@ export default function SafeFieldNepalApp() {
   const [selectedLon, setSelectedLon] = useState<number>(87.28);
   const [fertilizerType, setFertilizerType] = useState<string>("Urea");
   const [cropStage, setCropStage] = useState<string>("Vegetative / Tillering");
+  const [sandPercentOverride, setSandPercentOverride] = useState<number | null>(null);
 
   const [assessmentData, setAssessmentData] = useState<FieldAssessmentResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -59,7 +60,7 @@ export default function SafeFieldNepalApp() {
   const handleRunAssessment = async () => {
     setLoading(true);
     try {
-      const data = await fetchFieldAssessment(selectedLat, selectedLon, fertilizerType, cropStage, true);
+      const data = await fetchFieldAssessment(selectedLat, selectedLon, fertilizerType, cropStage, true, sandPercentOverride);
       startTransition(() => {
         setAssessmentData(data);
         setLoading(false);
@@ -72,7 +73,7 @@ export default function SafeFieldNepalApp() {
 
   useEffect(() => {
     handleRunAssessment();
-  }, [selectedLat, selectedLon, fertilizerType, cropStage]);
+  }, [selectedLat, selectedLon, fertilizerType, cropStage, sandPercentOverride]);
 
   const selectTab = (tab: TabId) => {
     setActiveTab(tab);
@@ -218,6 +219,8 @@ export default function SafeFieldNepalApp() {
             setFertilizerType={setFertilizerType}
             cropStage={cropStage}
             setCropStage={setCropStage}
+            sandPercentOverride={sandPercentOverride}
+            onSandOverrideChange={setSandPercentOverride}
             onRunAssessment={handleRunAssessment}
             onProceedToDecision={() => selectTab("decision")}
             lang={lang}
@@ -288,7 +291,7 @@ export default function SafeFieldNepalApp() {
 
           <div>
             <h2 className="text-xs font-extrabold uppercase tracking-[0.16em] text-white">Data & responsible use</h2>
-            <p className="mt-4 text-sm leading-6 text-emerald-50/75">Data sources used across the project include NASA POWER, GPM IMERG, SMAP, NASADEM, Open-Meteo and ISRIC SoilGrids. Availability, spatial resolution and update frequency vary by dataset.</p>
+            <p className="mt-4 text-sm leading-6 text-emerald-50/75">The current assessment calls NASA POWER, Open-Meteo, ISRIC SoilGrids and Open-Elevation. GPM IMERG, SMAP and NASADEM are not connected to this assessment endpoint. Availability, resolution and update frequency vary by source.</p>
             <p className="mt-3 text-xs leading-5 text-emerald-100/60">This tool provides research-informed estimates, not a substitute for field measurements, official land surveys or advice from local agricultural experts. Verify important decisions on the ground.</p>
           </div>
         </div>

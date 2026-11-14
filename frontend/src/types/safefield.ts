@@ -46,9 +46,9 @@ export interface ElevationResponse {
 export interface SoilTextureResponse {
   latitude: number;
   longitude: number;
-  clay_percent: number;
-  silt_percent: number;
-  sand_percent: number;
+  clay_percent: number | null;
+  silt_percent: number | null;
+  sand_percent: number | null;
   texture_class: string;
   freshness: FreshnessBadgeData;
 }
@@ -64,12 +64,12 @@ export interface ForecastResponse {
   longitude: number;
   freshness: FreshnessBadgeData;
   forecast_days: DailyForecastItem[];
-  expected_rain_next_48h_mm: number;
-  expected_rain_next_120h_mm: number;
-  rain_expected_soon: boolean;
+  expected_rain_next_48h_mm: number | null;
+  expected_rain_next_120h_mm: number | null;
+  rain_expected_soon: boolean | null;
 }
 
-export type DecisionSignal = "APPLY NOW" | "WAIT" | "APPLY IN SMALLER SPLITS";
+export type DecisionSignal = "CONDITIONS LOOK SUITABLE" | "WAIT AND RECHECK" | "LOCAL REVIEW NEEDED";
 export type ConfidenceLevel = "HIGH" | "MODERATE" | "CAUTION";
 
 export interface RuleContribution {
@@ -77,6 +77,7 @@ export interface RuleContribution {
   observed_value: string;
   impact: "FAVORABLE" | "RISKY" | "NEUTRAL";
   explanation: string;
+  evidence_status?: string;
 }
 
 export interface DecisionResult {

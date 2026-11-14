@@ -40,22 +40,22 @@ export default function ScreenCDecision({
   const { decision, forecast } = data;
 
   const getSignalTheme = (signal: DecisionSignal) => {
-    if (signal === "APPLY NOW") {
+    if (signal === "CONDITIONS LOOK SUITABLE") {
       return {
         bg: "bg-emerald-800",
         border: "border-emerald-900",
         badgeBg: "bg-emerald-950/50 text-emerald-100",
         icon: <CheckCircle2 className="w-12 h-12 text-emerald-200 shrink-0" />,
-        labelNe: "अहिले मल हाल्नुहोस् (APPLY NOW)",
+        labelNe: "उपलब्ध सूचक अनुकूल देखिन्छ — स्थानीय अवस्था जाँच्नुहोस्",
       };
     }
-    if (signal === "WAIT") {
+    if (signal === "WAIT AND RECHECK") {
       return {
         bg: "bg-rose-800",
         border: "border-rose-900",
         badgeBg: "bg-rose-950/50 text-rose-100",
         icon: <Clock className="w-12 h-12 text-rose-200 shrink-0" />,
-        labelNe: `केही दिन पर्खनुहोस् — ${decision.wait_days_recommended} दिन (WAIT)`,
+        labelNe: `पर्खनुहोस् र पुनः जाँच्नुहोस् — ${decision.wait_days_recommended} दिन`,
       };
     }
     return {
@@ -63,7 +63,7 @@ export default function ScreenCDecision({
       border: "border-amber-900",
       badgeBg: "bg-amber-950/50 text-amber-100",
       icon: <AlertTriangle className="w-12 h-12 text-amber-200 shrink-0" />,
-      labelNe: "थोरै-थोरै गरेर विभाजित गरी हाल्नुहोस् (SPLIT)",
+      labelNe: "स्थानीय कृषि प्राविधिकसँग समीक्षा गर्नुहोस्",
     };
   };
 
@@ -96,6 +96,7 @@ export default function ScreenCDecision({
 
         <p className="mt-4 text-lg font-semibold text-white/95">{decision.primary_reason}</p>
         <p className="mt-2 text-sm text-white/85 leading-relaxed">{decision.detailed_explanation}</p>
+        <p className="mt-4 rounded-xl border border-white/25 bg-white/10 p-3 text-xs leading-5 text-white">Check the fertilizer product label, crop-specific recommendation and a soil test. This prototype does not determine whether fertilizer is needed, set application rates, or certify that application is safe.</p>
       </div>
 
       {/* 5-Day Non-NASA Rain Outlook Strip */}
@@ -196,10 +197,24 @@ export default function ScreenCDecision({
               );
             })}
 
+            {decision.rule_contributions.some((rule) => rule.evidence_status?.includes("PENDING")) && <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-900">Numeric cut-offs are design assumptions pending review by Nepalese agronomists; they are not validated recommendations.</p>}
             <p className="text-xs text-gray-500 pt-2 border-t border-gray-100">{decision.disclaimer}</p>
           </div>
         )}
       </div>
+
+      <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 space-y-3">
+        <div className="flex items-center gap-2 text-emerald-950"><ShieldCheck className="h-5 w-5" /><h3 className="font-extrabold">Stay safe when handling fertilizer</h3></div>
+        <ul className="grid gap-2 text-sm text-emerald-950 sm:grid-cols-2">
+          <li>• Wear suitable gloves and a dust mask when handling dusty products.</li>
+          <li>• Wear long sleeves, long trousers and closed footwear.</li>
+          <li>• Avoid breathing dust; follow the product label and safety data sheet.</li>
+          <li>• Wash hands and exposed skin after handling; change contaminated clothing.</li>
+          <li>• Keep fertilizer in its original labelled container, away from children, food and drinking water.</li>
+          <li>• Do not mix products unless the label or a qualified adviser explicitly permits it.</li>
+        </ul>
+        <p className="text-xs leading-5 text-emerald-900">General precautions only. Follow the specific product label and safety data sheet. Seek medical advice if exposure or illness occurs.</p>
+      </section>
 
       {/* Next Step Navigation */}
       <div className="flex justify-end">

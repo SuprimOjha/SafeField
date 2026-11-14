@@ -34,7 +34,7 @@ export default function ScreenEMethods({ data, lang }: ScreenEMethodsProps) {
         <p className="text-sm text-gray-700 leading-relaxed">
           {lang === "ne"
             ? "सेफ फिल्ड नेपालले मल हाल्ने निर्णयको लागि NASA का आधिकारिक भू-अवलोकन डाटा र प्रमाणित कृषि नियमहरू प्रयोग गर्दछ। कुनै पनि संख्या वा निर्णय अनुमानमा आधारित छैन।"
-            : "Safe Field Nepal combines NASA Earth observation datasets with non-parametric climate statistics and deterministic agronomic rules. Every NASA and non-NASA data stream is explicitly labeled below with live latency and spatial resolution caveats."}
+            : "Safe Field Nepal is a research prototype combining NASA POWER gridded data, non-NASA forecast and soil/terrain services, exploratory statistics and deterministic screening rules. Not every available NASA dataset is connected to the assessment."}
         </p>
 
         {/* Methodology Highlights */}
@@ -42,7 +42,7 @@ export default function ScreenEMethods({ data, lang }: ScreenEMethodsProps) {
           <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-200">
             <h3 className="font-bold text-emerald-950 text-sm mb-1">1. Satellite & Gridded Proxies</h3>
             <p className="text-xs text-gray-700 leading-relaxed">
-              Daily rainfall, air temperature, and surface/root-zone wetness proxies are retrieved from NASA POWER; terrain elevation/slope comes from NASADEM. The current assessment also queries SoilGrids texture and Open-Meteo forecasts. GPM IMERG and SMAP are not yet connected to this assessment endpoint. NASA POWER responses use SQLite caching.
+              Daily rainfall (PRECTOTCORR), air temperature (T2M) and modelled wetness proxies (GWETTOP/GWETROOT) come from NASA POWER. POWER is a coarse reanalysis-based grid (~55 km), with delayed daily values; it is not a field sensor. Terrain is requested from Open-Elevation; this integration does not verify the underlying DEM lineage or resolution. Soil texture comes from predicted ISRIC SoilGrids 250 m topsoil (0–5 cm). Open-Meteo provides the non-NASA forecast. GPM IMERG and SMAP are not connected to this assessment endpoint.
             </p>
           </div>
           <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-200">

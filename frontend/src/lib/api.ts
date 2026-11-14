@@ -8,7 +8,8 @@ export async function fetchFieldAssessment(
   lon: number,
   fertilizerType: string = "Urea",
   cropStage: string = "Vegetative / Tillering",
-  saveMoney: boolean = true
+  saveMoney: boolean = true,
+  sandPercentOverride: number | null = null
 ): Promise<FieldAssessmentResponse> {
   const url = new URL(`${API_BASE_URL}/api/field-assessment`);
   url.searchParams.set("lat", lat.toString());
@@ -16,8 +17,9 @@ export async function fetchFieldAssessment(
   url.searchParams.set("fertilizer_type", fertilizerType);
   url.searchParams.set("crop_stage", cropStage);
   url.searchParams.set("save_money", saveMoney ? "true" : "false");
+  if (sandPercentOverride !== null) url.searchParams.set("sand_percent_override", String(sandPercentOverride));
 
-  const cacheKey = `${STORAGE_PREFIX}${lat.toFixed(2)}:${lon.toFixed(2)}:${fertilizerType}:${cropStage}`;
+  const cacheKey = `${STORAGE_PREFIX}${lat.toFixed(2)}:${lon.toFixed(2)}:${fertilizerType}:${cropStage}:${sandPercentOverride ?? "soilgrids"}`;
 
   try {
     const response = await fetch(url.toString(), {

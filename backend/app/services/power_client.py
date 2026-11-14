@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 from app.cache.sqlite_cache import SQLiteCache
 from app.schemas import DailyWeatherRecord, FreshnessBadge, PowerSummaryResponse
@@ -153,11 +153,14 @@ class NasaPowerClient:
         # Compute recent 24h (latest valid day) and 72h (latest 3 valid days) rainfall
         valid_precip_days = [r for r in records[-7:] if r.precip_mm is not None]
         rain_24h = round(valid_precip_days[-1].precip_mm, 2) if len(valid_precip_days) >= 1 else None
-        rain_72h = (
-            round(sum(r.precip_mm for r in valid_precip_days[-3:] if r.precip_mm is not None), 2)
-            if len(valid_precip_days) >= 3
-            else rain_24h
-        )
+        # Only call this a three-day total when the latest three valid records
+        # are consecutive calendar days. POWER's newest record may itself be delayed.
+        rain_72h = None
+        if len(valid_precip_days) >= 3:
+            last_three = valid_precip_days[-3:]
+            dates = [date.fromisoformat(record.date) for record in last_three]
+            if dates[1] - dates[0] == timedelta(days=1) and dates[2] - dates[1] == timedelta(days=1):
+                rain_72h = round(sum(record.precip_mm for record in last_three if record.precip_mm is not None), 2)
 
         latest_rec = records[-1] if records else None
 
