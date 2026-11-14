@@ -15,7 +15,7 @@ def test_decision_engine_triggers_wait_on_incoming_rain():
     )
     assert res.signal == "WAIT"
     assert res.wait_days_recommended >= 2
-    assert "incoming heavy rain" in res.detailed_explanation.lower()
+    assert "incoming heavy rain" in res.primary_reason.lower()
 
 
 def test_decision_engine_triggers_splits_on_sandy_urea():
