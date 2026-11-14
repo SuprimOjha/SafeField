@@ -8,7 +8,7 @@ NEPAL = ZoneInfo("Asia/Kathmandu")
 
 
 def test_hourly_total_sums_next_complete_48_hours():
-    start = datetime(2026, 11, 14, 12, tzinfo=NEPAL)
+    start = datetime.now(NEPAL).replace(minute=0, second=0, microsecond=0)
     times = [(start + timedelta(hours=i)).strftime("%Y-%m-%dT%H:%M") for i in range(1, 50)]
     hourly = {"time": times, "precipitation": [0.5] * 49}
     assert _hourly_total(hourly, 48) == 24.0
