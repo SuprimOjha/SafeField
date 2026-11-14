@@ -1,0 +1,15 @@
+export const en = {
+  appName: "Safe Field Nepal",
+  tagline: "NASA Earth Data & Climate Evidence for Fertilizer Timing",
+  navHome: "1. Location",
+  navField: "2. My Field",
+  navDecision: "3. Decision",
+  navTrends: "4. Changing Conditions",
+  navMethods: "5. Methods & Data",
+  applyNow: "APPLY NOW",
+  wait: "WAIT",
+  applySplits: "APPLY IN SMALLER SPLITS",
+  whyDrawer: "Why this decision? (View Rules & Evidence)",
+  offlineBanner: "You are offline. Showing last cached NASA observation state with timestamp.",
+  disclaimer: "Decision support based on NASA satellite observations and cited agronomic rules. Not formal agronomic advice.",
+};
