@@ -26,7 +26,7 @@ def parse_field_polygon(raw: str | None) -> list[tuple[float, float]] | None:
         coordinates = json.loads(raw)
     except json.JSONDecodeError as exc:
         raise HTTPException(status_code=422, detail="field_polygon must be a JSON array of [longitude, latitude] pairs.") from exc
-    if not isinstance(coordinates, list) or len(coordinates) < 3 or len(coordinates) > 200:
+    if not isinstance(coordinates, list) or len(coordinates) < 3 or len(coordinates) > 201:
         raise HTTPException(status_code=422, detail="field_polygon must contain between 3 and 200 vertices.")
     points: list[tuple[float, float]] = []
     for point in coordinates:
@@ -41,8 +41,8 @@ def parse_field_polygon(raw: str | None) -> list[tuple[float, float]] | None:
         points.append((lon_value, lat_value))
     if points[0] != points[-1]:
         points.append(points[0])
-    if len(points) < 4:
-        raise HTTPException(status_code=422, detail="A field polygon requires at least three unique vertices.")
+    if len(points) < 4 or len(points) > 201:
+        raise HTTPException(status_code=422, detail="A field polygon requires 3–200 unique vertices.")
     return points
 
 
