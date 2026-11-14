@@ -21,6 +21,39 @@ import {
 
 type TabId = "home" | "field" | "decision" | "trends" | "methods";
 
+function subscribeToLanguage(onChange: () => void) {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener("storage", onChange);
+  window.addEventListener("safefield-language-change", onChange);
+  return () => {
+    window.removeEventListener("storage", onChange);
+    window.removeEventListener("safefield-language-change", onChange);
+  };
+}
+
+function getLanguageSnapshot(): "en" | "ne" {
+  if (typeof window === "undefined") return "ne";
+  try {
+    const saved = window.localStorage.getItem("safefield_language");
+    return saved === "en" || saved === "ne" ? saved : "ne";
+  } catch {
+    return "ne";
+  }
+}
+
+function getServerLanguageSnapshot(): "en" | "ne" {
+  return "ne";
+}
+
+function updateStoredLanguage(next: "en" | "ne") {
+  try {
+    window.localStorage.setItem("safefield_language", next);
+  } catch {
+    // Keep the in-memory/server default when storage is unavailable.
+  }
+  window.dispatchEvent(new Event("safefield-language-change"));
+}
+
 function subscribeToOnlineStatus(onChange: () => void) {
   window.addEventListener("online", onChange);
   window.addEventListener("offline", onChange);
@@ -48,29 +81,9 @@ const NAV_ITEMS = [
 
 export default function SafeFieldNepalApp() {
   const [activeTab, setActiveTab] = useState<TabId>("home");
-  const [lang, setLang] = useState<"en" | "ne">("ne");
-  const [languageLoaded, setLanguageLoaded] = useState(false);
+  const lang = useSyncExternalStore(subscribeToLanguage, getLanguageSnapshot, getServerLanguageSnapshot);
+  const setLang = useCallback(updateStoredLanguage, []);
   const requestSequence = useRef(0);
-
-  useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem("safefield_language");
-      if (saved === "en" || saved === "ne") setLang(saved);
-    } catch {
-      // Language preference remains session-only when storage is unavailable.
-    } finally {
-      setLanguageLoaded(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!languageLoaded) return;
-    try {
-      window.localStorage.setItem("safefield_language", lang);
-    } catch {
-      // Ignore storage restrictions; the in-memory preference still works.
-    }
-  }, [lang, languageLoaded]);
 
   const isOnline = useSyncExternalStore(subscribeToOnlineStatus, getOnlineStatus, getServerOnlineStatus);
   const [partnerLogoVisible, setPartnerLogoVisible] = useState(true);
