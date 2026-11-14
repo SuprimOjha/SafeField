@@ -9,6 +9,7 @@ import ScreenBField from "@/components/ScreenBField";
 import ScreenCDecision from "@/components/ScreenCDecision";
 import ScreenDTrends from "@/components/ScreenDTrends";
 import ScreenEMethods from "@/components/ScreenEMethods";
+import AskAssistant from "@/components/AskAssistant";
 import {
   MapPin,
   SlidersHorizontal,
@@ -199,6 +200,10 @@ export default function SafeFieldNepalApp() {
   const [sandState, setSandState] = useState<number | null | undefined>(undefined);
   const [polygonState, setPolygonState] = useState<[number, number][] | null | undefined>(undefined);
   const [assessmentState, setAssessmentState] = useState<FieldAssessmentResponse | null | undefined>(undefined);
+  // Previous assessment for the Ask assistant what_changed intent. It only
+  // changes when a NEW assessment successfully replaces the old one, so a
+  // failed refresh never corrupts the comparison (honest answer, rule 1).
+  const [previousAssessmentState, setPreviousAssessmentState] = useState<FieldAssessmentResponse | null>(null);
 
   const selectedLat = latState ?? persisted?.lat ?? 26.45;
   const selectedLon = lonState ?? persisted?.lon ?? 87.28;
@@ -288,6 +293,7 @@ export default function SafeFieldNepalApp() {
   // asynchronous request settles, avoiding synchronous state updates in effects.
   const refreshAssessment = useCallback(async () => {
     const requestId = ++requestSequence.current;
+    const outgoing = assessmentData;
     setLoading(true);
     setAssessmentError(null);
     setAssessmentState(null);
@@ -302,7 +308,10 @@ export default function SafeFieldNepalApp() {
         selectedFieldPolygon,
       );
       if (requestId === requestSequence.current) {
-        startTransition(() => setAssessmentState(data));
+        startTransition(() => {
+          setPreviousAssessmentState(outgoing);
+          setAssessmentState(data);
+        });
         updateSession({ assessment: data });
       }
     } catch (err) {
@@ -314,7 +323,7 @@ export default function SafeFieldNepalApp() {
     } finally {
       if (requestId === requestSequence.current) setLoading(false);
     }
-  }, [selectedLat, selectedLon, fertilizerType, cropStage, sandPercentOverride, selectedFieldPolygon, startTransition, updateSession]);
+  }, [selectedLat, selectedLon, fertilizerType, cropStage, sandPercentOverride, selectedFieldPolygon, assessmentData, startTransition, updateSession]);
 
   const handleRunAssessment = useCallback(() => {
     void refreshAssessment();
@@ -498,6 +507,18 @@ export default function SafeFieldNepalApp() {
           })}
         </div>
       </nav>
+
+      <AskAssistant
+        lang={lang}
+        context={{
+          latitude: selectedLat,
+          longitude: selectedLon,
+          answers: { fertilizerType, cropStage, saveMoney: true, sandPercentOverride },
+          assessment: assessmentData,
+          previousAssessment: previousAssessmentState,
+          farmerContent: null,
+        }}
+      />
     </main>
   );
 }

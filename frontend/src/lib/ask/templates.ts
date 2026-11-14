@@ -44,7 +44,9 @@ const REVIEW_LINE: Bi = {
   ne: "यो उत्तर विज्ञ-समीक्षित छैन।",
 };
 
-const LABEL_REMINDER: Bi = {
+// Exported for the Work Package 2 UI: the label-reminder chip must reuse the
+// exact lib wording (rule 2 spirit — the UI never invents its own wording).
+export const LABEL_REMINDER: Bi = {
   en: "Always follow the product label.",
   ne: "सधैं उत्पादनको लेबल पालना गर्नुहोस्।",
 };

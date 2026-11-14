@@ -214,4 +214,23 @@ export const ne: Dictionary = {
   nonOfficialSource: "स्थानीय कृषि कार्यालयसँग जाँच्नुहोस्। गैर-आधिकारिक स्रोतका मात्रा देखाइँदैन।",
   safetyNotesLabel: "सुरक्षा नोट:",
   openSource: "स्रोत खोल्नुहोस्",
+
+  // Ask assistant (Work Package 2 — buttons UI, clarifying flow, read-aloud)
+  askOpen: "सोध्नुहोस्",
+  askOpenAria: "सेफ फिल्ड प्रश्न सहायक खोल्नुहोस्",
+  askTitle: "सेफ फिल्डसँग सोध्नुहोस्",
+  askSubtitle: "प्रश्न छान्नुहोस्। उत्तर यही एपकै डाटा र उपकरणबाट मात्र आउँछ।",
+  askReviewNote: "सहायकका उत्तर अझै विज्ञ-समीक्षित छैनन्।",
+  askClose: "सहायक बन्द गर्नुहोस्",
+  askQuestions: "प्रश्नहरू",
+  askLogLabel: "सहायक कुराकानी",
+  askEmptyLog: "माथिको प्रश्न छान्नुहोस्, उत्तर यहीँ देखिनेछ।",
+  askClear: "कुराकानी खाली गर्नुहोस्",
+  askReadAloud: "पढेर सुनाउनुहोस्",
+  askStopReading: "पढ्न रोक्नुहोस्",
+  askFactsTitle: "यो उत्तरमा प्रयोग भएका मानहरू",
+  askTagUnavailable: "डाटा उपलब्ध छैन",
+  askTagRefusal: "दायरा बाहिर",
+  askTagMedical: "स्वास्थ्य सुरक्षा",
+  askFeelingUnwell: "मल सम्हालेपछि अस्वस्थ महसुस हुनुहुन्छ?",
 };

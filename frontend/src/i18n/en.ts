@@ -212,6 +212,25 @@ export const en = {
   nonOfficialSource: "Check with your local agriculture office. Non-official source quantities are not shown.",
   safetyNotesLabel: "Safety notes:",
   openSource: "open source",
+
+  // Ask assistant (Work Package 2 — buttons UI, clarifying flow, read-aloud)
+  askOpen: "Ask",
+  askOpenAria: "Open the Safe Field question assistant",
+  askTitle: "Ask Safe Field",
+  askSubtitle: "Choose a question. Answers come only from this app's own data and tools.",
+  askReviewNote: "Assistant answers are not expert-reviewed yet.",
+  askClose: "Close assistant",
+  askQuestions: "Questions",
+  askLogLabel: "Assistant conversation",
+  askEmptyLog: "Pick a question above and the answer will appear here.",
+  askClear: "Clear conversation",
+  askReadAloud: "Read aloud",
+  askStopReading: "Stop reading",
+  askFactsTitle: "Values used in this answer",
+  askTagUnavailable: "Data unavailable",
+  askTagRefusal: "Out of scope",
+  askTagMedical: "Health safety",
+  askFeelingUnwell: "Feeling unwell after handling fertilizer?",
 };
 
 export type Dictionary = typeof en;
