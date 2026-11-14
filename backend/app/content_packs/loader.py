@@ -9,8 +9,8 @@ from app.content_packs.models import (
 
 CONTENT_DIR = Path(__file__).resolve().parents[2] / "content"
 DOSE_PATTERN = re.compile(
-    r"\b\d+(?:[.,]\d+)?\s*(?:mg|g|kg|ml|mL|l|L|%|ppm|spoon|cup|litre|liter|ropani|bigha|kattha)\b"
-    r"|\bper\s+hectare\b|\bkg\s*/\s*ha\b|\bg\s*/\s*l\b",
+    r"\b\d+(?:[.,]\d+)?\s*(?:mg|milligrams?|g|grams?|kg|kilograms?|ml|milliliters?|millilitres?|mL|l|litres?|liters?|L|%|ppm|spoons?|tablespoons?|teaspoons?|tbsp|tsp|cups?|tonnes?|tons?|quintals?|bags?|sacks?|packets?|ropani|bigha|kattha)\b"
+    r"|\bper\s+(?:hectare|ropani|bigha|kattha)\b|\bkg\s*/\s*ha\b|\bg\s*/\s*l\b",
     re.IGNORECASE,
 )
 
@@ -77,6 +77,8 @@ def validate_content(content_dir: Path = CONTENT_DIR) -> dict[str, Any]:
                         raise ValueError("valueMin cannot exceed valueMax")
                     if len(record.shortQuote.split()) > 25:
                         raise ValueError("shortQuote must be no more than 25 words")
+                    if DOSE_PATTERN.search(record.timingSplit):
+                        raise ValueError("fertilizer rates belong in valueMin/valueMax and unitAsPrinted, not timingSplit")
                     if not record.unitAsPrinted.strip():
                         raise ValueError("unitAsPrinted is required exactly as printed")
                 elif kind == "conversion":

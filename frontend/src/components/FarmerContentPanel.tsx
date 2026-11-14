@@ -61,6 +61,9 @@ export default function FarmerContentPanel({ lang }: { lang: "en" | "ne" }) {
             <p className="text-xs text-slate-600">
               Reference only · {source?.title ?? item.sourceKey}, {item.year} · {item.page}
             </p>
+            {item.secondSourceKey && content.sources[item.secondSourceKey] && (
+              <p className="text-xs text-slate-600">Second source: {content.sources[item.secondSourceKey].title} ({content.sources[item.secondSourceKey].authority})</p>
+            )}
             <p className="text-sm text-slate-700">{item.timingSplit}</p>
             <p className="text-xs text-slate-600">
               Follow the product label. Soil testing is recommended. Not a prescription.

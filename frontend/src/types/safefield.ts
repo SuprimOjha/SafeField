@@ -152,6 +152,7 @@ export interface FertilizerReference {
   unitAsPrinted: string;
   timingSplit: string;
   sourceKey: string;
+  secondSourceKey: string | null;
   year: number;
   page: string;
   shortQuote: string;

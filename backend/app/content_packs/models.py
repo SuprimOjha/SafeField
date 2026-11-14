@@ -21,9 +21,9 @@ class FertilizerReference(BaseModel):
     region: str
     nutrientOrProduct: str
     basis: Literal["nutrient", "product"]
-    valueMin: float | None
-    valueMax: float | None
-    unitAsPrinted: str
+    valueMin: float | None = Field(default=None, ge=0)
+    valueMax: float | None = Field(default=None, ge=0)
+    unitAsPrinted: str = Field(min_length=1)
     timingSplit: str
     sourceKey: str
     year: int
@@ -35,7 +35,11 @@ class FertilizerReference(BaseModel):
     reviewer: str | None = None
 
     @model_validator(mode="after")
-    def expert_review_requires_reviewer(self):
+    def validate_reference_bounds(self):
+        if self.valueMin is None and self.valueMax is None:
+            raise ValueError("at least one printed reference bound is required")
+        if self.valueMin is not None and self.valueMax is not None and self.valueMin > self.valueMax:
+            raise ValueError("valueMin cannot exceed valueMax")
         if self.reviewStatus == "expert-reviewed" and not self.reviewer:
             raise ValueError("expert-reviewed fertilizer reference requires reviewer")
         return self
@@ -44,7 +48,7 @@ class FertilizerReference(BaseModel):
 class AreaConversion(BaseModel):
     model_config = ConfigDict(extra="forbid")
     unit: Literal["ropani", "bigha", "kattha", "hectare"]
-    toHectare: float | None
+    toHectare: float | None = Field(default=None, gt=0)
     sourceKey: str
     verified: bool
 
@@ -54,13 +58,13 @@ class HomeRemedy(BaseModel):
     id: str
     crop: str
     problem: str
-    remedyText: str
+    remedyText: str = Field(min_length=5)
     quantitiesAsPrinted: str | None
     preparationNotesAsPrinted: str | None
     sourceKey: str
     evidence: Literal["official", "research", "extension"]
     verified: bool
-    safetyNotes: str
+    safetyNotes: str = Field(min_length=5)
     reviewStatus: Literal["not-expert-reviewed", "expert-reviewed"]
     reviewer: str | None = None
 
