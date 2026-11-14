@@ -76,6 +76,8 @@ export default function ScreenAHome({
   const [locationName, setLocationName] = useState("Biratnagar, Morang");
   const [mapError, setMapError] = useState<string | null>(null);
   const [mapStyle, setMapStyle] = useState<"streets" | "satellite">("streets");
+  const mapStyleRef = useRef(mapStyle);
+  const selectedCoordinatesRef = useRef({ lat: selectedLat, lon: selectedLon });
   const [drawMode, setDrawMode] = useState<DrawMode>("select");
   const [drawPoints, setDrawPoints] = useState<[number, number][]>([]);
   const [fieldArea, setFieldArea] = useState<number | null>(null);
@@ -106,6 +108,10 @@ export default function ScreenAHome({
   useEffect(() => { drawPointsRef.current = drawPoints; }, [drawPoints]);
   useEffect(() => { districtsRef.current = districts; }, [districts]);
   useEffect(() => { drawModeRef.current = drawMode; }, [drawMode]);
+  useEffect(() => { mapStyleRef.current = mapStyle; }, [mapStyle]);
+  useEffect(() => {
+    selectedCoordinatesRef.current = { lat: selectedLat, lon: selectedLon };
+  }, [selectedLat, selectedLon]);
 
   useEffect(() => {
     let cancelled = false;
@@ -157,18 +163,19 @@ export default function ScreenAHome({
     if (!container) return;
 
     setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
-    const map = createMap(container, [selectedLon, selectedLat]);
+    const initialLocation = selectedCoordinatesRef.current;
+    const map = createMap(container, [initialLocation.lon, initialLocation.lat]);
     mapRef.current = map;
     map.addControl(new NavigationControl({ visualizePitch: true }), "top-right");
     map.addControl(new ScaleControl({ unit: "metric" }), "bottom-right");
 
     const marker = new MapLibreMarker({ color: "#047857", draggable: false })
-      .setLngLat([selectedLon, selectedLat]).addTo(map);
+      .setLngLat([initialLocation.lon, initialLocation.lat]).addTo(map);
     markerRef.current = marker;
 
     const installLayers = () => {
       addSatelliteLayer(map);
-      setSatellite(map, mapStyle === "satellite");
+      setSatellite(map, mapStyleRef.current === "satellite");
       if (!map.getSource("nepal-districts") && districtsRef.current.length) {
         map.addSource("nepal-districts", {
           type: "geojson",
