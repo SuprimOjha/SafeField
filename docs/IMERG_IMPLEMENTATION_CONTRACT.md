@@ -2,24 +2,22 @@
 
 ## Current state
 
-The backend exposes an explicit integration status at `GET /api/integrations/imerg/status`. It currently reports `NOT_CONNECTED`; it does not discover, download or process granules. The field assessment does not consume IMERG.
+The field assessment uses a fresh local GPM IMERG Late daily cache when installed. It falls back to NASA POWER only when the IMERG cache is missing/stale and three consecutive POWER daily values are available. The API does not download data during farmer requests. The endpoint GET /api/integrations/imerg/status reports local cache readiness.
 
-## Contract implemented
+## Implemented
+- The contracts module records product, version, Late/Final stream, granule ID, observation interval, processing time, source URL and nominal spatial resolution.
+- The fetch module authenticates through Earthdata, discovers GPM_3IMERGDL daily Late granules, checks required variables/units, and crops to Nepal.
+- The grid cache persists daily grid cells and excludes cells with no valid sample count.
+- The provider reads the latest three consecutive daily cells and rejects stale cache data.
+- The decision engine receives one typed RainfallObservation with source kind and provenance, and records that provenance in its rule contributions.
+- Missing or rejected data are never converted to zero.
 
-- `backend/app/services/imerg/contracts.py` records product, version, Late/Final stream, granule ID, observation interval, processing time, source URL and nominal spatial resolution.
-- Intersecting cells carry an intersection area, precipitation value and explicit quality state.
-- The summary uses an area-weighted mean only when valid spatial coverage meets the configured operational completeness threshold.
-- Missing, suspect and rejected cells are excluded, never converted to zero.
-- Insufficient coverage produces a null estimate and an explicit unavailable/partial status.
+## Remaining before field-level activation
+1. Intersect each IMERG grid-cell polygon with the farmer's selected field polygon and calculate area-weighted values. Current field assessment uses nearest point-cell lookup only.
+2. Verify product-specific quality flags and units against current NASA product documentation.
+3. Keep Late and Final observations separate in API responses and UI.
+4. Preserve all source metadata through any future polygon aggregation and cache changes.
+5. Compare results against local rain gauges and obtain domain-expert review.
+6. Add integration tests with real, documented sample granules.
 
-## Work still required before activation
-
-1. Implement NASA Earthdata authentication and granule discovery/download.
-2. Verify product-specific quality flags and units against official product documentation.
-3. Derive cell-field intersection areas from the actual selected field geometry.
-4. Keep Late and Final observations separate in API responses and UI.
-5. Preserve all source metadata and cache provenance through the full pipeline.
-6. Compare results against local gauges and obtain domain-expert review.
-7. Add integration tests with real, documented sample granules.
-
-Do not use the contract helper as a substitute for a validated IMERG reader. The current test fixtures are synthetic software tests, not scientific validation data.
+Current tests use synthetic fixtures; they validate software logic, not scientific accuracy or live NASA service availability.

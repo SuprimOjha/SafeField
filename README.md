@@ -4,7 +4,7 @@ Safe Field Nepal is a NASA Space Apps Challenge research prototype for exploring
 
 ## Farmer map and location selection
 
-The map uses MapLibre GL JS with OpenFreeMap Bright as the default street basemap and an optional Esri World Imagery overlay. Farmers can select one of Nepal's 77 districts, use GPS, or tap once on the map to place a pin. Drawing a field polygon is optional and estimates area; it is not required to receive a location-based assessment. A polygon does not increase the resolution of the underlying gridded data. The current NASA POWER rainfall grid is coarse (about 55 km); GPM IMERG is not connected to the assessment yet. See [basemap terms and limitations](docs/ESRI_AND_BASEMAP_NOTES.md).
+The map uses MapLibre GL JS with OpenFreeMap Bright as the default street basemap and an optional Esri World Imagery overlay. Farmers can select one of Nepal's 77 districts, use GPS, or tap once on the map to place a pin. Drawing a field polygon is optional and estimates area; it is not required to receive a location-based assessment. A polygon does not increase the resolution of the underlying gridded data. When a fresh GPM IMERG Late daily cache is installed, the assessment uses the nearest 0.1° (~10 km) grid cell; otherwise it falls back to the coarse NASA POWER rainfall grid (~55 km). A selected polygon does not yet produce an area-weighted IMERG field average. See [basemap terms and limitations](docs/ESRI_AND_BASEMAP_NOTES.md).
 
 ## Current assessment inputs
 
@@ -15,7 +15,7 @@ The map uses MapLibre GL JS with OpenFreeMap Bright as the default street basema
 | Predicted soil texture | ISRIC SoilGrids | 250 m prediction for 0–5 cm topsoil; not a field soil test |
 | Elevation and slope estimate | Open-Elevation API | Underlying DEM lineage/resolution are not verified by this integration |
 
-GPM IMERG, SMAP and NASADEM are **not connected** to the current field-assessment endpoint. Do not present them as active decision inputs.
+GPM IMERG Late is an optional cached rainfall input. GPM IMERG Final, SMAP and NASADEM are **not connected** to the current field-assessment endpoint.
 
 ## Decision engine status
 

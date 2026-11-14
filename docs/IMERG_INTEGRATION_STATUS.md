@@ -1,15 +1,20 @@
 # GPM IMERG integration status
 
-**Status: NOT CONNECTED to the field-assessment endpoint.**
+**Status: PARTIALLY INTEGRATED.** The field-assessment endpoint can use a locally cached GPM IMERG Late daily grid. It does not perform live downloads during farmer requests.
 
-The current backend route imports a NASA CMR/GIBS client, but its field assessment does not request GPM IMERG precipitation values. Listing a catalog or map layer is not equivalent to using IMERG as a decision input.
+## Implemented
+- Earthdata Login environment authentication through the fetch-imerg CLI.
+- Discovery of GPM_3IMERGDL daily Late granules using CMR collection version 07 (NASA's GPM directory identifies the current algorithm line as V07B).
+- Nepal bounding-box crop, explicit checks for precipitation and precipitation_cnt, and fail-closed unit validation.
+- Persistent SQLite grid-cell cache with observed UTC date, fetch time, granule ID, stream and version.
+- Read-only ImergLateProvider; the API uses the most recent three consecutive UTC daily grids when fresh.
+- NASA POWER is an explicitly labelled fallback when IMERG is unavailable or stale.
+- GET /api/integrations/imerg/status reports whether a fresh local cache is installed.
 
-## Integration requirements
-1. Select the appropriate GPM IMERG product and latency stream (Late for recent rainfall, Final for retrospective research).
-2. Preserve product version, granule identifiers, observation interval, processing timestamp and spatial resolution.
-3. Extract the grid cells intersecting the selected field polygon or point, with quality flags and missing-data handling.
-4. Keep IMERG Late separate from Final Run in the UI and API.
-5. Compare against local gauges where possible.
-6. Add tests for missing granules, partial coverage, delayed updates and cache expiry.
+## Not yet implemented
+1. Field polygon/cell intersection and area-weighted field aggregation. The current assessment uses the nearest cached IMERG grid-cell centre for the selected point.
+2. Real granule fixture integration tests and gauge comparison.
+3. Automatic propagation of the refresh workflow artifact into the deployed API service's persistent storage.
+4. Full production monitoring for missing days, failed refreshes and dataset version changes.
 
-Until implemented and tested, do not claim that IMERG powers the live decision.
+Late and Final streams remain separate. Do not describe the current point lookup as a polygon-average rainfall estimate or a field-validated agronomic measurement.
