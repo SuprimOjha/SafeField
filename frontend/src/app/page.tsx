@@ -39,6 +39,7 @@ export default function SafeFieldNepalApp() {
   const [selectedLon, setSelectedLon] = useState<number>(87.28);
   const [fertilizerType, setFertilizerType] = useState<string>("Urea");
   const [cropStage, setCropStage] = useState<string>("Vegetative / Tillering");
+  const [sandPercentOverride, setSandPercentOverride] = useState<number | null>(null);
 
   const [assessmentData, setAssessmentData] = useState<FieldAssessmentResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -59,7 +60,7 @@ export default function SafeFieldNepalApp() {
   const handleRunAssessment = async () => {
     setLoading(true);
     try {
-      const data = await fetchFieldAssessment(selectedLat, selectedLon, fertilizerType, cropStage, true);
+      const data = await fetchFieldAssessment(selectedLat, selectedLon, fertilizerType, cropStage, true, sandPercentOverride);
       startTransition(() => {
         setAssessmentData(data);
         setLoading(false);
@@ -72,7 +73,7 @@ export default function SafeFieldNepalApp() {
 
   useEffect(() => {
     handleRunAssessment();
-  }, [selectedLat, selectedLon, fertilizerType, cropStage]);
+  }, [selectedLat, selectedLon, fertilizerType, cropStage, sandPercentOverride]);
 
   const selectTab = (tab: TabId) => {
     setActiveTab(tab);
@@ -218,6 +219,7 @@ export default function SafeFieldNepalApp() {
             setFertilizerType={setFertilizerType}
             cropStage={cropStage}
             setCropStage={setCropStage}
+            onSandOverrideChange={setSandPercentOverride}
             onRunAssessment={handleRunAssessment}
             onProceedToDecision={() => selectTab("decision")}
             lang={lang}
