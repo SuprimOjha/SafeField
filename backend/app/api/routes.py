@@ -94,25 +94,31 @@ async def assess_field(
     # Prefer installed IMERG Late grid cells; use area-weighted polygon coverage when supplied.
     parsed_field_polygon = parse_field_polygon(field_polygon)
     rainfall_observation = ImergLateProvider().get_recent_rain(lat, lon, 72, parsed_field_polygon)
-    if rainfall_observation.status != "AVAILABLE" and power_res.rain_last_72h_mm is not None:
-        records = [record for record in power_res.recent_daily_records if record.precip_mm is not None][-3:]
-        if len(records) == 3:
-            dates = [date.fromisoformat(record.date) for record in records]
-            if dates[1] - dates[0] == timedelta(days=1) and dates[2] - dates[1] == timedelta(days=1):
-                fetched_at = datetime.fromisoformat(power_res.freshness.fetched_at_utc.replace("Z", "+00:00"))
-                rainfall_observation = RainfallObservation(
-                    status="AVAILABLE", amount_mm=power_res.rain_last_72h_mm, window_hours=72,
-                    provenance=RainfallProvenance(
-                        source_name="NASA POWER PRECTOTCORR (fallback when IMERG is unavailable)", kind="fallback",
-                        observed_start_utc=datetime.combine(dates[0], time.min, tzinfo=timezone.utc),
-                        observed_end_utc=datetime.combine(dates[-1] + timedelta(days=1), time.min, tzinfo=timezone.utc),
-                        fetched_at_utc=fetched_at, spatial_resolution=power_res.freshness.spatial_resolution,
-                        latency_note="POWER daily reanalysis-based data, typically delayed 2–4 days; not an IMERG observation.",
-                        dataset="NASA POWER PRECTOTCORR", version="daily API",
-                        units="mm/day summed over three consecutive UTC days",
-                        spatial_method="nearest_grid_cell",
-                    ),
-                )
+    if rainfall_observation.status != "AVAILABLE":
+        # NASA POWER is a coarse (~55 km) reanalysis grid with multi-day latency.
+        # Keep its numeric estimate visible only as regional context in power_summary;
+        # never promote it to an on-field 72-hour rainfall observation or feed it
+        # into the field-timing decision as if rain were verified at this location.
+        power_records = [record for record in power_res.recent_daily_records if record.precip_mm is not None][-3:]
+        power_dates = [record.date for record in power_records]
+        power_context = (
+            f" NASA POWER regional estimate: {power_res.rain_last_72h_mm} mm "
+            f"across available daily records {', '.join(power_dates)} "
+            f"({power_res.freshness.spatial_resolution}); this coarse reanalysis "
+            "is not verification of rainfall at the selected field."
+            if power_res.rain_last_72h_mm is not None and len(power_records) == 3
+            else ""
+        )
+        rainfall_observation = RainfallObservation(
+            status="UNAVAILABLE",
+            amount_mm=None,
+            window_hours=72,
+            provenance=None,
+            unavailable_reason=(
+                "No usable local-scale GPM IMERG rainfall observation is available "
+                "for the selected field and requested window." + power_context
+            ),
+        )
 
     # Evaluate decision engine
     decision_engine = FertilizerDecisionEngine()
