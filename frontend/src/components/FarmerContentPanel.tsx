@@ -87,7 +87,8 @@ export default function FarmerContentPanel({ lang }: { lang: "en" | "ne" }) {
               <p className="text-sm font-semibold text-amber-800">Check with your local agriculture office. Non-official source quantities are not shown.</p>
             )}
             {item.preparationNotesAsPrinted && <p className="text-sm text-slate-600">{item.preparationNotesAsPrinted}</p>}
-            <p className="text-xs text-slate-600">{source?.title ?? item.sourceKey} · {item.evidence} · {item.reviewStatus}</p>
+            <p className="text-sm text-slate-700">Safety notes: {item.safetyNotes}</p>
+            <p className="text-xs text-slate-600">{source?.title ?? item.sourceKey} · {item.evidence} · {item.reviewStatus}{item.reviewer ? " by " + item.reviewer : ""}</p>
             {source?.url && (
               <a className="text-sm font-semibold text-emerald-800 underline" href={source.url} target="_blank" rel="noreferrer">
                 {source.authority} — open source

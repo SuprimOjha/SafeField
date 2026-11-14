@@ -217,7 +217,7 @@ export default function ScreenCDecision({
           <li>• Wash hands and exposed skin after handling; change contaminated clothing.</li>
           <li>• Keep fertilizer in its original labelled container, away from children, food and drinking water.</li>
           <li>• Do not mix products unless the label or a qualified adviser explicitly permits it.</li>
-          <li>• Avoid the hottest part of the day; follow label instructions for wind direction and stop in gusty conditions.</li>
+          <li>• Avoid the hottest part of the day. For label-approved sprays, keep the wind at your back and stop in gusty conditions.</li>
         </ul>
         <p className="text-xs leading-5 text-emerald-900">General guidance only. Follow the specific product label and safety data sheet. Seek medical advice if exposure or illness occurs.</p>
       </section>
