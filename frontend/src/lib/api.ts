@@ -6,6 +6,7 @@ const API_BASE_URL =
   (process.env.NODE_ENV === "production" ? DEFAULT_PRODUCTION_API_URL : "http://127.0.0.1:8000");
 const STORAGE_PREFIX = "safefield_cache_v2:";
 const MAX_OFFLINE_CACHE_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const ASSESSMENT_REQUEST_TIMEOUT_MS = 45_000;
 
 interface CachedAssessment {
   cached_at_utc: string;
@@ -67,6 +68,7 @@ export async function fetchFieldAssessment(
     const response = await fetch(url.toString(), {
       method: "GET",
       headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(ASSESSMENT_REQUEST_TIMEOUT_MS),
     });
     if (!response.ok) throw new Error(`Backend returned ${response.status} ${response.statusText}`);
 
@@ -80,12 +82,18 @@ export async function fetchFieldAssessment(
       }
     }
     return data;
-  } catch {
+  } catch (error) {
     const cached = readOfflineAssessment(cacheKey);
     if (cached) return cached;
 
+    if (error instanceof DOMException && error.name === "TimeoutError") {
+      throw new Error("The field assessment request timed out after 45 seconds. The backend did not respond in time. Please retry.");
+    }
+    if (error instanceof Error && error.message.startsWith("Backend returned ")) {
+      throw error;
+    }
     throw new Error(
-      `Cannot connect to Safe Field backend at ${API_BASE_URL}. No offline assessment less than seven days old is available.`
+      `Cannot connect to Safe Field backend at ${API_BASE_URL}. ${error instanceof Error ? error.message : "Network request failed."} No offline assessment less than seven days old is available.`
     );
   }
 }
