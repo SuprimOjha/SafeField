@@ -114,7 +114,19 @@ class SoilGridsClient:
             self.cache.set(cache_key, response.model_dump(), fetched_at, SOILGRIDS_CACHE_TTL)
             return response
 
-        except Exception:
+        except Exception as exc:
+            stale = self.cache.get(cache_key, allow_stale=True)
+            if stale is not None:
+                payload, fetched_at, _ = stale
+                parsed = SoilTextureResponse.model_validate(payload)
+                parsed.freshness.status = "CACHED_FALLBACK"
+                parsed.freshness.fetched_at_utc = fetched_at
+                parsed.freshness.caveat = (
+                    f"Showing previously cached SoilGrids estimate because the upstream request failed: {exc}. "
+                    + parsed.freshness.caveat
+                )
+                return parsed
+
             return SoilTextureResponse(
                 latitude=lat_r,
                 longitude=lon_r,
