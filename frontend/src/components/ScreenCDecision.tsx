@@ -118,7 +118,7 @@ export default function ScreenCDecision({
         {forecast.forecast_days.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             {forecast.forecast_days.map((day) => {
-              const isWet = day.precipitation_sum_mm >= 5.0;
+              const isWet = day.precipitation_sum_mm !== null && day.precipitation_sum_mm >= 5.0;
               return (
                 <div
                   key={day.date}

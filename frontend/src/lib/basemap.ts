@@ -21,7 +21,7 @@ export function createMap(container: HTMLElement, center: [number, number]): Map
     minZoom: 5,
     maxZoom: 18,
     maxBounds: [[79.8, 26.2], [88.5, 30.6]],
-    attributionControl: true,
+    attributionControl: { compact: true },
   });
 }
 
@@ -55,6 +55,8 @@ export function setSatellite(map: MapLibreMap, enabled: boolean): void {
   map.setLayoutProperty(SATELLITE_LAYER, "visibility", enabled ? "visible" : "none");
 }
 
-export function isSatelliteSourceError(event: { sourceId?: string }): boolean {
-  return event.sourceId === SATELLITE_SOURCE;
+export function isSatelliteSourceError(event: unknown): boolean {
+  if (!event || typeof event !== "object") return false;
+  const candidate = event as { sourceId?: unknown; error?: { sourceId?: unknown } };
+  return candidate.sourceId === SATELLITE_SOURCE || candidate.error?.sourceId === SATELLITE_SOURCE;
 }
