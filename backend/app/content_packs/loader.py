@@ -24,7 +24,7 @@ def validate_content(content_dir: Path = CONTENT_DIR) -> dict[str, Any]:
     report: dict[str, Any] = {
         "status": "ok", "sources": 0, "fertilizer_references": 0,
         "conversions": 0, "home_remedies": 0, "skipped": {}, "warnings": [],
-        "fertilizer": [], "remedies": [], "conversions_data": [],
+        "fertilizer": [], "remedies": [], "conversions_data": [], "source_records": {},
     }
     try:
         raw_sources = _read_json(content_dir / "sources.json")
@@ -41,6 +41,7 @@ def validate_content(content_dir: Path = CONTENT_DIR) -> dict[str, Any]:
         except ValidationError as exc:
             report["warnings"].append(f"sources.{key}: {exc.errors()[0]['msg']}")
     report["sources"] = len(sources)
+    report["source_records"] = {key: source.model_dump() for key, source in sources.items()}
     if report["warnings"]:
         report["status"] = "partial"
 
@@ -71,6 +72,8 @@ def validate_content(content_dir: Path = CONTENT_DIR) -> dict[str, Any]:
                         raise ValueError("at least one printed reference bound is required")
                     if record.valueMin is not None and record.valueMax is not None and record.valueMin > record.valueMax:
                         raise ValueError("valueMin cannot exceed valueMax")
+                    if len(record.shortQuote.split()) > 25:
+                        raise ValueError("shortQuote must be no more than 25 words")
                     if not record.unitAsPrinted.strip():
                         raise ValueError("unitAsPrinted is required exactly as printed")
                 elif kind == "conversion":
