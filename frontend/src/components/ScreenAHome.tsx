@@ -107,6 +107,8 @@ export default function ScreenAHome({
   const [districtLoading, setDistrictLoading] = useState(true);
   const [mapReady, setMapReady] = useState(false);
   const [satelliteAvailable, setSatelliteAvailable] = useState(true);
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
 
   const copy = {
     title: lang === "ne" ? "आफ्नो खेतको स्थान छान्नुहोस्" : "Choose your farm location",
@@ -190,9 +192,22 @@ export default function ScreenAHome({
     map.addControl(new NavigationControl({ visualizePitch: true }), "top-right");
     map.addControl(new ScaleControl({ unit: "metric" }), "bottom-right");
 
-    const marker = new MapLibreMarker({ color: "#047857", draggable: false })
+    const marker = new MapLibreMarker({ color: "#047857", draggable: true })
       .setLngLat([initialLocation.lon, initialLocation.lat]).addTo(map);
     markerRef.current = marker;
+    marker.on("dragend", () => {
+      const point = marker.getLngLat();
+      if (point.lng < 80.0 || point.lng > 88.3 || point.lat < 26.3 || point.lat > 30.5) {
+        marker.setLngLat([selectedCoordinatesRef.current.lon, selectedCoordinatesRef.current.lat]);
+        setMapError("Keep the selected field marker inside the Nepal pilot area.");
+        return;
+      }
+      onLocationSelectRef.current(point.lat, point.lng, "Manually adjusted field");
+      onFieldPolygonSelect(null);
+      setDistrictName("");
+      setLocationName(`Adjusted field · ${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}`);
+      setGpsAccuracy(null);
+    });
 
     const installLayers = () => {
       addSatelliteLayer(map);
@@ -370,22 +385,35 @@ export default function ScreenAHome({
       setMapError("Geolocation is not supported by this browser.");
       return;
     }
+    setGpsLoading(true);
+    setMapError(null);
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
+        setGpsLoading(false);
         if (lat < 26.3 || lat > 30.5 || lon < 80.0 || lon > 88.3) {
-          setMapError("Your GPS location appears to be outside Nepal.");
+          setMapError("Your GPS fix is outside the Nepal pilot area. You can still place or drag the pin manually.");
           return;
         }
+        setGpsAccuracy(position.coords.accuracy);
         setDistrictName("");
         onLocationSelect(lat, lon, "My GPS field");
         onFieldPolygonSelect(null);
-        setLocationName("My GPS field");
+        setLocationName(`GPS fix · ±${Math.round(position.coords.accuracy)} m`);
         markerRef.current?.setLngLat([lon, lat]);
-        mapRef.current?.flyTo({ center: [lon, lat], zoom: 14 });
+        mapRef.current?.flyTo({ center: [lon, lat], zoom: 17 });
       },
-      () => setMapError("Unable to retrieve GPS. Allow location access and use HTTPS or localhost.")
+      (error) => {
+        setGpsLoading(false);
+        const reason = error.code === error.PERMISSION_DENIED
+          ? "Location permission was denied. Allow location access for this site in your browser settings."
+          : error.code === error.POSITION_UNAVAILABLE
+            ? "Your device could not determine a location. Enable device location services or drag the map pin manually."
+            : "GPS timed out. Try again outdoors or drag the map pin to the exact field location.";
+        setMapError(reason);
+      },
+      { enableHighAccuracy: true, timeout: 25000, maximumAge: 0 }
     );
   };
 
@@ -476,7 +504,7 @@ export default function ScreenAHome({
           {drawMode === "draw" && <div className="pointer-events-none absolute left-1/2 top-3 z-[5] -translate-x-1/2 rounded-full bg-emerald-950/90 px-4 py-2 text-xs font-bold text-white shadow-lg">Drawing mode · tap field corners</div>}
           <div className="absolute bottom-3 left-3 z-[5] flex max-w-[calc(100%-24px)] items-center gap-2 rounded-xl border border-white/70 bg-white/95 px-3 py-2.5 text-xs text-slate-700 shadow-lg backdrop-blur">
             <Compass className="h-4 w-4 shrink-0 text-emerald-700" />
-            <span className="truncate">Selected location: <strong className="text-emerald-900">{locationName}</strong> · {selectedLat.toFixed(4)}°N, {selectedLon.toFixed(4)}°E</span>
+            <span className="truncate">Selected location: <strong className="text-emerald-900">{locationName}</strong> · {selectedLat.toFixed(5)}°N, {selectedLon.toFixed(5)}°E{gpsAccuracy !== null ? ` · GPS accuracy ±${Math.round(gpsAccuracy)} m` : ""} · Drag pin to adjust</span>
           </div>
           <div className="absolute bottom-3 right-3 z-[5] max-w-[85%] rounded-lg bg-white/95 px-3 py-2 text-[10px] font-semibold text-slate-700 shadow">
             {mapStyle === "satellite" ? "Sources: Esri, Maxar, Earthstar Geographics, and the GIS User Community." : "OpenFreeMap · © OpenMapTiles · © OpenStreetMap contributors"}
