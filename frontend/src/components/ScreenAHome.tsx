@@ -1,15 +1,22 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Map as MapLibreMap,
   setWorkerUrl,
   Marker as MapLibreMarker,
   NavigationControl,
   ScaleControl,
+  type MapMouseEvent,
+  type Feature,
+  type FeatureCollection,
+  type Polygon,
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { MapPin, Navigation, Compass, ArrowRight } from "lucide-react";
+import {
+  MapPin, Navigation, Compass, ArrowRight, Pencil, Undo2, Trash2,
+  Check, Map as MapIcon, Layers3, LocateFixed, MousePointer2,
+} from "lucide-react";
 
 interface ScreenAHomeProps {
   selectedLat: number;
@@ -19,14 +26,51 @@ interface ScreenAHomeProps {
   lang: "en" | "ne";
 }
 
-const PILOT_LOCATIONS = [
-  { nameEn: "Biratnagar (Morang - Terai Hub)", nameNe: "विराटनगर (मोरङ)", lat: 26.45, lon: 87.28 },
-  { nameEn: "Itahari (Sunsari - Pilot)", nameNe: "इटहरी (सुनसरी)", lat: 26.66, lon: 87.27 },
-  { nameEn: "Bhadrapur (Jhapa - Eastern Terai)", nameNe: "भद्रपुर (झापा)", lat: 26.54, lon: 88.09 },
-  { nameEn: "Ilam Bazaar (Hills Pilot)", nameNe: "इलाम बजार (पहाडी क्षेत्र)", lat: 26.91, lon: 87.92 },
-];
+type DrawMode = "select" | "draw";
+type DistrictProperties = { DISTRICT?: string; PROVINCE?: number; HQ?: string };
+type DistrictFeature = Feature<Polygon | import("geojson").MultiPolygon, DistrictProperties>;
 
-const NEPAL_BOUNDS = { south: 26.3, north: 30.5, west: 80.0, east: 88.3 };
+const NEPAL_BOUNDS: [[number, number], [number, number]] = [[79.8, 26.2], [88.5, 30.6]];
+const EMPTY_FEATURES: FeatureCollection<Polygon> = { type: "FeatureCollection", features: [] };
+const OSM_STYLE = {
+  version: 8 as const,
+  sources: {
+    osm: {
+      type: "raster" as const,
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      tileSize: 256,
+      attribution: "© OpenStreetMap contributors",
+    },
+  },
+  layers: [{ id: "osm-tiles", type: "raster" as const, source: "osm" }],
+};
+
+function getCoordinates(geometry: DistrictFeature["geometry"]): number[][] {
+  const points: number[][] = [];
+  const visit = (value: unknown) => {
+    if (!Array.isArray(value)) return;
+    if (typeof value[0] === "number" && typeof value[1] === "number") {
+      points.push(value as number[]);
+      return;
+    }
+    value.forEach(visit);
+  };
+  visit(geometry.coordinates);
+  return points;
+}
+
+function polygonAreaHectares(points: [number, number][]) {
+  if (points.length < 3) return 0;
+  const radius = 6378137;
+  let area = 0;
+  for (let i = 0; i < points.length; i++) {
+    const [lon1, lat1] = points[i];
+    const [lon2, lat2] = points[(i + 1) % points.length];
+    area += (lon2 - lon1) * Math.PI / 180 *
+      (2 + Math.sin(lat1 * Math.PI / 180) + Math.sin(lat2 * Math.PI / 180));
+  }
+  return Math.abs(area * radius * radius / 2) / 10000;
+}
 
 export default function ScreenAHome({
   selectedLat,
@@ -39,198 +83,337 @@ export default function ScreenAHome({
   const mapRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<MapLibreMarker | null>(null);
   const onLocationSelectRef = useRef(onLocationSelect);
+  const drawPointsRef = useRef<[number, number][]>([]);
   const [locationName, setLocationName] = useState("Biratnagar, Morang");
   const [mapError, setMapError] = useState<string | null>(null);
-  const [mapStyle, setMapStyle] = useState<"streets-v2" | "satellite">("streets-v2");
+  const [mapStyle, setMapStyle] = useState<"streets" | "satellite">("streets");
+  const [drawMode, setDrawMode] = useState<DrawMode>("select");
+  const [drawPoints, setDrawPoints] = useState<[number, number][]>([]);
+  const [fieldArea, setFieldArea] = useState<number | null>(null);
+  const [districts, setDistricts] = useState<DistrictFeature[]>([]);
+  const [districtName, setDistrictName] = useState("");
+  const [districtLoading, setDistrictLoading] = useState(true);
+  const [mapReady, setMapReady] = useState(false);
+
+  const copy = {
+    title: lang === "ne" ? "आफ्नो खेतको स्थान छान्नुहोस्" : "Choose your farm location",
+    subtitle: lang === "ne" ? "जिल्ला छान्नुहोस् वा नक्सामा आफ्नो खेतको सिमाना आफैँ कोर्नुहोस्।" : "Select a district or draw your exact farm boundary directly on the map.",
+    streets: lang === "ne" ? "सडक" : "Streets",
+    satellite: lang === "ne" ? "स्याटेलाइट" : "Satellite",
+    district: lang === "ne" ? "जिल्ला छान्नुहोस्" : "Select district",
+    draw: lang === "ne" ? "आफ्नो खेत कोर्नुहोस्" : "Draw my land",
+    finish: lang === "ne" ? "सीमा पूरा भयो" : "Finish boundary",
+    undo: lang === "ne" ? "पछिल्लो बिन्दु हटाउनुहोस्" : "Undo point",
+    clear: lang === "ne" ? "मेटाउनुहोस्" : "Clear",
+    points: lang === "ne" ? "बिन्दु" : "Points",
+    area: lang === "ne" ? "अनुमानित क्षेत्रफल" : "Estimated area",
+    instruction: lang === "ne" ? "खेतको कुनाकाप्चामा ट्याप गरेर सीमा कोर्नुहोस्। कम्तीमा ३ बिन्दु चाहिन्छ।" : "Tap each corner of your field to draw its boundary. Add at least 3 points, then finish.",
+    gps: lang === "ne" ? "मेरो GPS स्थान" : "Use my GPS",
+  };
+
+  useEffect(() => { onLocationSelectRef.current = onLocationSelect; }, [onLocationSelect]);
+  useEffect(() => { drawPointsRef.current = drawPoints; }, [drawPoints]);
 
   useEffect(() => {
-    onLocationSelectRef.current = onLocationSelect;
-  }, [onLocationSelect]);
+    let cancelled = false;
+    fetch("/data/nepal-districts.geojson")
+      .then((response) => {
+        if (!response.ok) throw new Error("District boundary file is not available.");
+        return response.json();
+      })
+      .then((data: FeatureCollection) => {
+        if (!cancelled) setDistricts(data.features as DistrictFeature[]);
+      })
+      .catch((error) => {
+        console.error("Could not load Nepal district boundaries:", error);
+        if (!cancelled) setMapError("Nepal district boundaries could not be loaded. Refresh the page or check the deployment build.");
+      })
+      .finally(() => { if (!cancelled) setDistrictLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const updateDrawLayer = useCallback((map: MapLibreMap, points: [number, number][]) => {
+    const features: Feature<Polygon>[] = [];
+    if (points.length >= 3) {
+      features.push({
+        type: "Feature",
+        properties: {},
+        geometry: { type: "Polygon", coordinates: [[...points, points[0]]] },
+      });
+    }
+    const source = map.getSource("user-field") as import("maplibre-gl").GeoJSONSource | undefined;
+    source?.setData({ type: "FeatureCollection", features });
+  }, []);
 
   useEffect(() => {
     const container = mapContainerRef.current;
     if (!container) return;
 
     const apiKey = process.env.NEXT_PUBLIC_MAPTILER_KEY;
-    if (!apiKey) {
-      setMapError("MapTiler API key is missing. Add NEXT_PUBLIC_MAPTILER_KEY to frontend/.env.local and restart the dev server.");
-      return;
-    }
+    const styleUrl = mapStyle === "satellite"
+      ? (apiKey ? `https://api.maptiler.com/maps/satellite-v2/style.json?key=${encodeURIComponent(apiKey)}` : null)
+      : (apiKey ? `https://api.maptiler.com/maps/streets-v2/style.json?key=${encodeURIComponent(apiKey)}` : null);
 
     setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
-
     const map = new MapLibreMap({
       container,
-      style: `https://api.maptiler.com/maps/${mapStyle}/style.json?key=${encodeURIComponent(apiKey)}`,
+      style: styleUrl ?? OSM_STYLE,
       center: [selectedLon, selectedLat],
-      zoom: 8,
+      zoom: 7,
       minZoom: 5,
-      maxZoom: 18,
+      maxZoom: 19,
+      maxBounds: NEPAL_BOUNDS,
       attributionControl: true,
     });
     mapRef.current = map;
-
     map.addControl(new NavigationControl({ visualizePitch: true }), "top-right");
     map.addControl(new ScaleControl({ unit: "metric" }), "bottom-right");
 
     const marker = new MapLibreMarker({ color: "#047857", draggable: false })
-      .setLngLat([selectedLon, selectedLat])
-      .addTo(map);
+      .setLngLat([selectedLon, selectedLat]).addTo(map);
     markerRef.current = marker;
 
-    map.on("click", (event) => {
-      const { lat, lng } = event.lngLat;
-      if (
-        lat >= NEPAL_BOUNDS.south &&
-        lat <= NEPAL_BOUNDS.north &&
-        lng >= NEPAL_BOUNDS.west &&
-        lng <= NEPAL_BOUNDS.east
-      ) {
-        const name = `Custom Point (${lat.toFixed(2)}°N, ${lng.toFixed(2)}°E)`;
-        onLocationSelectRef.current(lat, lng, name);
-        setLocationName(name);
+    const installLayers = () => {
+      if (!map.getSource("nepal-districts") && districts.length) {
+        map.addSource("nepal-districts", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: districts },
+        });
+        map.addLayer({
+          id: "district-fill", type: "fill", source: "nepal-districts",
+          paint: { "fill-color": "#16a34a", "fill-opacity": 0.035 },
+        });
+        map.addLayer({
+          id: "district-lines", type: "line", source: "nepal-districts",
+          paint: { "line-color": "#087443", "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.7, 11, 1.6], "line-opacity": 0.85 },
+        });
+      }
+      if (!map.getSource("user-field")) {
+        map.addSource("user-field", { type: "geojson", data: EMPTY_FEATURES });
+        map.addLayer({
+          id: "user-field-fill", type: "fill", source: "user-field",
+          paint: { "fill-color": "#10b981", "fill-opacity": 0.3 },
+        });
+        map.addLayer({
+          id: "user-field-outline", type: "line", source: "user-field",
+          paint: { "line-color": "#047857", "line-width": 3, "line-dasharray": [2, 1] },
+        });
+      }
+    };
+
+    map.on("load", () => {
+      setMapReady(true);
+      setMapError(mapStyle === "satellite" && !apiKey
+        ? "Satellite imagery needs a valid MapTiler key. Streets remain available without a key."
+        : null);
+      installLayers();
+    });
+
+    map.on("style.load", installLayers);
+    map.on("click", (event: MapMouseEvent) => {
+      const { lng, lat } = event.lngLat;
+      if (drawMode === "draw") {
+        const next = [...drawPointsRef.current, [lng, lat] as [number, number]];
+        drawPointsRef.current = next;
+        setDrawPoints(next);
+        updateDrawLayer(map, next);
+        return;
+      }
+      const feature = map.queryRenderedFeatures(event.point, { layers: map.getLayer("district-fill") ? ["district-fill"] : [] })[0] as DistrictFeature | undefined;
+      if (feature?.properties?.DISTRICT) {
+        const name = feature.properties.DISTRICT;
+        setDistrictName(name);
+        setLocationName(`${name} District`);
+        const coords = getCoordinates(feature.geometry);
+        if (coords.length) {
+          const center = coords.reduce((acc, point) => [acc[0] + point[0], acc[1] + point[1]], [0, 0]);
+          const lon = center[0] / coords.length;
+          const latCenter = center[1] / coords.length;
+          onLocationSelectRef.current(latCenter, lon, `${name} District`);
+          marker.setLngLat([lon, latCenter]);
+        }
+      } else {
+        onLocationSelectRef.current(lat, lng, `Selected field (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
+        setLocationName(`Selected field · ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
         marker.setLngLat([lng, lat]);
       }
     });
 
-    map.on("error", () => {
-      setMapError("MapTiler map could not load. Check your API key, allowed origins, and internet connection.");
+    map.on("error", (event) => {
+      console.error("MapLibre map error:", event.error);
+      if (mapStyle === "satellite") {
+        setMapError("Satellite tiles failed to load. Check your MapTiler key and allowed website origins. Switch to Streets to continue.");
+      } else {
+        setMapError("Map tiles could not load. Check your internet connection. District outlines may still be available after the map loads.");
+      }
     });
-    map.on("load", () => setMapError(null));
 
     return () => {
       marker.remove();
       map.remove();
       mapRef.current = null;
       markerRef.current = null;
+      setMapReady(false);
     };
-  }, [mapStyle, selectedLat, selectedLon]);
+  // Recreate only when basemap changes. District data is added after map load below.
+  }, [mapStyle, selectedLat, selectedLon, districts, drawMode, updateDrawLayer]);
 
   useEffect(() => {
-    if (markerRef.current && mapRef.current) {
+    if (markerRef.current && mapRef.current && drawMode === "select") {
       markerRef.current.setLngLat([selectedLon, selectedLat]);
-      mapRef.current.setCenter([selectedLon, selectedLat]);
     }
-  }, [selectedLat, selectedLon]);
+  }, [selectedLat, selectedLon, drawMode]);
 
-  const handleSelectPreset = (loc: typeof PILOT_LOCATIONS[number]) => {
-    onLocationSelect(loc.lat, loc.lon, lang === "ne" ? loc.nameNe : loc.nameEn);
-    setLocationName(lang === "ne" ? loc.nameNe : loc.nameEn);
+  useEffect(() => {
+    if (mapRef.current) updateDrawLayer(mapRef.current, drawPoints);
+  }, [drawPoints, updateDrawLayer]);
+
+  const selectDistrict = (name: string) => {
+    const feature = districts.find((item) => item.properties?.DISTRICT === name);
+    if (!feature) return;
+    const coords = getCoordinates(feature.geometry);
+    if (!coords.length) return;
+    const sum = coords.reduce((acc, point) => [acc[0] + point[0], acc[1] + point[1]], [0, 0]);
+    const lon = sum[0] / coords.length;
+    const lat = sum[1] / coords.length;
+    setDistrictName(name);
+    setLocationName(`${name} District`);
+    onLocationSelect(lat, lon, `${name} District`);
+    markerRef.current?.setLngLat([lon, lat]);
+    mapRef.current?.flyTo({ center: [lon, lat], zoom: 8, essential: true });
+  };
+
+  const beginDrawing = () => {
+    setDrawMode("draw");
+    setDrawPoints([]);
+    setFieldArea(null);
+    setDistrictName("");
+  };
+
+  const undoPoint = () => setDrawPoints((current) => current.slice(0, -1));
+  const clearDrawing = () => { setDrawPoints([]); setFieldArea(null); drawPointsRef.current = []; };
+
+  const finishDrawing = () => {
+    if (drawPoints.length < 3) return;
+    const area = polygonAreaHectares(drawPoints);
+    setFieldArea(area);
+    setDrawMode("select");
+    const center = drawPoints.reduce((acc, point) => [acc[0] + point[0], acc[1] + point[1]], [0, 0]);
+    const lon = center[0] / drawPoints.length;
+    const lat = center[1] / drawPoints.length;
+    setLocationName("My drawn field");
+    onLocationSelect(lat, lon, "My drawn field");
+    markerRef.current?.setLngLat([lon, lat]);
+    mapRef.current?.fitBounds(drawPoints.reduce((bounds, point) => bounds.extend(point), new (require("maplibre-gl").LngLatBounds)(drawPoints[0], drawPoints[0])), { padding: 60, maxZoom: 16 });
   };
 
   const handleUseGps = () => {
-    if (!("geolocation" in navigator)) return;
+    if (!navigator.geolocation) {
+      setMapError("Geolocation is not supported by this browser.");
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
-        if (
-          lat >= NEPAL_BOUNDS.south &&
-          lat <= NEPAL_BOUNDS.north &&
-          lon >= NEPAL_BOUNDS.west &&
-          lon <= NEPAL_BOUNDS.east
-        ) {
-          onLocationSelect(lat, lon, "My Current GPS Field");
-          setLocationName("My Current GPS Field");
-        } else {
-          alert(lang === "ne" ? "तपाईंको GPS स्थान नेपाल बाहिर छ।" : "Your GPS location is outside Nepal pilot bounds.");
+        if (lat < 26.2 || lat > 30.6 || lon < 79.8 || lon > 88.5) {
+          setMapError("Your GPS location appears to be outside Nepal.");
+          return;
         }
+        onLocationSelect(lat, lon, "My GPS field");
+        setLocationName("My GPS field");
+        markerRef.current?.setLngLat([lon, lat]);
+        mapRef.current?.flyTo({ center: [lon, lat], zoom: 14 });
       },
-      () => alert(lang === "ne" ? "GPS लिन सकिएन।" : "Unable to retrieve your GPS location.")
+      () => setMapError("Unable to retrieve GPS. Allow location access and use HTTPS or localhost.")
     );
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-emerald-100">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-          <div>
-            <h2 className="text-2xl font-bold text-emerald-900">
-              {lang === "ne" ? "१. खेत वा स्थान छान्नुहोस्" : "1. Select Your Field Location"}
-            </h2>
-            <p className="text-gray-600 text-sm mt-1">
-              {lang === "ne"
-                ? "नक्सामा क्लिक गर्नुहोस् वा तलबाट पाइलट जिल्ला छान्नुहोस्।"
-                : "Tap anywhere on the map of Nepal or pick a pilot district below."}
-            </p>
-          </div>
-          <button
-            onClick={handleUseGps}
-            className="flex items-center gap-2 bg-emerald-800 hover:bg-emerald-900 text-white px-5 py-3 rounded-xl font-semibold shadow-sm transition"
-          >
-            <Navigation className="w-5 h-5" />
-            {lang === "ne" ? "मेरो हालको स्थान (GPS)" : "Use My GPS Location"}
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-          {PILOT_LOCATIONS.map((loc) => {
-            const isSelected = Math.abs(selectedLat - loc.lat) < 0.05 && Math.abs(selectedLon - loc.lon) < 0.05;
-            return (
-              <button
-                key={loc.nameEn}
-                onClick={() => handleSelectPreset(loc)}
-                className={`p-4 rounded-xl border text-left transition flex flex-col justify-between ${
-                  isSelected
-                    ? "border-emerald-600 bg-emerald-50 ring-2 ring-emerald-600/20"
-                    : "border-gray-200 bg-gray-50/50 hover:bg-white hover:border-emerald-300"
-                }`}
-              >
-                <div className="flex items-center gap-2 text-emerald-800 font-semibold mb-1">
-                  <MapPin className="w-4 h-4 shrink-0" />
-                  <span className="text-sm">{lang === "ne" ? loc.nameNe : loc.nameEn}</span>
-                </div>
-                <span className="text-xs text-gray-500 font-mono">{loc.lat}°N, {loc.lon}°E</span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="flex items-center justify-between gap-3 mb-3">
-          <p className="text-sm font-semibold text-gray-700">Map view</p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setMapStyle("streets-v2")}
-              aria-pressed={mapStyle === "streets-v2"}
-              className={`rounded-lg px-3 py-2 text-sm font-medium border ${mapStyle === "streets-v2" ? "bg-emerald-800 text-white border-emerald-800" : "bg-white text-gray-700 border-gray-200"}`}
-            >
-              Streets
-            </button>
-            <button
-              type="button"
-              onClick={() => setMapStyle("satellite")}
-              aria-pressed={mapStyle === "satellite"}
-              className={`rounded-lg px-3 py-2 text-sm font-medium border ${mapStyle === "satellite" ? "bg-emerald-800 text-white border-emerald-800" : "bg-white text-gray-700 border-gray-200"}`}
-            >
-              Satellite
-            </button>
-          </div>
-        </div>
-
-        <div className="relative w-full h-[400px] rounded-xl overflow-hidden border border-gray-200 shadow-inner">
-          <div ref={mapContainerRef} className="w-full h-full" />
-          {mapError && (
-            <div role="alert" className="absolute top-3 left-3 right-3 z-10 rounded-lg border border-amber-300 bg-amber-50/95 px-3 py-2 text-xs font-medium text-amber-950 shadow-sm">
-              {mapError}
+    <div className="space-y-5">
+      <section className="overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-[0_16px_55px_rgba(15,65,40,0.08)]">
+        <div className="border-b border-emerald-50 bg-gradient-to-r from-[#f2faf5] via-white to-[#f8fbf6] px-5 py-6 sm:px-7">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="max-w-2xl">
+              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-[.15em] text-emerald-800">
+                <LocateFixed className="h-3.5 w-3.5" /> Nepal field mapping
+              </div>
+              <h2 className="text-2xl font-extrabold tracking-tight text-[#123c2b] sm:text-3xl">{copy.title}</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{copy.subtitle}</p>
             </div>
-          )}
-          <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-lg shadow border border-gray-200 text-xs text-gray-700 font-medium flex items-center gap-2">
-            <Compass className="w-4 h-4 text-emerald-700" />
-            <span>Selected: <strong className="text-emerald-900">{locationName}</strong> ({selectedLat.toFixed(2)}°N, {selectedLon.toFixed(2)}°E)</span>
+            <button onClick={handleUseGps} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-800 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-900/15 transition hover:bg-emerald-900">
+              <Navigation className="h-4 w-4" /> {copy.gps}
+            </button>
           </div>
         </div>
 
-        <div className="mt-6 flex justify-end">
-          <button
-            onClick={onProceedToField}
-            className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-md transition"
-          >
-            {lang === "ne" ? "माटो र बाली विवरण प्रविष्ट गर्नुहोस्" : "Next: Enter Soil & Crop Details"}
-            <ArrowRight className="w-5 h-5" />
+        <div className="grid gap-3 border-b border-slate-100 bg-white p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:p-5">
+          <label className="block">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">{copy.district}</span>
+            <select value={districtName} onChange={(event) => selectDistrict(event.target.value)} disabled={districtLoading || districts.length === 0}
+              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 sm:max-w-md">
+              <option value="">{districtLoading ? "Loading Nepal districts…" : "Choose one of Nepal’s 77 districts"}</option>
+              {[...districts].sort((a,b) => (a.properties?.DISTRICT ?? "").localeCompare(b.properties?.DISTRICT ?? "")).map((item) => (
+                <option key={item.properties?.DISTRICT} value={item.properties?.DISTRICT}>{item.properties?.DISTRICT}</option>
+              ))}
+            </select>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => { setDrawMode("select"); }} className={`inline-flex h-11 items-center gap-2 rounded-xl border px-4 text-sm font-bold transition ${drawMode === "select" ? "border-emerald-700 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white text-slate-600"}`}>
+              <MousePointer2 className="h-4 w-4" /> {copy.district}
+            </button>
+            <button onClick={beginDrawing} className={`inline-flex h-11 items-center gap-2 rounded-xl px-4 text-sm font-bold shadow-sm transition ${drawMode === "draw" ? "bg-emerald-950 text-white" : "bg-emerald-700 text-white hover:bg-emerald-800"}`}>
+              <Pencil className="h-4 w-4" /> {copy.draw}
+            </button>
+          </div>
+        </div>
+
+        {drawMode === "draw" && (
+          <div className="flex flex-col gap-3 border-b border-emerald-100 bg-emerald-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+            <div className="flex items-start gap-2 text-xs leading-5 text-emerald-950">
+              <Pencil className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{copy.instruction} <strong>{drawPoints.length} {copy.points}</strong></span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={undoPoint} disabled={!drawPoints.length} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 text-xs font-bold text-emerald-900 disabled:opacity-40"><Undo2 className="h-3.5 w-3.5" />{copy.undo}</button>
+              <button onClick={clearDrawing} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3 text-xs font-bold text-rose-700"><Trash2 className="h-3.5 w-3.5" />{copy.clear}</button>
+              <button onClick={finishDrawing} disabled={drawPoints.length < 3} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-emerald-800 px-3 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"><Check className="h-3.5 w-3.5" />{copy.finish}</button>
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-white px-4 py-3 sm:px-5">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-600"><Layers3 className="h-4 w-4 text-emerald-700" /> Map layers</div>
+          <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1">
+            <button type="button" onClick={() => setMapStyle("streets")} aria-pressed={mapStyle === "streets"} className={`rounded-lg px-4 py-2 text-xs font-bold transition ${mapStyle === "streets" ? "bg-white text-emerald-900 shadow-sm" : "text-slate-500 hover:text-slate-900"}`}>{copy.streets}</button>
+            <button type="button" onClick={() => setMapStyle("satellite")} aria-pressed={mapStyle === "satellite"} className={`rounded-lg px-4 py-2 text-xs font-bold transition ${mapStyle === "satellite" ? "bg-white text-emerald-900 shadow-sm" : "text-slate-500 hover:text-slate-900"}`}>{copy.satellite}</button>
+          </div>
+        </div>
+
+        <div className="relative mx-3 mb-3 h-[440px] overflow-hidden rounded-2xl border border-slate-200 bg-[#eaf1e9] shadow-inner sm:mx-5 sm:h-[560px]">
+          <div ref={mapContainerRef} className="h-full w-full" />
+          {!mapReady && <div className="absolute inset-0 z-[2] flex items-center justify-center bg-[#edf4ec]/80 text-sm font-semibold text-emerald-900 backdrop-blur-[2px]">Loading Nepal map…</div>}
+          {mapError && <div role="alert" className="absolute left-3 right-3 top-3 z-10 rounded-xl border border-amber-300 bg-amber-50/95 px-4 py-3 text-xs font-medium leading-5 text-amber-950 shadow-lg">{mapError}</div>}
+          {drawMode === "draw" && <div className="pointer-events-none absolute left-1/2 top-3 z-[5] -translate-x-1/2 rounded-full bg-emerald-950/90 px-4 py-2 text-xs font-bold text-white shadow-lg">Drawing mode · tap field corners</div>}
+          <div className="absolute bottom-3 left-3 z-[5] flex max-w-[calc(100%-24px)] items-center gap-2 rounded-xl border border-white/70 bg-white/95 px-3 py-2.5 text-xs text-slate-700 shadow-lg backdrop-blur">
+            <Compass className="h-4 w-4 shrink-0 text-emerald-700" />
+            <span className="truncate">Selected: <strong className="text-emerald-900">{locationName}</strong> · {selectedLat.toFixed(4)}°N, {selectedLon.toFixed(4)}°E</span>
+          </div>
+          <div className="absolute bottom-3 right-3 z-[5] rounded-lg bg-white/95 px-3 py-2 text-[10px] font-semibold text-slate-500 shadow">© OpenStreetMap · MapTiler</div>
+        </div>
+
+        <div className="flex flex-col gap-3 px-4 pb-5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-600">
+            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-5 rounded-sm border border-emerald-700 bg-emerald-200/70" /> District boundaries</span>
+            {fieldArea !== null && <span className="font-bold text-emerald-900">{copy.area}: {fieldArea.toFixed(3)} ha</span>}
+            <span>{districts.length || 0} districts {districtLoading ? "loading…" : "available"}</span>
+          </div>
+          <button onClick={onProceedToField} className="inline-flex min-h-12 items-center justify-center gap-3 rounded-xl bg-emerald-800 px-7 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-emerald-900/15 transition hover:-translate-y-0.5 hover:bg-emerald-900">
+            {lang === "ne" ? "माटो र बाली विवरण भर्नुहोस्" : "Next: Enter Soil & Crop Details"} <ArrowRight className="h-4 w-4" />
           </button>
         </div>
-      </div>
+      </section>
+      <p className="px-1 text-[11px] leading-5 text-slate-500">District boundaries are administrative reference data. A hand-drawn field boundary is an approximate outline from map clicks; verify it on the ground before using it for official land measurement.</p>
     </div>
   );
 }
