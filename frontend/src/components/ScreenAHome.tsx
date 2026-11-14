@@ -107,7 +107,7 @@ export default function ScreenAHome({
 
   const copy = {
     title: lang === "ne" ? "आफ्नो खेतको स्थान छान्नुहोस्" : "Choose your farm location",
-    subtitle: lang === "ne" ? "जिल्ला छान्नुहोस् वा नक्सामा आफ्नो खेतको सिमाना आफैँ कोर्नुहोस्।" : "Select a district or draw your exact farm boundary directly on the map.",
+    subtitle: lang === "ne" ? "जिल्ला छान्नुहोस् वा नक्सामा आफ्नो खेतको सिमाना आफैँ कोर्नुहोस्।" : "Choose a district, use GPS or tap once to place a pin. Drawing a boundary is optional.",
     streets: lang === "ne" ? "सडक" : "Streets",
     satellite: lang === "ne" ? "स्याटेलाइट" : "Satellite",
     district: lang === "ne" ? "जिल्ला छान्नुहोस्" : "Select district",
@@ -117,7 +117,7 @@ export default function ScreenAHome({
     clear: lang === "ne" ? "मेटाउनुहोस्" : "Clear",
     points: lang === "ne" ? "बिन्दु" : "Points",
     area: lang === "ne" ? "अनुमानित क्षेत्रफल" : "Estimated area",
-    instruction: lang === "ne" ? "खेतको कुनाकाप्चामा ट्याप गरेर सीमा कोर्नुहोस्। कम्तीमा ३ बिन्दु चाहिन्छ।" : "Tap each corner of your field to draw its boundary. Add at least 3 points, then finish.",
+    instruction: lang === "ne" ? "खेतको कुनाकाप्चामा ट्याप गरेर सीमा कोर्नुहोस्। कम्तीमा ३ बिन्दु चाहिन्छ।" : "Optional: tap at least 3 field corners to estimate the boundary and area.",
     gps: lang === "ne" ? "मेरो GPS स्थान" : "Use my GPS",
   };
 
@@ -433,7 +433,7 @@ export default function ScreenAHome({
             <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">{copy.district}</span>
             <select value={districtName} onChange={(event) => selectDistrict(event.target.value)} disabled={districtLoading || districts.length === 0}
               className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 sm:max-w-md">
-              <option value="">{districtLoading ? "Loading Nepal districts…" : "Choose one of Nepal’s 77 districts"}</option>
+              <option value="">{districtLoading ? "Loading Nepal districts…" : "Choose a district (77 districts)"}</option>
               {[...districts].sort((a,b) => (a.properties?.DISTRICT ?? "").localeCompare(b.properties?.DISTRICT ?? "")).map((item) => (
                 <option key={item.properties?.DISTRICT} value={item.properties?.DISTRICT}>{item.properties?.DISTRICT}</option>
               ))}
@@ -478,7 +478,7 @@ export default function ScreenAHome({
           {drawMode === "draw" && <div className="pointer-events-none absolute left-1/2 top-3 z-[5] -translate-x-1/2 rounded-full bg-emerald-950/90 px-4 py-2 text-xs font-bold text-white shadow-lg">Drawing mode · tap field corners</div>}
           <div className="absolute bottom-3 left-3 z-[5] flex max-w-[calc(100%-24px)] items-center gap-2 rounded-xl border border-white/70 bg-white/95 px-3 py-2.5 text-xs text-slate-700 shadow-lg backdrop-blur">
             <Compass className="h-4 w-4 shrink-0 text-emerald-700" />
-            <span className="truncate">Selected: <strong className="text-emerald-900">{locationName}</strong> · {selectedLat.toFixed(4)}°N, {selectedLon.toFixed(4)}°E</span>
+            <span className="truncate">Selected location: <strong className="text-emerald-900">{locationName}</strong> · {selectedLat.toFixed(4)}°N, {selectedLon.toFixed(4)}°E</span>
           </div>
           <div className="absolute bottom-3 right-3 z-[5] max-w-[85%] rounded-lg bg-white/95 px-3 py-2 text-[10px] font-semibold text-slate-700 shadow">
             {mapStyle === "satellite" ? "Sources: Esri, Maxar, Earthstar Geographics, and the GIS User Community." : "OpenFreeMap · © OpenMapTiles · © OpenStreetMap contributors"}
