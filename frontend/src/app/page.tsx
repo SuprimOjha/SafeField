@@ -416,7 +416,7 @@ export default function SafeFieldNepalApp() {
             </div>
           </header>
 
-          <section className="flex w-full flex-1 flex-col px-3 py-5 pb-28 sm:px-6 sm:py-7 lg:px-8 lg:py-8 lg:pb-8">
+          <section className="flex w-full flex-1 flex-col px-3 pb-28 pt-5 sm:px-6 sm:pb-32 sm:pt-7 lg:px-8 lg:pb-8 lg:pt-7">
             {activeTab === "home" && (
               <ScreenAHome
                 selectedLat={selectedLat}

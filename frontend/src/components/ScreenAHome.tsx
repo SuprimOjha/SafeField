@@ -924,11 +924,11 @@ export default function ScreenAHome({
           {mapError && <div role="alert" className="absolute left-3 right-3 top-3 z-10 rounded-lg border border-amber bg-amber-soft/95 px-4 py-3 text-xs font-medium leading-5 text-amber-ink shadow-float">{mapError}</div>}
           {drawMode === "draw" && <div className="pointer-events-none absolute left-1/2 top-3 z-[5] -translate-x-1/2 rounded-full bg-charcoal/90 px-4 py-2 text-xs font-bold text-white shadow-float">{copy.drawingMode}</div>}
           {walkCorners.length > 0 && <div className="pointer-events-none absolute left-1/2 top-3 z-[5] -translate-x-1/2 rounded-full bg-charcoal/90 px-4 py-2 text-xs font-bold text-white shadow-float">{copy.walkModePill}</div>}
-          <div className="tnum absolute bottom-3 left-3 z-[5] flex max-w-[calc(100%-24px)] items-center gap-2 rounded-full border border-divider bg-white/95 px-3 py-2.5 text-xs text-ink-soft shadow-float backdrop-blur">
+          <div className="tnum absolute bottom-3 left-3 z-[5] flex max-w-[calc(100%-24px)] items-center gap-2 rounded-full border border-divider bg-white/95 px-3 py-2.5 text-xs text-ink-soft shadow-float backdrop-blur sm:max-w-[calc(100%-180px)]">
             <Compass className="h-4 w-4 shrink-0 text-leaf" />
             <span className="truncate">{copy.selectedLocation} <strong className="font-semibold text-forest">{locationName}</strong> · {selectedLat.toFixed(5)}°N, {selectedLon.toFixed(5)}°E{gpsAccuracy !== null ? ` · GPS ±${Math.round(gpsAccuracy)} m` : ""} · {copy.dragPin}</span>
           </div>
-          <div className="absolute bottom-3 right-3 z-[5] max-w-[85%] rounded-full bg-white/92 px-3 py-2 text-[10px] font-semibold text-ink-muted">
+          <div className="absolute bottom-16 right-3 z-[5] max-w-[85%] rounded-full bg-white/92 px-3 py-2 text-[10px] font-semibold text-ink-muted">
             {mapStyle === "satellite" ? copy.attributionSatellite : copy.attributionStreets}
           </div>
         </div>

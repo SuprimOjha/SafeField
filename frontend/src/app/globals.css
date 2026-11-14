@@ -126,6 +126,11 @@ input {
 .maplibregl-ctrl-group button span {
   filter: hue-rotate(100deg) saturate(0.7);
 }
+/* The app renders its own attribution pill per map style; hide the redundant
+   built-in control to avoid collisions with the location chip. */
+.maplibregl-ctrl-attrib {
+  display: none !important;
+}
 
 @media (prefers-reduced-motion: reduce) {
   *,
