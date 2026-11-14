@@ -1,14 +1,15 @@
+from datetime import date
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
 
 class SourceRecord(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
     title: str = Field(min_length=3)
     authority: str = Field(min_length=2)
     year: int = Field(ge=1900)
     url: HttpUrl
-    accessed: str = Field(min_length=10)
+    accessed: date
     official: bool
     language: str = Field(min_length=2)
 
