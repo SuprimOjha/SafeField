@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from typing import Literal
 from pydantic import BaseModel
+from app.services.rainfall import RainfallObservation
 
 
 DecisionSignal = Literal["CONDITIONS LOOK SUITABLE", "WAIT AND RECHECK", "LOCAL REVIEW NEEDED"]
@@ -47,7 +48,10 @@ class FertilizerDecisionEngine:
         fertilizer_type: str,
         crop_stage: str,
         priority_save_money: bool,
+        rainfall_observation: RainfallObservation | None = None,
     ) -> DecisionResult:
+        if rainfall_observation is not None:
+            rain_last_72h_mm = rainfall_observation.amount_mm if rainfall_observation.status == "AVAILABLE" else None
         t = self.rules
         contributions: list[RuleContribution] = []
         inputs = {
@@ -58,6 +62,19 @@ class FertilizerDecisionEngine:
             "Elevation-derived slope": slope_percent,
         }
         missing = [name for name, value in inputs.items() if value is None]
+        if rainfall_observation is not None:
+            if rainfall_observation.provenance is None:
+                rainfall_detail = "Rainfall source unavailable; no provenance supplied."
+            else:
+                source = rainfall_observation.provenance
+                rainfall_detail = f"{source.source_name}; kind={source.kind}; observed {source.observed_start_utc.isoformat()} to {source.observed_end_utc.isoformat()}; fetched {source.fetched_at_utc.isoformat()}."
+            contributions.append(RuleContribution(
+                parameter="Rainfall provenance",
+                observed_value="Unavailable" if rainfall_observation.amount_mm is None else f"{rainfall_observation.amount_mm} mm over {rainfall_observation.window_hours} hours",
+                impact="NEUTRAL",
+                explanation=rainfall_detail,
+                evidence_status="SOURCE PROVENANCE — NUMERIC SCREENING THRESHOLD PENDING EXPERT REVIEW",
+            ))
         for name, value in inputs.items():
             contributions.append(RuleContribution(
                 parameter=name,

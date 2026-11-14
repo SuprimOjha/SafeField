@@ -93,6 +93,7 @@ async def assess_field(
         fertilizer_type=fertilizer_type,
         crop_stage=crop_stage,
         priority_save_money=save_money,
+        rainfall_observation=rainfall_observation,
     )
 
     # Compute climate trend (heavy rain days per season over historical records)
