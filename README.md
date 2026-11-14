@@ -2,6 +2,10 @@
 
 Safe Field Nepal is a NASA Space Apps Challenge research prototype for exploring field location, gridded weather context, predicted soil texture and cautious fertilizer-timing screening in Nepal.
 
+## Farmer map and location selection
+
+The map uses MapLibre GL JS with OpenFreeMap Bright as the default street basemap and an optional Esri World Imagery overlay. Farmers can select one of Nepal's 77 districts, use GPS, or tap once on the map to place a pin. Drawing a field polygon is optional and estimates area; it is not required to receive a location-based assessment. A polygon does not increase the resolution of the underlying gridded data. The current NASA POWER rainfall grid is coarse (about 55 km); GPM IMERG is not connected to the assessment yet. See [basemap terms and limitations](docs/ESRI_AND_BASEMAP_NOTES.md).
+
 ## Current assessment inputs
 
 | Input | Provider | Role and limitation |
