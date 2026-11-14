@@ -117,29 +117,43 @@ export default function ScreenCDecision({
         </div>
 
         {forecast.forecast_days.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            {forecast.forecast_days.map((day) => {
-              const isWet = day.precipitation_sum_mm !== null && day.precipitation_sum_mm >= 5.0;
-              return (
-                <div
-                  key={day.date}
-                  className={`p-3.5 rounded-xl border text-center ${
-                    isWet ? "bg-blue-50 border-blue-300" : "bg-gray-50 border-gray-200"
-                  }`}
-                >
-                  <div className="text-xs font-semibold text-gray-600">{day.date}</div>
-                  <div className={`text-xl font-bold mt-1 ${isWet ? "text-blue-900" : "text-gray-900"}`}>
-                    {day.precipitation_sum_mm ?? "N/A"} <span className="text-xs font-normal">{day.precipitation_sum_mm === null ? "" : "mm"}</span>
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3 text-xs text-gray-600">
+              <span className={`rounded-full px-2.5 py-1 font-bold ${forecast.freshness.status === "LIVE" ? "bg-emerald-100 text-emerald-900" : "bg-amber-100 text-amber-900"}`}>
+                {forecast.freshness.status === "LIVE" ? "LIVE MODEL FORECAST" : "CACHED FORECAST"}
+              </span>
+              <span>Fetched: {new Date(forecast.freshness.fetched_at_utc).toLocaleString()}</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {forecast.forecast_days.map((day) => {
+                const isWet = day.precipitation_sum_mm !== null && day.precipitation_sum_mm >= 5.0;
+                return (
+                  <div
+                    key={day.date}
+                    className={`p-3.5 rounded-xl border ${isWet ? "bg-blue-50 border-blue-300" : "bg-gray-50 border-gray-200"}`}
+                  >
+                    <div className="text-xs font-semibold text-gray-600">{day.date}</div>
+                    <div className={`text-xl font-bold mt-1 ${isWet ? "text-blue-900" : "text-gray-900"}`}>
+                      {day.precipitation_sum_mm ?? "N/A"} <span className="text-xs font-normal">{day.precipitation_sum_mm === null ? "" : "mm rain"}</span>
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">
+                      {day.precipitation_probability_max !== null ? `${day.precipitation_probability_max}% rain chance` : "Rain chance unavailable"}
+                    </div>
+                    <div className="mt-2 border-t border-gray-200 pt-2 space-y-1 text-xs text-gray-600">
+                      <div>Temperature: {day.temperature_2m_min_c ?? "—"}° to {day.temperature_2m_max_c ?? "—"}°C</div>
+                      <div>Max wind: {day.wind_speed_10m_max_kmh ?? "—"} km/h</div>
+                      <div>Rain hours: {day.precipitation_hours ?? "—"}</div>
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {day.precipitation_probability_max !== null
-                      ? `${day.precipitation_probability_max}% prob.`
-                      : "Outlook"}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+            <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
+              <p className="text-sm font-semibold text-blue-950">Next 48 hours: {forecast.expected_rain_next_48h_mm === null ? "Unavailable" : `${forecast.expected_rain_next_48h_mm} mm forecast precipitation`}</p>
+              <p className="mt-1 text-xs text-blue-900">Hourly model precipitation summed over the next 48 complete forecast hours. This is a model estimate, not an observed rainfall measurement.</p>
+              <p className="mt-2 text-xs text-blue-900">{forecast.freshness.caveat}</p>
+            </div>
+          </>
         ) : (
           <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4">
             <p className="text-sm font-semibold text-amber-950">
