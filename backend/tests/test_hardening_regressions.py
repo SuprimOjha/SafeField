@@ -124,3 +124,10 @@ def test_point_lookup_rejects_38_valid_half_hour_samples(tmp_path):
     result = cache.get_recent_rain(27.0, 85.0, 72)
     assert result.status == "UNAVAILABLE"
     assert "39" in (result.unavailable_reason or "")
+
+
+def test_point_lookup_accepts_39_valid_half_hour_samples(tmp_path):
+    cache = make_cache(tmp_path, counts=(39, 39, 39))
+    result = cache.get_recent_rain(27.0, 85.0, 72)
+    assert result.status == "AVAILABLE"
+    assert result.amount_mm == 6.0
