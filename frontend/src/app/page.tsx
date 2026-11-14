@@ -265,15 +265,38 @@ export default function SafeFieldNepalApp() {
           })}
         </div>
       </nav>
-      <footer className="mt-auto border-t border-emerald-950/10 bg-white">
-        <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-4 py-6 text-center sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8 lg:text-left">
+      <footer className="mt-auto border-t border-emerald-950/10 bg-[#102f24] text-white">
+        <div className="mx-auto grid max-w-[1440px] gap-9 px-5 py-10 sm:px-8 md:grid-cols-2 lg:grid-cols-[1.25fr_0.8fr_1.2fr] lg:gap-12 lg:px-10 lg:py-12">
           <div>
-            <p className="text-xs font-bold text-slate-700">Safe Field Nepal <span className="font-normal text-slate-400">· NASA International Space Apps Challenge 2026</span></p>
-            <p className="mt-1 text-[11px] text-slate-400">Evidence-led field decisions for Nepal's farming communities.</p>
+            <img src="/logo.png" alt="Safe Field logo" className="h-12 w-auto max-w-[210px] object-contain object-left" />
+            <p className="mt-3 max-w-sm text-sm leading-6 text-emerald-50/75">Earth intelligence for every field. Safe Field Nepal helps farmers explore satellite, weather and environmental evidence alongside their own field information.</p>
+            <p className="mt-4 text-xs font-semibold text-emerald-200">NASA International Space Apps Challenge 2026</p>
           </div>
-          <p className="text-[10px] leading-relaxed text-slate-400 lg:max-w-md lg:text-right">
-            Data sources: NASA POWER, GPM IMERG, SMAP, NASADEM, Open-Meteo and ISRIC SoilGrids.
-          </p>
+
+          <div>
+            <h2 className="text-xs font-extrabold uppercase tracking-[0.16em] text-white">Explore</h2>
+            <ul className="mt-4 space-y-3 text-sm text-emerald-50/75">
+              {NAV_ITEMS.map((item) => (
+                <li key={item.id}>
+                  <button type="button" onClick={() => { selectTab(item.id); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="transition hover:text-white focus-visible:outline-none focus-visible:underline">
+                    {item.labelEn}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h2 className="text-xs font-extrabold uppercase tracking-[0.16em] text-white">Data & responsible use</h2>
+            <p className="mt-4 text-sm leading-6 text-emerald-50/75">Data sources used across the project include NASA POWER, GPM IMERG, SMAP, NASADEM, Open-Meteo and ISRIC SoilGrids. Availability, spatial resolution and update frequency vary by dataset.</p>
+            <p className="mt-3 text-xs leading-5 text-emerald-100/60">This tool provides research-informed estimates, not a substitute for field measurements, official land surveys or advice from local agricultural experts. Verify important decisions on the ground.</p>
+          </div>
+        </div>
+        <div className="border-t border-white/10">
+          <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-5 py-4 text-[11px] text-emerald-100/55 sm:px-8 md:flex-row md:items-center md:justify-between lg:px-10">
+            <span>© {new Date().getFullYear()} Safe Field Nepal. Built for Nepal's farming communities.</span>
+            <span>Earth intelligence for every field.</span>
+          </div>
         </div>
       </footer>
     </main>
