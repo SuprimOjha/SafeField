@@ -80,3 +80,8 @@ def test_cache_rejects_non_whole_day_window(tmp_path):
 def test_cache_reports_fresh_recent_data(tmp_path):
     cache = make_cache(tmp_path)
     assert cache.has_fresh_data() is True
+
+
+def test_empty_cache_is_not_reported_as_ready(tmp_path):
+    cache = ImergGridCache(str(tmp_path / "empty.sqlite"))
+    assert cache.has_fresh_data() is False
