@@ -4,7 +4,7 @@ This document describes only the current `GET /api/field-assessment` integration
 
 | Input | Current source | Role | Important limitation |
 |---|---|---|---|
-| Rainfall | NASA GPM IMERG Late daily cache when fresh; NASA POWER PRECTOTCORR fallback | 72-hour total from the latest three complete UTC daily grids; POWER is used only when IMERG cache is missing/stale | IMERG is 0.1° (~10 km) and uses nearest cached grid cell for a point; POWER is much coarser (~55 km) and may lag several days |
+| Rainfall | NASA GPM IMERG Late daily cache when fresh; NASA POWER PRECTOTCORR fallback | 72-hour total from the latest three complete UTC daily grids; POWER is used only when IMERG cache is missing/stale | IMERG is 0.1° (~10 km): point selection uses nearest cell; drawn polygons use equal-area cell intersections with at least 80% daily coverage. POWER is much coarser (~55 km) and may lag several days |
 | Temperature | NASA POWER daily point API | Historical context | Gridded reanalysis-based data; not an on-farm sensor |
 | Surface/root wetness | NASA POWER GWETTOP/GWETROOT | Modelled wetness proxies | Not SMAP observations, not in-situ probes, and not volumetric water content |
 | Forecast | Open-Meteo | Next 48-hour rain outlook | Non-NASA forecast; model grid and forecast uncertainty apply |

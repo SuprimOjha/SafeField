@@ -25,7 +25,7 @@ The command searches the most recent completed UTC days, walks back up to five a
 
 - Product: GPM IMERG Late daily, `GPM_3IMERGDL`, CMR collection version `07` (NASA GPM currently documents the V07B algorithm line).
 - Daily precipitation field: `precipitation`, in mm/day; valid-sample count: `precipitation_cnt`.
-- Grid: 0.1° (~10 km). The cache stores cell centres, not a surveyed field boundary average.
+- Grid: 0.1° (~10 km). The cache stores 0.1° grid-cell centres and treats them as cell footprints for equal-area polygon intersection. This is a grid-derived screening estimate, not a surveyed field boundary measurement.
 - The observed UTC date is stored separately from fetch time. Publication delay varies; do not label fetch time as observation time.
 - The current V07 daily Late product is kept separate from V07 Final research data. Re-check NASA CMR for product/version changes before a later deployment; V08 transition notices exist and the code deliberately fails closed if variable names/units change.
 

@@ -53,6 +53,10 @@ export async function fetchFieldAssessment(
       if (cached) {
         const parsed: FieldAssessmentResponse = JSON.parse(cached);
         parsed.power_summary.freshness.status = "CACHED_FALLBACK";
+        if (parsed.rainfall_observation.provenance) {
+          parsed.rainfall_observation.provenance.kind = "fallback";
+          parsed.rainfall_observation.provenance.latency_note += " Browser local cache fallback; original observation timestamps are unchanged.";
+        }
         return parsed;
       }
     }
