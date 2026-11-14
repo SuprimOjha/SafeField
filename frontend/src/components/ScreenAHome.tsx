@@ -13,6 +13,7 @@ import {
 } from "maplibre-gl";
 import type { Feature, FeatureCollection, Geometry, Polygon, MultiPolygon } from "geojson";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { createMap, addSatelliteLayer, setSatellite } from "@/lib/basemap";
 import {
   MapPin, Navigation, Compass, ArrowRight, Pencil, Undo2, Trash2,
   Check, Map as MapIcon, Layers3, LocateFixed, MousePointer2,
@@ -48,9 +49,6 @@ function rasterStyle(tileUrl: string, attribution: string) {
   };
 }
 
-const STREET_STYLE_URL = "https://tiles.openfreemap.org/styles/bright";
-const ESRI_IMAGERY_TILES =
-  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 
 function getCoordinates(geometry: DistrictFeature["geometry"]): number[][] {
   const points: number[][] = [];
@@ -176,16 +174,7 @@ export default function ScreenAHome({
     if (!container) return;
 
     setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
-    const map = new MapLibreMap({
-      container,
-      style: STREET_STYLE_URL,
-      center: [selectedLon, selectedLat],
-      zoom: 7,
-      minZoom: 5,
-      maxZoom: 19,
-      maxBounds: NEPAL_BOUNDS,
-      attributionControl: true,
-    });
+    const map = createMap(container, [selectedLon, selectedLat]);
     mapRef.current = map;
     map.addControl(new NavigationControl({ visualizePitch: true }), "top-right");
     map.addControl(new ScaleControl({ unit: "metric" }), "bottom-right");
@@ -195,22 +184,8 @@ export default function ScreenAHome({
     markerRef.current = marker;
 
     const installLayers = () => {
-      if (!map.getSource("esri-world-imagery")) {
-        map.addSource("esri-world-imagery", {
-          type: "raster",
-          tiles: [ESRI_IMAGERY_TILES],
-          tileSize: 256,
-          maxzoom: 18,
-          attribution: "Sources: Esri, Maxar, Earthstar Geographics, and the GIS User Community.",
-        });
-        const firstLabelLayer = map.getStyle().layers?.find((layer) => layer.type === "symbol")?.id;
-        map.addLayer({
-          id: "esri-world-imagery-layer",
-          type: "raster",
-          source: "esri-world-imagery",
-          layout: { visibility: mapStyle === "satellite" ? "visible" : "none" },
-        }, firstLabelLayer);
-      }
+      addSatelliteLayer(map);
+      setSatellite(map, mapStyle === "satellite");
       if (!map.getSource("nepal-districts") && districtsRef.current.length) {
         map.addSource("nepal-districts", {
           type: "geojson",
@@ -273,7 +248,7 @@ export default function ScreenAHome({
 
     map.on("error", (event) => {
       console.error("MapLibre map error:", event.error);
-      if (event.sourceId === "esri-world-imagery") {
+      if (event.sourceId === "esri-satellite") {
         setSatelliteAvailable(false);
         setMapStyle("streets");
         setMapError("Satellite imagery is unavailable here. The OpenFreeMap street map remains selected.");
@@ -295,8 +270,8 @@ export default function ScreenAHome({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (map?.getLayer("esri-world-imagery-layer")) {
-      map.setLayoutProperty("esri-world-imagery-layer", "visibility", mapStyle === "satellite" ? "visible" : "none");
+    if (map?.getLayer("esri-satellite-layer")) {
+      setSatellite(map, mapStyle === "satellite");
     }
   }, [mapStyle, mapReady]);
 
