@@ -1,7 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import maplibregl, { type Map as MapLibreMap, type Marker as MapLibreMarker } from "maplibre-gl";
+import {
+  Map as MapLibreMap,
+  Marker as MapLibreMarker,
+  NavigationControl,
+  ScaleControl,
+} from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MapPin, Navigation, Compass, ArrowRight } from "lucide-react";
 
@@ -51,7 +56,7 @@ export default function ScreenAHome({
       return;
     }
 
-    const map = new maplibregl.Map({
+    const map = new MapLibreMap({
       container,
       style: `https://api.maptiler.com/maps/${mapStyle}/style.json?key=${encodeURIComponent(apiKey)}`,
       center: [selectedLon, selectedLat],
@@ -62,10 +67,10 @@ export default function ScreenAHome({
     });
     mapRef.current = map;
 
-    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
-    map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-right");
+    map.addControl(new NavigationControl({ visualizePitch: true }), "top-right");
+    map.addControl(new ScaleControl({ unit: "metric" }), "bottom-right");
 
-    const marker = new maplibregl.Marker({ color: "#047857", draggable: false })
+    const marker = new MapLibreMarker({ color: "#047857", draggable: false })
       .setLngLat([selectedLon, selectedLat])
       .addTo(map);
     markerRef.current = marker;
