@@ -47,3 +47,10 @@ def test_regression_helpers_use_recent_utc_days(tmp_path):
     result = cache.get_recent_rain(27.0, 85.0, 72)
     assert result.status == "AVAILABLE"
     assert result.amount_mm == 6.0
+
+
+def test_zero_precipitation_is_a_valid_measurement(tmp_path):
+    cache = make_cache(tmp_path, values=(0.0, 0.0, 0.0))
+    result = cache.get_recent_rain(27.0, 85.0, 72)
+    assert result.status == "AVAILABLE"
+    assert result.amount_mm == 0.0
