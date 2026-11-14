@@ -131,3 +131,15 @@ def test_point_lookup_accepts_39_valid_half_hour_samples(tmp_path):
     result = cache.get_recent_rain(27.0, 85.0, 72)
     assert result.status == "AVAILABLE"
     assert result.amount_mm == 6.0
+
+
+def test_point_lookup_rejects_a_gap_between_daily_granules(tmp_path):
+    cache = ImergGridCache(str(tmp_path / "gap.sqlite"))
+    today = datetime.now(timezone.utc).date()
+    fetched = datetime.now(timezone.utc)
+    for offset in (1, 2, 4):
+        day = today - timedelta(days=offset)
+        cache.store_daily_grid(day, [27.0], [85.0], [[1.0]], [[48]], f"granule-{day}", fetched)
+    result = cache.get_recent_rain(27.0, 85.0, 72)
+    assert result.status == "UNAVAILABLE"
+    assert "gap" in (result.unavailable_reason or "")
