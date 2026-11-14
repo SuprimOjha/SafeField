@@ -198,3 +198,11 @@ def test_polygon_rejects_insufficient_cached_spatial_coverage(tmp_path):
     result = cache.get_recent_rain(27.0, 85.0, 72, polygon)
     assert result.status == "UNAVAILABLE"
     assert "coverage" in (result.unavailable_reason or "")
+
+
+def test_polygon_intersection_works_when_grid_centre_is_outside_field(tmp_path):
+    cache = make_cache(tmp_path)
+    tiny_field = field_box(85.02, 27.02, 85.04, 27.04)
+    result = cache.get_recent_rain(27.03, 85.03, 72, tiny_field)
+    assert result.status == "AVAILABLE"
+    assert result.provenance.spatial_method == "area_weighted_polygon"
