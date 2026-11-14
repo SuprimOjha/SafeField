@@ -1,7 +1,44 @@
 import { FieldAssessmentResponse } from "@/types/safefield";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
-const STORAGE_PREFIX = "safefield_cache_v1:";
+const STORAGE_PREFIX = "safefield_cache_v2:";
+const MAX_OFFLINE_CACHE_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+interface CachedAssessment {
+  cached_at_utc: string;
+  data: FieldAssessmentResponse;
+}
+
+function readOfflineAssessment(cacheKey: string): FieldAssessmentResponse | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(cacheKey);
+    if (!raw) return null;
+
+    const cached = JSON.parse(raw) as CachedAssessment;
+    if (!cached || typeof cached !== "object" || !cached.data || !cached.cached_at_utc) return null;
+
+    const cachedAt = Date.parse(cached.cached_at_utc);
+    if (!Number.isFinite(cachedAt) || Date.now() - cachedAt > MAX_OFFLINE_CACHE_AGE_MS || cachedAt > Date.now()) {
+      return null;
+    }
+
+    const data = cached.data;
+    for (const source of [data.power_summary, data.elevation, data.soil_texture, data.forecast]) {
+      source.freshness.status = "CACHED_FALLBACK";
+      source.freshness.caveat += ` Browser offline cache captured at ${cached.cached_at_utc}; the source observation time is unchanged.`;
+    }
+    if (data.rainfall_observation.provenance) {
+      data.rainfall_observation.provenance.kind = "fallback";
+      data.rainfall_observation.provenance.latency_note += " Browser local cache fallback; original observation timestamps are unchanged.";
+    }
+    return data;
+  } catch {
+    // Storage can be disabled, quota-limited, or contain malformed JSON.
+    return null;
+  }
+}
 
 export async function fetchFieldAssessment(
   lat: number,
@@ -26,43 +63,26 @@ export async function fetchFieldAssessment(
   try {
     const response = await fetch(url.toString(), {
       method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
+      headers: { Accept: "application/json" },
     });
-
-    if (!response.ok) {
-      throw new Error(`Backend returned ${response.status} ${response.statusText}`);
-    }
+    if (!response.ok) throw new Error(`Backend returned ${response.status} ${response.statusText}`);
 
     const data: FieldAssessmentResponse = await response.json();
-
     if (typeof window !== "undefined") {
       try {
-        window.localStorage.setItem(cacheKey, JSON.stringify(data));
+        const envelope: CachedAssessment = { cached_at_utc: new Date().toISOString(), data };
+        window.localStorage.setItem(cacheKey, JSON.stringify(envelope));
       } catch {
-        // Ignore storage quota errors
+        // Ignore disabled storage and quota errors; live results remain usable.
       }
     }
-
     return data;
   } catch {
-    // Fallback to browser localStorage cache if offline or backend unreachable
-    if (typeof window !== "undefined") {
-      const cached = window.localStorage.getItem(cacheKey);
-      if (cached) {
-        const parsed: FieldAssessmentResponse = JSON.parse(cached);
-        parsed.power_summary.freshness.status = "CACHED_FALLBACK";
-        if (parsed.rainfall_observation.provenance) {
-          parsed.rainfall_observation.provenance.kind = "fallback";
-          parsed.rainfall_observation.provenance.latency_note += " Browser local cache fallback; original observation timestamps are unchanged.";
-        }
-        return parsed;
-      }
-    }
+    const cached = readOfflineAssessment(cacheKey);
+    if (cached) return cached;
 
     throw new Error(
-      `Cannot connect to Safe Field backend at ${API_BASE_URL}. Make sure FastAPI (uvicorn) is running on port 8000.`
+      `Cannot connect to Safe Field backend at ${API_BASE_URL}. No offline assessment less than seven days old is available.`
     );
   }
 }
