@@ -13,10 +13,10 @@ import {
 } from "maplibre-gl";
 import type { Feature, FeatureCollection, Geometry, Polygon, MultiPolygon } from "geojson";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { createMap, addSatelliteLayer, setSatellite } from "@/lib/basemap";
+import { createMap, addSatelliteLayer, setSatellite, isSatelliteSourceError } from "@/lib/basemap";
 import {
   MapPin, Navigation, Compass, ArrowRight, Pencil, Undo2, Trash2,
-  Check, Map as MapIcon, Layers3, LocateFixed, MousePointer2,
+  Check, Layers3, LocateFixed, MousePointer2,
 } from "lucide-react";
 
 interface ScreenAHomeProps {
@@ -31,25 +31,7 @@ type DrawMode = "select" | "draw";
 type DistrictProperties = { DISTRICT?: string; PROVINCE?: number; HQ?: string };
 type DistrictFeature = Feature<Polygon | MultiPolygon, DistrictProperties>;
 
-const NEPAL_BOUNDS: [[number, number], [number, number]] = [[79.8, 26.2], [88.5, 30.6]];
 const EMPTY_FEATURES: FeatureCollection<Polygon> = { type: "FeatureCollection", features: [] };
-function rasterStyle(tileUrl: string, attribution: string) {
-  return {
-    version: 8 as const,
-    sources: {
-      basemap: {
-        type: "raster" as const,
-        tiles: [tileUrl],
-        tileSize: 256,
-        maxzoom: 19,
-        attribution,
-      },
-    },
-    layers: [{ id: "basemap-tiles", type: "raster" as const, source: "basemap" }],
-  };
-}
-
-
 function getCoordinates(geometry: DistrictFeature["geometry"]): number[][] {
   const points: number[][] = [];
   const visit = (value: unknown) => {
@@ -109,6 +91,7 @@ export default function ScreenAHome({
     streets: lang === "ne" ? "सडक" : "Streets",
     satellite: lang === "ne" ? "स्याटेलाइट" : "Satellite",
     district: lang === "ne" ? "जिल्ला छान्नुहोस्" : "Select district",
+    tap: lang === "ne" ? "नक्सामा पिन राख्नुहोस्" : "Tap to drop a pin",
     draw: lang === "ne" ? "आफ्नो खेत कोर्नुहोस्" : "Draw my land",
     finish: lang === "ne" ? "सीमा पूरा भयो" : "Finish boundary",
     undo: lang === "ne" ? "पछिल्लो बिन्दु हटाउनुहोस्" : "Undo point",
@@ -248,7 +231,7 @@ export default function ScreenAHome({
 
     map.on("error", (event) => {
       console.error("MapLibre map error:", event.error);
-      if (event.sourceId === "esri-satellite") {
+      if (isSatelliteSourceError(event)) {
         setSatelliteAvailable(false);
         setMapStyle("streets");
         setMapError("Satellite imagery is unavailable here. The OpenFreeMap street map remains selected.");
@@ -416,7 +399,7 @@ export default function ScreenAHome({
           </label>
           <div className="flex flex-wrap gap-2">
             <button onClick={() => { drawModeRef.current = "select"; setDrawMode("select"); if (mapRef.current) mapRef.current.getCanvas().style.cursor = ""; }} className={`inline-flex h-11 items-center gap-2 rounded-xl border px-4 text-sm font-bold transition ${drawMode === "select" ? "border-emerald-700 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white text-slate-600"}`}>
-              <MousePointer2 className="h-4 w-4" /> {copy.district}
+              <MousePointer2 className="h-4 w-4" /> {copy.tap}
             </button>
             <button onClick={beginDrawing} className={`inline-flex h-11 items-center gap-2 rounded-xl px-4 text-sm font-bold shadow-sm transition ${drawMode === "draw" ? "bg-emerald-950 text-white" : "bg-emerald-700 text-white hover:bg-emerald-800"}`}>
               <Pencil className="h-4 w-4" /> {copy.draw}
