@@ -8,8 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "copy:maplibre-workers": "node scripts/copy-maplibre-workers.mjs",
-    "predev": "npm run copy:maplibre-workers",
-    "prebuild": "npm run copy:maplibre-workers"
+    "predev": "npm run copy:maplibre-workers && npm run prepare:nepal-data",
+    "prebuild": "npm run copy:maplibre-workers && npm run prepare:nepal-data",
+    "prepare:nepal-data": "node scripts/prepare-nepal-data.cjs"
   },
   "dependencies": {
     "lucide-react": "^1.72.0",
@@ -17,7 +18,8 @@
     "next": "16.4.6",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "recharts": "^3.10.1"
+    "recharts": "^3.10.1",
+    "nepal-geojson": "5.0.0-alpha"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "4.3.3",
