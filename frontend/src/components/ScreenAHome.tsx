@@ -33,28 +33,21 @@ export default function ScreenAHome({
 
   const [locationName, setLocationName] = useState("Biratnagar, Morang");
   const [mapError, setMapError] = useState<string | null>(null);
-  const [mapProvider, setMapProvider] = useState<"carto" | "osm">("carto");
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
+    const mapTilerKey = process.env.NEXT_PUBLIC_MAPTILER_KEY;
+    if (!mapTilerKey) {
+      setMapError("MapTiler key is missing. Add NEXT_PUBLIC_MAPTILER_KEY to frontend/.env.local and restart the dev server.");
+      return;
+    }
+
     if (!mapRef.current) {
       mapRef.current = new maplibregl.Map({
         container: mapContainerRef.current,
-        // Use a raster basemap to avoid vector-style glyph/sprite and tile failures.
-        // CARTO Voyager is keyless and includes OSM street/place labels.
-        style: {
-          version: 8,
-          sources: {
-            "carto-voyager": {
-              type: "raster",
-              tiles: ["https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"],
-              tileSize: 256,
-              attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>',
-            },
-          },
-          layers: [{ id: "carto-voyager", type: "raster", source: "carto-voyager" }],
-        },
+        // MapTiler Streets vector basemap. The public key is supplied through Next.js env.
+        style: `https://api.maptiler.com/maps/streets-v2/style.json?key=${encodeURIComponent(mapTilerKey)}`,
         center: [selectedLon, selectedLat],
         zoom: 9,
         attributionControl: true,
@@ -65,7 +58,7 @@ export default function ScreenAHome({
       mapRef.current.on("load", () => setMapError(null));
       mapRef.current.on("error", (event) => {
         console.error("MapLibre basemap/tile error:", event.error);
-        setMapError("Map tiles are not responding. Check that basemaps.cartocdn.com is reachable on your network.");
+        setMapError("MapTiler could not load the map. Check your API key, allowed domains, and network requests in DevTools.");
       });
 
       markerRef.current = new maplibregl.Marker({ color: "#2e6930" })
@@ -177,27 +170,7 @@ export default function ScreenAHome({
           {mapError && (
             <div role="alert" className="absolute top-3 left-3 right-3 z-10 rounded-lg border border-amber-300 bg-amber-50/95 px-3 py-2 text-xs font-medium text-amber-950 shadow-sm">
               {mapError}
-              <button
-                type="button"
-                onClick={() => {
-                  setMapError(null);
-                  mapRef.current?.setStyle({
-                    version: 8,
-                    sources: {
-                      "osm-standard": {
-                        type: "raster",
-                        tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-                        tileSize: 256,
-                        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-                      },
-                    },
-                    layers: [{ id: "osm-standard", type: "raster", source: "osm-standard" }],
-                  });
-                }}
-                className="ml-3 underline font-bold"
-              >
-                Try OpenStreetMap tiles
-              </button>
+     </button>
             </div>
           )}
           <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-lg shadow border border-gray-200 text-xs text-gray-700 font-medium flex items-center gap-2">
