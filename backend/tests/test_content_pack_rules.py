@@ -148,3 +148,40 @@ def test_remedy_missing_source_is_not_loaded(tmp_path):
 def test_remedy_requires_nontrivial_safety_notes(tmp_path):
     write_pack(tmp_path, remedies=[remedy(safetyNotes="OK")])
     assert validate_content(tmp_path)["home_remedies"] == 0
+
+
+def test_two_source_confidence_rejects_same_source_twice(tmp_path):
+    write_pack(tmp_path, fertilizers=[fertilizer(confidence="two-sources", secondSourceKey="source-a")])
+    assert validate_content(tmp_path)["fertilizer_references"] == 0
+
+
+def test_two_source_confidence_rejects_unknown_second_source(tmp_path):
+    write_pack(tmp_path, fertilizers=[fertilizer(confidence="two-sources", secondSourceKey="missing-source")])
+    assert validate_content(tmp_path)["fertilizer_references"] == 0
+
+
+def test_area_conversion_rejects_non_official_source(tmp_path):
+    conversion = {"unit": "bigha", "toHectare": 0.13, "sourceKey": "source-a", "verified": True}
+    write_pack(tmp_path, sources={"source-a": source(False)}, conversions=[conversion])
+    report = validate_content(tmp_path)
+    assert report["conversions"] == 0
+    assert report["skipped"]["conversion"] == 1
+
+
+def test_home_remedy_official_evidence_requires_official_source(tmp_path):
+    write_pack(tmp_path, sources={"source-a": source(False)}, remedies=[remedy(evidence="official")])
+    report = validate_content(tmp_path)
+    assert report["home_remedies"] == 0
+    assert report["skipped"]["remedy"] == 1
+
+
+def test_home_remedy_research_evidence_can_use_non_official_source(tmp_path):
+    write_pack(tmp_path, sources={"source-a": source(False)}, remedies=[remedy(evidence="research")])
+    assert validate_content(tmp_path)["home_remedies"] == 1
+
+
+def test_fertilizer_reference_rejects_year_mismatch_even_with_valid_source(tmp_path):
+    write_pack(tmp_path, sources={"source-a": source(year=2024)}, fertilizers=[fertilizer(year=2025)])
+    report = validate_content(tmp_path)
+    assert report["fertilizer_references"] == 0
+    assert report["skipped"]["fertilizer"] == 1
