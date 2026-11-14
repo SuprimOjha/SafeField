@@ -219,6 +219,7 @@ export default function SafeFieldNepalApp() {
             setFertilizerType={setFertilizerType}
             cropStage={cropStage}
             setCropStage={setCropStage}
+            sandPercentOverride={sandPercentOverride}
             onSandOverrideChange={setSandPercentOverride}
             onRunAssessment={handleRunAssessment}
             onProceedToDecision={() => selectTab("decision")}
