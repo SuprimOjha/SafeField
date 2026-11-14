@@ -17,6 +17,11 @@ const notoDevanagari = Noto_Sans_Devanagari({
 export const metadata: Metadata = {
   title: "Safe Field Nepal - NASA Space Apps 2026",
   description: "Decision support for fertilizer timing using NASA Earth observations and climate evidence.",
+  icons: {
+    icon: "/partner-logo.png",
+    shortcut: "/partner-logo.png",
+    apple: "/partner-logo.png",
+  },
 };
 
 export default function RootLayout({
