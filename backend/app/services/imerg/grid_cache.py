@@ -41,6 +41,14 @@ class ImergGridCache:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", rows)
         return len(rows)
 
+    def has_fresh_data(self) -> bool:
+        with self._connect() as conn:
+            row = conn.execute("SELECT MAX(date_utc) AS latest_date FROM imerg_daily_cells").fetchone()
+        if not row or not row["latest_date"]:
+            return False
+        age_days = (datetime.now(timezone.utc).date() - date.fromisoformat(row["latest_date"])).days
+        return 0 <= age_days <= 5
+
     def get_recent_rain(self, latitude: float, longitude: float, hours: int) -> RainfallObservation:
         if hours <= 0 or hours % 24:
             return RainfallObservation(status="UNAVAILABLE", window_hours=hours, unavailable_reason="Daily IMERG cache supports whole-day windows only.")

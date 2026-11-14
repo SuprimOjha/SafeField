@@ -123,6 +123,25 @@ async def assess_field(
     )
 
 
+@router.get("/integrations/imerg/status")
+async def get_imerg_integration_status() -> dict[str, object]:
+    """Report the local IMERG cache state; the API never downloads granules."""
+    provider = ImergLateProvider()
+    ready = provider.is_available
+    return {
+        "integration": "GPM IMERG Late daily",
+        "status": "CACHE_READY" if ready else "NOT_INSTALLED",
+        "used_by_field_assessment": ready,
+        "supported_streams_in_contract": ["LATE"],
+        "message": "Recent IMERG Late cells are cached and used for rainfall screening." if ready else "No fresh IMERG Late cache is installed; field assessment falls back to NASA POWER where available.",
+        "next_steps": [] if ready else [
+            "Configure NASA Earthdata Login credentials.",
+            "Run python -m app.cli fetch-imerg --days 7 from the backend directory.",
+            "Validate the local cache against rain gauges before operational use.",
+        ],
+    }
+
+
 async def asyncio_gather_safe(*coros):
     import asyncio
     return await asyncio.gather(*coros)

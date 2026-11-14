@@ -8,5 +8,9 @@ class ImergLateProvider(RainfallProvider):
     def __init__(self, cache: ImergGridCache | None = None) -> None:
         self.cache = cache or ImergGridCache()
 
+    @property
+    def is_available(self) -> bool:
+        return self.cache.has_fresh_data()
+
     def get_recent_rain(self, latitude: float, longitude: float, hours: int) -> RainfallObservation:
         return self.cache.get_recent_rain(latitude, longitude, hours)
