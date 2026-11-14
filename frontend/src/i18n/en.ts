@@ -58,8 +58,6 @@ export const en = {
   errorGpsDenied: "Location permission was denied. Allow location access for this site in your browser settings.",
   errorGpsUnavailable: "Your device could not determine a location. Enable device location services or drag the map pin manually.",
   errorGpsTimeout: "GPS timed out. Try again outdoors or drag the map pin to the exact field location.",
-  mapFootnote:
-    "District boundaries are administrative reference data. A hand-drawn field boundary is an approximate outline from map clicks; verify it on the ground before using it for official land measurement. Rainfall for a drawn field uses the nearest reanalysis/IMERG grid cell (~9–11 km); a drawn boundary does not increase the resolution of the underlying gridded data. Point selection uses the nearest grid cell as well.",
 
   // Screen B — Field
   freshnessLatest: "Latest Observation:",

@@ -201,7 +201,6 @@ export default function ScreenAHome({
     errorGpsDenied: t.errorGpsDenied,
     errorGpsUnavailable: t.errorGpsUnavailable,
     errorGpsTimeout: t.errorGpsTimeout,
-    mapFootnote: t.mapFootnote,
   };
 
   useEffect(() => { onLocationSelectRef.current = onLocationSelect; }, [onLocationSelect]);
@@ -945,7 +944,6 @@ export default function ScreenAHome({
           </button>
         </div>
       </section>
-      <p className="px-1 text-[11px] leading-5 text-slate-500">{copy.mapFootnote}</p>
     </div>
   );
 }
