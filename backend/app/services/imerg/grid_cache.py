@@ -38,9 +38,23 @@ class ImergGridCache:
             for lon_index, longitude in enumerate(longitudes):
                 value = precipitation[lat_index][lon_index]
                 count = valid_counts[lat_index][lon_index]
-                if value is None or count is None or count <= 0 or value < 0:
+                if value is None or count is None:
                     continue
-                rows.append((day.isoformat(), float(latitude), float(longitude), float(value), int(count), granule_id, "GPM_3IMERGDL", "07B", "LATE", fetched_at.isoformat()))
+                try:
+                    lat_value, lon_value = float(latitude), float(longitude)
+                    rain_value, sample_count = float(value), float(count)
+                except (TypeError, ValueError, OverflowError):
+                    continue
+                if (
+                    not all(math.isfinite(item) for item in (lat_value, lon_value, rain_value, sample_count))
+                    or not 26.3 <= lat_value <= 30.5
+                    or not 80.0 <= lon_value <= 88.3
+                    or rain_value < 0
+                    or not sample_count.is_integer()
+                    or not 1 <= sample_count <= TOTAL_DAILY_SAMPLES
+                ):
+                    continue
+                rows.append((day.isoformat(), lat_value, lon_value, rain_value, int(sample_count), granule_id, "GPM_3IMERGDL", "07B", "LATE", fetched_at.isoformat()))
         with self._connect() as conn:
             conn.executemany("""INSERT OR REPLACE INTO imerg_daily_cells
                 (date_utc, latitude, longitude, precipitation_mm_day, valid_samples, granule_id, product, version, stream, fetched_at_utc)
