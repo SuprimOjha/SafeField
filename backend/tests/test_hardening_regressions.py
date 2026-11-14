@@ -85,3 +85,10 @@ def test_cache_reports_fresh_recent_data(tmp_path):
 def test_empty_cache_is_not_reported_as_ready(tmp_path):
     cache = ImergGridCache(str(tmp_path / "empty.sqlite"))
     assert cache.has_fresh_data() is False
+
+
+def test_cache_rejects_data_older_than_five_days(tmp_path):
+    cache = ImergGridCache(str(tmp_path / "stale.sqlite"))
+    old_day = datetime.now(timezone.utc).date() - timedelta(days=6)
+    cache.store_daily_grid(old_day, [27.0], [85.0], [[1.0]], [[48]], "stale", datetime.now(timezone.utc))
+    assert cache.has_fresh_data() is False
