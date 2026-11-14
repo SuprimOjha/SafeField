@@ -246,3 +246,10 @@ def test_polygon_provenance_lists_the_granules_used(tmp_path):
     result = cache.get_recent_rain(27.0, 85.0, 72, field_box())
     assert result.provenance.granule_ids
     assert len(result.provenance.granule_ids) == 3
+
+
+def test_polygon_provenance_preserves_observed_utc_interval(tmp_path):
+    cache = make_cache(tmp_path)
+    result = cache.get_recent_rain(27.0, 85.0, 72, field_box())
+    assert result.provenance.observed_start_utc < result.provenance.observed_end_utc
+    assert result.provenance.observed_start_utc.tzinfo is not None
