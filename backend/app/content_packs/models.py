@@ -15,7 +15,7 @@ class SourceRecord(BaseModel):
 
 
 class FertilizerReference(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
     id: str
     crop: str
     varietyType: str
@@ -28,7 +28,7 @@ class FertilizerReference(BaseModel):
     timingSplit: str
     sourceKey: str
     secondSourceKey: str | None = None
-    year: int
+    year: int = Field(ge=1900)
     page: str
     shortQuote: str
     confidence: Literal["single-source", "two-sources"]
@@ -52,7 +52,7 @@ class FertilizerReference(BaseModel):
 
 
 class AreaConversion(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
     unit: Literal["ropani", "bigha", "kattha", "hectare"]
     toHectare: float | None = Field(default=None, gt=0)
     sourceKey: str
@@ -60,7 +60,7 @@ class AreaConversion(BaseModel):
 
 
 class HomeRemedy(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
     id: str
     crop: str
     problem: str
