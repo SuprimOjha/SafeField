@@ -183,8 +183,6 @@ export default function SafeFieldNepalApp() {
             </div>
           </div>
         </nav>
-
-}
       </header>
 
       <section className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-3 py-5 pb-28 sm:px-6 sm:py-7 sm:pb-28 lg:px-8 lg:py-9 lg:pb-9">
