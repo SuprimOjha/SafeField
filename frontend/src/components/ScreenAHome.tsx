@@ -17,7 +17,7 @@ import { createMap, addSatelliteLayer, setSatellite, isSatelliteSourceError } fr
 import { getDict, type Lang } from "@/i18n";
 import {
   Navigation, Compass, ArrowRight, Pencil, Undo2, Trash2,
-  Check, Layers3, LocateFixed, MousePointer2,
+  Check, Layers3, LocateFixed, MousePointer2, Search, Loader2, X, MapPin,
 } from "lucide-react";
 
 interface ScreenAHomeProps {
@@ -27,6 +27,7 @@ interface ScreenAHomeProps {
   onFieldPolygonSelect: (polygon: [number, number][] | null) => void;
   onProceedToField: () => void;
   lang: Lang;
+  fieldPolygon?: [number, number][] | null;
 }
 
 type DrawMode = "select" | "draw";
@@ -87,6 +88,7 @@ export default function ScreenAHome({
   onFieldPolygonSelect,
   onProceedToField,
   lang,
+  fieldPolygon,
 }: ScreenAHomeProps) {
   const t = getDict(lang);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -112,6 +114,13 @@ export default function ScreenAHome({
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
 
+  // Place/city/road search (Nominatim, restricted to Nepal).
+  type PlaceResult = { title: string; subtitle: string; lat: number; lon: number };
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<PlaceResult[]>([]);
+  const [searchStatus, setSearchStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const searchAbortRef = useRef<AbortController | null>(null);
+
   const copy = {
     title: lang === "ne" ? "आफ्नो खेतको स्थान छान्नुहोस्" : "Choose your farm location",
     subtitle: lang === "ne" ? "जिल्ला छान्नुहोस्, GPS प्रयोग गर्नुहोस् वा नक्सामा एक पटक थिचेर पिन राख्नुहोस्। सीमा कोर्नु वैकल्पिक हो।" : "Choose a district, use GPS or tap once to place a pin. Drawing a boundary is optional.",
@@ -127,6 +136,10 @@ export default function ScreenAHome({
     area: lang === "ne" ? "अनुमानित क्षेत्रफल" : "Estimated area",
     instruction: lang === "ne" ? "खेतको कुनाकाप्चामा ट्याप गरेर सीमा कोर्नुहोस्। कम्तीमा ३ बिन्दु चाहिन्छ।" : "Optional: tap at least 3 field corners to estimate the boundary and area.",
     gps: lang === "ne" ? "मेरो GPS स्थान" : "Use my GPS",
+    searchLabel: t.searchLabel,
+    searchPlaceholder: t.searchPlaceholder,
+    searchNoResults: t.searchNoResults,
+    searchError: t.searchError,
     fieldMappingBadge: t.fieldMappingBadge,
     subtitleExtra: t.subtitleExtra,
     loadingDistricts: t.loadingDistricts,
@@ -168,6 +181,67 @@ export default function ScreenAHome({
   useEffect(() => { onLocationSelectRef.current = onLocationSelect; }, [onLocationSelect]);
   useEffect(() => { drawPointsRef.current = drawPoints; }, [drawPoints]);
   useEffect(() => { districtsRef.current = districts; }, [districts]);
+
+  // Debounced place search; results are limited to Nepal by the provider.
+  useEffect(() => {
+    const query = searchQuery.trim();
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      if (query.length < 3) {
+        searchAbortRef.current?.abort();
+        setSearchResults([]);
+        setSearchStatus("idle");
+        return;
+      }
+      searchAbortRef.current?.abort();
+      searchAbortRef.current = controller;
+      setSearchStatus("loading");
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&countrycodes=np&q=${encodeURIComponent(query)}`;
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json: unknown = await res.json();
+        const rows = Array.isArray(json) ? json as Array<Record<string, unknown>> : [];
+        const results: PlaceResult[] = [];
+        for (const row of rows) {
+          const lat = Number(row.lat);
+          const lon = Number(row.lon);
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+          if (lat < 26.0 || lat > 30.8 || lon < 79.8 || lon > 88.5) continue;
+          const displayName = typeof row.display_name === "string" ? row.display_name : "";
+          const title = (typeof row.name === "string" && row.name.trim()) || displayName.split(",")[0].trim() || query;
+          const rest = displayName.includes(",") ? displayName.slice(displayName.indexOf(",") + 1).trim() : "";
+          const subtitle = rest.replace(/,?\s*Nepal\s*$/i, "");
+          if (!results.some((item) => item.title === title && item.subtitle === subtitle)) {
+            results.push({ title, subtitle, lat, lon });
+          }
+        }
+        setSearchResults(results);
+        setSearchStatus("done");
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        setSearchResults([]);
+        setSearchStatus("error");
+        console.error("Location search failed:", err);
+      }
+    }, query.length < 3 ? 0 : 500);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [searchQuery]);
+
+  const selectSearchResult = (result: PlaceResult) => {
+    setSearchQuery("");
+    setSearchResults([]);
+    setSearchStatus("idle");
+    setDistrictName("");
+    setLocationName(result.title);
+    onLocationSelectRef.current(result.lat, result.lon, result.title);
+    onFieldPolygonSelect(null);
+    markerRef.current?.setLngLat([result.lon, result.lat]);
+    mapRef.current?.flyTo({ center: [result.lon, result.lat], zoom: 14, essential: true });
+  };
   useEffect(() => { drawModeRef.current = drawMode; }, [drawMode]);
   useEffect(() => { mapStyleRef.current = mapStyle; }, [mapStyle]);
   // Mirror the latest translated strings for long-lived map/fetch callbacks so
@@ -177,6 +251,13 @@ export default function ScreenAHome({
   useEffect(() => {
     selectedCoordinatesRef.current = { lat: selectedLat, lon: selectedLon };
   }, [selectedLat, selectedLon]);
+
+  // Remember where the map was initialized so a restored session (applied by
+  // the parent shortly after hydration) can re-center the view once.
+  const initialMapCenterRef = useRef<{ lat: number; lon: number } | null>(null);
+  const fieldPolygonRef = useRef(fieldPolygon);
+  useEffect(() => { fieldPolygonRef.current = fieldPolygon; });
+  const sessionRestoredRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -223,12 +304,41 @@ export default function ScreenAHome({
     source?.setData({ type: "FeatureCollection", features });
   }, []);
 
+  // One-shot session restore: shortly after mount the parent has applied the
+  // persisted coordinates, so re-center the map and redraw a stored field.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (sessionRestoredRef.current) return;
+      sessionRestoredRef.current = true;
+      const map = mapRef.current;
+      const initial = initialMapCenterRef.current;
+      if (!map || !initial) return;
+      const restored = selectedCoordinatesRef.current;
+      const moved = Math.abs(restored.lat - initial.lat) > 1e-9 || Math.abs(restored.lon - initial.lon) > 1e-9;
+      if (moved) {
+        markerRef.current?.setLngLat([restored.lon, restored.lat]);
+        map.jumpTo({ center: [restored.lon, restored.lat], zoom: 12 });
+      }
+      const stored = fieldPolygonRef.current;
+      if (Array.isArray(stored) && stored.length >= 4) {
+        const closing = stored[stored.length - 1];
+        const first = stored[0];
+        const open = closing[0] === first[0] && closing[1] === first[1] ? stored.slice(0, -1) : stored;
+        setDrawPoints(open as [number, number][]);
+        setFieldArea(polygonAreaHectares(open as [number, number][]));
+        updateDrawLayer(map, open as [number, number][]);
+      }
+    }, 180);
+    return () => clearTimeout(timer);
+  }, [updateDrawLayer]);
+
   useEffect(() => {
     const container = mapContainerRef.current;
     if (!container) return;
 
     setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
     const initialLocation = selectedCoordinatesRef.current;
+    initialMapCenterRef.current = { lat: initialLocation.lat, lon: initialLocation.lon };
     const map = createMap(container, [initialLocation.lon, initialLocation.lat]);
     mapRef.current = map;
     map.addControl(new NavigationControl({ visualizePitch: true }), "top-right");
@@ -474,11 +584,61 @@ export default function ScreenAHome({
           </div>
         </div>
 
-        <div className="grid gap-3 border-b border-slate-100 bg-white p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:p-5">
+        <div className="grid gap-3 border-b border-slate-100 bg-white p-4 sm:grid-cols-2 sm:items-end sm:p-5">
+          <label className="block">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">{copy.searchLabel}</span>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                {searchStatus === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              </span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder={copy.searchPlaceholder}
+                aria-label={copy.searchLabel}
+                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-9 text-sm font-semibold text-slate-800 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  aria-label="Clear search"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+              {searchQuery.trim().length >= 3 && (searchStatus === "done" || searchStatus === "error") && (
+                <div className="absolute inset-x-0 top-full z-30 mt-1.5 max-h-72 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-[0_16px_40px_rgba(15,55,35,0.14)]">
+                  {searchStatus === "error" && (
+                    <p className="px-3 py-2.5 text-xs leading-5 text-rose-700">{copy.searchError}</p>
+                  )}
+                  {searchStatus === "done" && searchResults.length === 0 && (
+                    <p className="px-3 py-2.5 text-xs leading-5 text-slate-500">{copy.searchNoResults}</p>
+                  )}
+                  {searchResults.map((result) => (
+                    <button
+                      key={`${result.title}-${result.lat}-${result.lon}`}
+                      type="button"
+                      onClick={() => selectSearchResult(result)}
+                      className="flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left transition hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                    >
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" aria-hidden="true" />
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-bold text-slate-800">{result.title}</span>
+                        {result.subtitle && <span className="block truncate text-xs text-slate-500">{result.subtitle}</span>}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </label>
           <label className="block">
             <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">{copy.district}</span>
             <select value={districtName} onChange={(event) => selectDistrict(event.target.value)} disabled={districtLoading || districts.length === 0}
-              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 sm:max-w-md">
+              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10">
               <option value="">{districtLoading ? copy.loadingDistricts : copy.chooseDistrict}</option>
               {[...districts].sort((a,b) => (a.properties?.DISTRICT ?? "").localeCompare(b.properties?.DISTRICT ?? "")).map((item) => (
                 <option key={item.properties?.DISTRICT} value={item.properties?.DISTRICT}>{item.properties?.DISTRICT}</option>
