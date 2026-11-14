@@ -1,5 +1,5 @@
 from typing import Literal
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
 
 class SourceRecord(BaseModel):
@@ -7,7 +7,7 @@ class SourceRecord(BaseModel):
     title: str = Field(min_length=3)
     authority: str = Field(min_length=2)
     year: int = Field(ge=1900)
-    url: str = Field(min_length=8)
+    url: HttpUrl
     accessed: str = Field(min_length=10)
     official: bool
     language: str = Field(min_length=2)

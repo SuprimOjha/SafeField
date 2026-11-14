@@ -44,7 +44,7 @@ def validate_content(content_dir: Path = CONTENT_DIR) -> dict[str, Any]:
         except ValidationError as exc:
             report["warnings"].append(f"sources.{key}: {exc.errors()[0]['msg']}")
     report["sources"] = len(sources)
-    report["source_records"] = {key: source.model_dump() for key, source in sources.items()}
+    report["source_records"] = {key: source.model_dump(mode="json") for key, source in sources.items()}
     if report["warnings"]:
         report["status"] = "partial"
 
