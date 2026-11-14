@@ -97,7 +97,7 @@ export default function SafeFieldNepalApp() {
 
   const [assessmentData, setAssessmentData] = useState<FieldAssessmentResponse | null>(null);
   const [assessmentError, setAssessmentError] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [, startTransition] = useTransition();
 
   // Fetching starts after the effect runs; state updates happen only after the
@@ -133,14 +133,12 @@ export default function SafeFieldNepalApp() {
     void refreshAssessment();
   }, [refreshAssessment]);
 
-  useEffect(() => {
-    // Defer the request to the next task so the effect itself does not
-    // synchronously trigger React state updates before the fetch begins.
-    const timer = window.setTimeout(() => {
-      void refreshAssessment();
-    }, 0);
-
-    return () => window.clearTimeout(timer);
+  // Assessment is intentionally started by the explicit Next action, after
+  // the user has selected the final point or drawn boundary. This prevents
+  // an early/default-location request from racing the selected field request.
+  const handleProceedToField = useCallback(() => {
+    setActiveTab("field");
+    void refreshAssessment();
   }, [refreshAssessment]);
 
   const selectTab = (tab: TabId) => {
@@ -277,7 +275,7 @@ export default function SafeFieldNepalApp() {
               setSelectedFieldPolygon(null);
             }}
             onFieldPolygonSelect={setSelectedFieldPolygon}
-            onProceedToField={() => selectTab("field")}
+            onProceedToField={handleProceedToField}
             lang={lang}
           />
         )}
