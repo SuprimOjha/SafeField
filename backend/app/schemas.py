@@ -44,3 +44,20 @@ class PowerSummaryResponse(BaseModel):
     latest_temp_c: float | None
     recent_daily_records: list[DailyWeatherRecord]
     historical_daily_records: list[DailyWeatherRecord]
+
+
+class GibsLayerInfo(BaseModel):
+    layer_id: str
+    title: str
+    tile_matrix_set: str
+    wmts_url_template: str
+    time_extent: str | None = None
+    verified_in_capabilities: bool
+
+
+class SatelliteObservationStatus(BaseModel):
+    freshness: FreshnessBadge
+    latest_granule_id: str | None = None
+    granule_time_start: str | None = None
+    granule_time_end: str | None = None
+    gibs_overlay: GibsLayerInfo | None = None
