@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { FieldAssessmentResponse } from "@/types/safefield";
 import { CloudRain, Droplets, Thermometer, Mountain, Layers, CheckCircle2, RefreshCw, ArrowRight } from "lucide-react";
 
