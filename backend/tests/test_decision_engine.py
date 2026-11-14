@@ -55,3 +55,37 @@ def test_all_rule_thresholds_are_disclosed_as_assumptions():
         for rule in result.rule_contributions[:-1]
     )
     assert "not a safety certification" in result.disclaimer
+
+
+
+def test_typed_rainfall_observation_controls_decision_and_records_source():
+    from datetime import datetime, timezone
+    from app.services.rainfall import RainfallObservation, RainfallProvenance
+
+    rainfall = RainfallObservation(
+        status="AVAILABLE",
+        amount_mm=25.0,
+        window_hours=72,
+        provenance=RainfallProvenance(
+            source_name="NASA GPM IMERG Late Run",
+            kind="observation",
+            observed_start_utc=datetime(2026, 11, 10, tzinfo=timezone.utc),
+            observed_end_utc=datetime(2026, 11, 13, tzinfo=timezone.utc),
+            fetched_at_utc=datetime(2026, 11, 14, tzinfo=timezone.utc),
+            spatial_resolution="0.1° (~10 km)",
+            latency_note="Daily Late Run",
+            dataset="GPM_3IMERGDL",
+            version="07B",
+            stream="LATE",
+            granule_ids=["granule-001"],
+            units="mm/day summed over complete UTC days",
+        ),
+    )
+    result = FertilizerDecisionEngine().evaluate_timing(
+        **valid_inputs(rain_last_72h_mm=0.0),
+        rainfall_observation=rainfall,
+    )
+    assert result.signal == "WAIT AND RECHECK"
+    provenance_rule = next(rule for rule in result.rule_contributions if rule.parameter == "Rainfall provenance")
+    assert "NASA GPM IMERG Late Run" in provenance_rule.explanation
+    assert "kind=observation" in provenance_rule.explanation
