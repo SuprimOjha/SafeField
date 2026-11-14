@@ -42,7 +42,7 @@ export default function ScreenEMethods({ data, lang }: ScreenEMethodsProps) {
           <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-200">
             <h3 className="font-bold text-emerald-950 text-sm mb-1">1. Satellite & Gridded Proxies</h3>
             <p className="text-xs text-gray-700 leading-relaxed">
-              Daily rainfall (PRECTOTCORR), air temperature (T2M) and modelled wetness proxies (GWETTOP/GWETROOT) come from NASA POWER. POWER is a coarse reanalysis-based grid (~55 km), with delayed daily values; it is not a field sensor. Terrain is requested from Open-Elevation; this integration does not verify the underlying DEM lineage or resolution. Soil texture comes from predicted ISRIC SoilGrids 250 m topsoil (0–5 cm). Open-Meteo provides the non-NASA forecast. GPM IMERG and SMAP are not connected to this assessment endpoint.
+              Daily rainfall (PRECTOTCORR), air temperature (T2M) and modelled wetness proxies (GWETTOP/GWETROOT) come from NASA POWER. POWER is a coarse reanalysis-based grid (~55 km), with delayed daily values; it is not a field sensor. Terrain is requested from Open-Elevation; this integration does not verify the underlying DEM lineage or resolution. Soil texture comes from predicted ISRIC SoilGrids 250 m topsoil (0–5 cm). Open-Meteo provides the non-NASA forecast. When installed, GPM IMERG Late daily data is preferred for the rainfall screening input; otherwise the app labels NASA POWER as a fallback. SMAP is not connected.
             </p>
           </div>
           <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-200">
@@ -140,7 +140,18 @@ export default function ScreenEMethods({ data, lang }: ScreenEMethodsProps) {
         )}
       </div>
 
-      {/* Explicit Disclaimer */}
+
+      {data?.rainfall_observation.provenance && (
+        <div className="rounded-2xl border border-sky-200 bg-white p-5 space-y-2">
+          <h3 className="font-bold text-slate-900">Rainfall input actually used by the decision engine</h3>
+          <p className="text-sm text-slate-700">{data.rainfall_observation.provenance.source_name} · {data.rainfall_observation.provenance.kind}</p>
+          <p className="text-xs text-slate-600">Observed: {data.rainfall_observation.provenance.observed_start_utc} to {data.rainfall_observation.provenance.observed_end_utc}</p>
+          <p className="text-xs text-slate-600">Fetched: {data.rainfall_observation.provenance.fetched_at_utc} · {data.rainfall_observation.provenance.spatial_resolution ?? "Resolution not supplied"}</p>
+          <p className="text-xs text-slate-600">{data.rainfall_observation.provenance.latency_note}</p>
+          <p className="text-xs text-slate-600">Dataset {data.rainfall_observation.provenance.dataset}, version {data.rainfall_observation.provenance.version}, stream {data.rainfall_observation.provenance.stream ?? "not applicable"}</p>
+        </div>
+      )}
+\n      {/* Explicit Disclaimer */}
       <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-start gap-3 text-xs text-amber-950">
         <ShieldAlert className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
         <p>
