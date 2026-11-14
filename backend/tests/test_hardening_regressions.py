@@ -233,3 +233,9 @@ def test_polygon_aggregation_weights_all_intersected_cells(tmp_path):
     result = cache.get_recent_rain(27.05, 85.05, 72, polygon)
     assert result.status == "AVAILABLE"
     assert 74.0 <= result.amount_mm <= 76.0
+
+
+def test_polygon_coverage_fraction_never_exceeds_one(tmp_path):
+    cache = make_cache(tmp_path, counts=(48, 48, 48))
+    result = cache.get_recent_rain(27.0, 85.0, 72, field_box())
+    assert result.provenance.coverage_fraction == 1.0
