@@ -23,4 +23,4 @@ def test_imerg_late_provider_reports_uninstalled_cache_as_unavailable(tmp_path):
     result = provider.get_recent_rain(27.0, 85.0, 72)
     assert result.status == "UNAVAILABLE"
     assert result.amount_mm is None
-    assert "installed" in result.unavailable_reason.lower()
+    assert "cached" in result.unavailable_reason.lower()
