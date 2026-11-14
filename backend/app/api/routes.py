@@ -58,11 +58,11 @@ async def assess_field(
     # Evaluate decision engine
     decision_engine = FertilizerDecisionEngine()
     decision_res = decision_engine.evaluate_timing(
-        rain_last_72h_mm=power_res.rain_last_72h_mm or 0.0,
-        expected_rain_next_48h_mm=forecast_res.expected_rain_next_48h_mm,
-        soil_wetness=power_res.latest_surface_wetness or 0.40,
-        sand_percent=soil_res.sand_percent,
-        slope_percent=elev_res.slope_percent or 1.0,
+        rain_last_72h_mm=power_res.rain_last_72h_mm,
+        expected_rain_next_48h_mm=forecast_res.expected_rain_next_48h_mm if forecast_res.freshness.status != "UNAVAILABLE" else None,
+        soil_wetness=power_res.latest_surface_wetness,
+        sand_percent=soil_res.sand_percent if soil_res.freshness.status != "UNAVAILABLE" else None,
+        slope_percent=elev_res.slope_percent,
         fertilizer_type=fertilizer_type,
         crop_stage=crop_stage,
         priority_save_money=save_money,
