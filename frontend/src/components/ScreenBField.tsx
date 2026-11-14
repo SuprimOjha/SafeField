@@ -46,7 +46,7 @@ export default function ScreenBField({
   }
 
   const { power_summary, elevation, soil_texture, forecast } = data;
-  const sandVal = customSand !== null ? customSand : soil_texture.sand_percent;
+  const sandVal = customSand !== null ? customSand : (soil_texture.sand_percent ?? 40);
 
   return (
     <div className="space-y-6">
@@ -66,7 +66,7 @@ export default function ScreenBField({
         <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-semibold text-gray-600">
-              {lang === "ne" ? "पछिल्लो ७२ घन्टाको वर्षा" : "Rain Last 72 Hours"}
+              {lang === "ne" ? "उपलब्ध पछिल्ला ३ दैनिक वर्षा मान" : "Latest 3 Available Daily Rainfall Values"}
             </span>
             <CloudRain className="w-6 h-6 text-blue-600" />
           </div>
@@ -74,14 +74,14 @@ export default function ScreenBField({
             <span className="text-3xl font-bold text-gray-900">{power_summary.rain_last_72h_mm ?? 0}</span>
             <span className="text-gray-500 ml-1">mm</span>
           </div>
-          <span className="text-xs text-gray-400 mt-2">NASA POWER Daily PRECTOTCORR</span>
+          <span className="text-xs text-gray-400 mt-2">NASA POWER PRECTOTCORR · coarse reanalysis-based grid; latest records may be delayed 2–4 days</span>
         </div>
 
         {/* Soil Wetness */}
         <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-semibold text-gray-600">
-              {lang === "ne" ? "माटोको चिस्यान (Surface Wetness)" : "Surface Soil Wetness"}
+              {lang === "ne" ? "मोडेल गरिएको सतही चिस्यान" : "Modelled Surface Wetness Proxy"}
             </span>
             <Droplets className="w-6 h-6 text-emerald-600" />
           </div>
@@ -91,7 +91,7 @@ export default function ScreenBField({
             </span>
             <span className="text-gray-500 ml-1">%</span>
           </div>
-          <span className="text-xs text-gray-400 mt-2">NASA POWER GWETTOP (surface wetness proxy)</span>
+          <span className="text-xs text-gray-400 mt-2">NASA POWER GWETTOP · modelled proxy, not a SMAP or in-situ observation</span>
         </div>
 
         {/* Temperature */}
@@ -118,12 +118,14 @@ export default function ScreenBField({
             <Mountain className="w-6 h-6 text-stone-600" />
           </div>
           <div>
-            <span className="text-3xl font-bold text-gray-900">{elevation.slope_percent}%</span>
+            <span className="text-3xl font-bold text-gray-900">{elevation.slope_percent ?? "N/A"}%</span>
             <span className="text-xs text-emerald-800 font-semibold block mt-1">{elevation.terrain_category}</span>
           </div>
-          <span className="text-xs text-gray-400 mt-2">NASADEM 30m</span>
+          <span className="text-xs text-gray-400 mt-2">Open-Elevation API · DEM lineage/resolution not verified</span>
         </div>
       </div>
+
+      <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">NASA POWER is a coarse (~55 km) reanalysis-based grid, not an on-farm sensor; recent daily values may be delayed 2–4 days. GWETTOP/GWETROOT are modelled wetness proxies. SoilGrids is a predicted 250 m estimate for 0–5 cm depth, not a field test. Open-Elevation DEM lineage is not verified.</p>
 
       {/* Input Configuration Card */}
       <div className="bg-white p-6 rounded-2xl border border-emerald-100 shadow-sm space-y-6">
@@ -178,7 +180,7 @@ export default function ScreenBField({
               className="w-full accent-emerald-700 h-2 bg-gray-200 rounded-lg cursor-pointer mt-3"
             />
             <span className="text-xs text-gray-500 mt-1 block">
-              ISRIC SoilGrids baseline: {soil_texture.texture_class} ({soil_texture.sand_percent}% sand)
+              ISRIC SoilGrids predicted 250 m topsoil (0–5 cm): {soil_texture.sand_percent === null ? "Unavailable" : `${soil_texture.texture_class} (${soil_texture.sand_percent}% sand)`}. Estimated, not a field test; verify locally.
             </span>
           </div>
         </div>
