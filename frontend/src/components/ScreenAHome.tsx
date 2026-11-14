@@ -379,6 +379,25 @@ export default function ScreenAHome({
 
   return (
     <div className="space-y-5">
+      <section className="relative overflow-hidden rounded-3xl border border-emerald-100 bg-gradient-to-br from-[#eaf7ee] via-white to-[#f1f8f1] px-5 py-8 shadow-[0_16px_55px_rgba(15,65,40,0.07)] sm:px-8 sm:py-10">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-emerald-100/60 blur-3xl" />
+        <div className="relative max-w-3xl">
+          <p className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/80 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-emerald-800">
+            <MapPin className="h-3.5 w-3.5" /> NASA-powered agricultural intelligence
+          </p>
+          <h1 className="mt-4 max-w-2xl text-3xl font-black leading-tight tracking-tight text-[#123c2b] sm:text-4xl lg:text-5xl">
+            Understand your land. Make more informed farming decisions.
+          </h1>
+          <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
+            Safe Field Nepal brings together satellite observations, weather and environmental datasets with the details you provide about your field. Select your location, outline your land and enter your crop and soil information to explore field conditions, climate context and evidence-led recommendations for Nepal.
+          </p>
+          <p className="mt-5 inline-flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.13em] text-emerald-800 sm:text-sm">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-800 text-white"><ArrowRight className="h-4 w-4 rotate-90" /></span>
+            Scroll down to start your analysis
+          </p>
+        </div>
+      </section>
+
       <section className="overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-[0_16px_55px_rgba(15,65,40,0.08)]">
         <div className="border-b border-emerald-50 bg-gradient-to-r from-[#f2faf5] via-white to-[#f8fbf6] px-5 py-6 sm:px-7">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
