@@ -32,6 +32,7 @@ export default function ScreenAHome({
   const markerRef = useRef<maplibregl.Marker | null>(null);
 
   const [locationName, setLocationName] = useState("Biratnagar, Morang");
+  const [mapError, setMapError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -39,9 +40,19 @@ export default function ScreenAHome({
     if (!mapRef.current) {
       mapRef.current = new maplibregl.Map({
         container: mapContainerRef.current,
-        style: "https://demotiles.maplibre.org/style.json",
+        // OpenFreeMap provides a maintained, keyless basemap suitable for real applications.
+        style: "https://tiles.openfreemap.org/styles/liberty",
         center: [selectedLon, selectedLat],
         zoom: 9,
+        attributionControl: true,
+        cooperativeGestures: true,
+      });
+
+      mapRef.current.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
+      mapRef.current.on("load", () => setMapError(null));
+      mapRef.current.on("error", (event) => {
+        console.error("MapLibre basemap/tile error:", event.error);
+        setMapError("Map tiles could not be loaded. Check your internet connection or try refreshing the map.");
       });
 
       markerRef.current = new maplibregl.Marker({ color: "#2e6930" })
@@ -150,6 +161,11 @@ export default function ScreenAHome({
 
         <div className="relative w-full h-[400px] rounded-xl overflow-hidden border border-gray-200 shadow-inner">
           <div ref={mapContainerRef} className="w-full h-full" />
+          {mapError && (
+            <div role="alert" className="absolute top-3 left-3 right-3 z-10 rounded-lg border border-amber-300 bg-amber-50/95 px-3 py-2 text-xs font-medium text-amber-950 shadow-sm">
+              {mapError}
+            </div>
+          )}
           <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-lg shadow border border-gray-200 text-xs text-gray-700 font-medium flex items-center gap-2">
             <Compass className="w-4 h-4 text-emerald-700 animate-spin" />
             <span>Selected: <strong className="text-emerald-900">{locationName}</strong> ({selectedLat.toFixed(2)}°N, {selectedLon.toFixed(2)}°E)</span>
