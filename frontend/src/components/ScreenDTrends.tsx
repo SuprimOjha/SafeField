@@ -59,7 +59,7 @@ export default function ScreenDTrends({
 
   if (!data) {
     return (
-      <div className="bg-white p-8 rounded-2xl border border-gray-200 text-center text-gray-600">
+      <div className="rounded-xl border border-divider bg-white p-8 text-center text-ink-soft shadow-float">
         {t.selectFirst}
       </div>
     );
@@ -70,11 +70,11 @@ export default function ScreenDTrends({
   return (
     <div className="space-y-6">
       {/* Statistical Verdict Card */}
-      <div className="bg-white p-6 rounded-2xl border border-emerald-100 shadow-sm space-y-4">
+      <div className="rounded-xl border border-divider bg-white p-6 shadow-float space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <TrendingUp className="w-6 h-6 text-emerald-800" />
-            <h2 className="text-2xl font-bold text-emerald-950">
+            <TrendingUp className="w-6 h-6 text-leaf" />
+            <h2 className="text-2xl font-bold text-forest">
               {t.trendsTitle}
             </h2>
           </div>
@@ -82,72 +82,72 @@ export default function ScreenDTrends({
           <span
             className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-full ${
               climate_trend.significant_after_fdr
-                ? "bg-amber-100 text-amber-900 border border-amber-300"
-                : "bg-slate-100 text-slate-800 border border-slate-300"
+                ? "bg-amber-soft text-amber-ink border border-amber"
+                : "bg-soft text-ink border border-line"
             }`}
           >
             {climate_trend.significant_after_fdr ? (
               <>
-                <AlertCircle className="w-4 h-4 text-amber-700" />
+                <AlertCircle className="w-4 h-4 text-amber-ink" />
                 {t.badgeSignificant}
               </>
             ) : (
               <>
-                <CheckCircle2 className="w-4 h-4 text-slate-600" />
+                <CheckCircle2 className="w-4 h-4 text-ink-soft" />
                 {t.badgeNotSignificant}
               </>
             )}
           </span>
         </div>
 
-        <p className="text-base text-gray-800 bg-emerald-50/60 border border-emerald-200 p-4 rounded-xl leading-relaxed">
+        <p className="text-base text-ink bg-mint border border-divider p-4 rounded-lg leading-relaxed">
           {climate_trend.plain_language_summary}
         </p>
 
         {/* Key Statistical Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
-          <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
-            <div className="text-xs font-semibold text-gray-500 uppercase">{t.metricTheilSen}</div>
-            <div className="text-2xl font-bold text-gray-900 mt-1">
+          <div className="p-4 rounded-lg bg-soft border border-divider">
+            <div className="text-xs font-semibold text-ink-muted uppercase">{t.metricTheilSen}</div>
+            <div className="text-2xl font-bold text-ink mt-1 tnum">
               {climate_trend.theil_sen_slope_per_decade > 0 ? "+" : ""}
               {climate_trend.theil_sen_slope_per_decade}
-              <span className="text-xs font-normal text-gray-500 ml-1">{t.daysPerDecade}</span>
+              <span className="text-xs font-normal text-ink-muted ml-1">{t.daysPerDecade}</span>
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
-            <div className="text-xs font-semibold text-gray-500 uppercase">{t.metricCi}</div>
-            <div className="text-lg font-bold text-gray-900 mt-1 font-mono">
+          <div className="p-4 rounded-lg bg-soft border border-divider">
+            <div className="text-xs font-semibold text-ink-muted uppercase">{t.metricCi}</div>
+            <div className="text-lg font-bold text-ink mt-1 font-mono tnum">
               [{climate_trend.confidence_interval_lower}, {climate_trend.confidence_interval_upper}]
             </div>
-            <div className="text-xs text-gray-500 mt-0.5">{t.daysPerDecade}</div>
+            <div className="text-xs text-ink-muted mt-0.5">{t.daysPerDecade}</div>
           </div>
 
-          <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
-            <div className="text-xs font-semibold text-gray-500 uppercase">{t.metricPValue}</div>
-            <div className="text-2xl font-bold text-gray-900 mt-1 font-mono">
+          <div className="p-4 rounded-lg bg-soft border border-divider">
+            <div className="text-xs font-semibold text-ink-muted uppercase">{t.metricPValue}</div>
+            <div className="text-2xl font-bold text-ink mt-1 font-mono tnum">
               {climate_trend.corrected_p_value}
             </div>
-            <div className="text-xs text-gray-500 mt-0.5">
+            <div className="text-xs text-ink-muted mt-0.5 tnum">
               {t.rawMkP} {climate_trend.mann_kendall_p_value.toFixed(4)}
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
-            <div className="text-xs font-semibold text-gray-500 uppercase">{t.metricRecordLength}</div>
-            <div className="text-2xl font-bold text-gray-900 mt-1">
-              {climate_trend.years_analyzed} <span className="text-sm font-normal text-gray-600">{t.years}</span>
+          <div className="p-4 rounded-lg bg-soft border border-divider">
+            <div className="text-xs font-semibold text-ink-muted uppercase">{t.metricRecordLength}</div>
+            <div className="text-2xl font-bold text-ink mt-1 tnum">
+              {climate_trend.years_analyzed} <span className="text-sm font-normal text-ink-soft">{t.years}</span>
             </div>
-            <div className="text-xs text-gray-500 mt-0.5">{t.recordSource}</div>
+            <div className="text-xs text-ink-muted mt-0.5">{t.recordSource}</div>
           </div>
         </div>
       </div>
 
       {/* Historical Time-Series Chart */}
-      <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+      <div className="rounded-xl border border-divider bg-white p-6 shadow-float">
         <div className="flex items-center gap-2 mb-4">
-          <Activity className="w-5 h-5 text-emerald-700" />
-          <h3 className="text-lg font-bold text-gray-900">
+          <Activity className="w-5 h-5 text-leaf" />
+          <h3 className="text-lg font-bold text-forest">
             {t.chartTitle}
           </h3>
         </div>
@@ -156,32 +156,33 @@ export default function ScreenDTrends({
           <div className="w-full h-[340px]">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={annualSeries} margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="year" tick={{ fontSize: 12, fill: "#374151" }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E4E9E2" />
+                <XAxis dataKey="year" tick={{ fontSize: 12, fill: "#657168" }} />
                 <YAxis
-                  tick={{ fontSize: 12, fill: "#374151" }}
+                  tick={{ fontSize: 12, fill: "#657168" }}
                   label={{ value: t.yAxisLabel, angle: -90, position: "insideLeft", fontSize: 12 }}
                 />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#ffffff",
-                    borderColor: "#d1d5db",
-                    borderRadius: "12px",
+                    borderColor: "#E4E9E2",
+                    borderRadius: "18px",
+                    boxShadow: "0 4px 18px rgba(24, 44, 30, 0.1)",
                     fontSize: "13px",
                   }}
                 />
-                <Legend />
+                <Legend formatter={(value) => <span style={{ color: "#657168" }}>{value}</span>} />
                 <Bar
                   dataKey="heavyRainDays"
                   name={t.legendHeavyDays}
-                  fill="#2e6930"
+                  fill="#2F8F4E"
                   radius={[6, 6, 0, 0]}
                 />
                 <Line
                   type="monotone"
                   dataKey="trendLine"
                   name={t.legendTrend}
-                  stroke="#d97706"
+                  stroke="#F2B93B"
                   strokeWidth={3}
                   dot={false}
                 />
@@ -189,7 +190,7 @@ export default function ScreenDTrends({
             </ResponsiveContainer>
           </div>
         ) : (
-          <p className="text-sm text-gray-500">{t.noChartData}</p>
+          <p className="text-sm text-ink-muted">{t.noChartData}</p>
         )}
       </div>
 
@@ -197,7 +198,7 @@ export default function ScreenDTrends({
       <div className="flex justify-end">
         <button
           onClick={onProceedToMethods}
-          className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-md transition"
+          className="flex items-center gap-2 rounded-full bg-action px-8 py-4 text-lg font-semibold text-white shadow-float transition hover:bg-action-pressed"
         >
           {t.nextMethods}
           <ArrowRight className="w-5 h-5" />

@@ -23,56 +23,56 @@ export default function ScreenEMethods({ data, lang }: ScreenEMethodsProps) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-6 rounded-2xl border border-emerald-100 shadow-sm space-y-4">
+      <div className="rounded-xl border border-divider bg-white p-6 shadow-float space-y-4">
         <div className="flex items-center gap-2.5">
-          <Database className="w-6 h-6 text-emerald-800" />
-          <h2 className="text-2xl font-bold text-emerald-950">{t.methodsTitle}</h2>
+          <Database className="w-6 h-6 text-leaf" />
+          <h2 className="text-2xl font-bold text-forest">{t.methodsTitle}</h2>
         </div>
 
-        <p className="text-sm text-gray-700 leading-relaxed">{t.methodsIntro}</p>
+        <p className="text-sm text-ink-soft leading-relaxed">{t.methodsIntro}</p>
 
         {/* Methodology Highlights */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-          <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-200">
-            <h3 className="font-bold text-emerald-950 text-sm mb-1">{t.method1Title}</h3>
-            <p className="text-xs text-gray-700 leading-relaxed">{t.method1Body}</p>
+          <div className="rounded-lg border border-divider bg-soft p-4">
+            <h3 className="font-bold text-forest text-sm mb-1">{t.method1Title}</h3>
+            <p className="text-xs text-ink-soft leading-relaxed">{t.method1Body}</p>
           </div>
-          <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-200">
-            <h3 className="font-bold text-emerald-950 text-sm mb-1">{t.method2Title}</h3>
-            <p className="text-xs text-gray-700 leading-relaxed">{t.method2Body}</p>
+          <div className="rounded-lg border border-divider bg-soft p-4">
+            <h3 className="font-bold text-forest text-sm mb-1">{t.method2Title}</h3>
+            <p className="text-xs text-ink-soft leading-relaxed">{t.method2Body}</p>
           </div>
-          <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-200">
-            <h3 className="font-bold text-emerald-950 text-sm mb-1">{t.method3Title}</h3>
-            <p className="text-xs text-gray-700 leading-relaxed">{t.method3Body}</p>
+          <div className="rounded-lg border border-divider bg-soft p-4">
+            <h3 className="font-bold text-forest text-sm mb-1">{t.method3Title}</h3>
+            <p className="text-xs text-ink-soft leading-relaxed">{t.method3Body}</p>
           </div>
         </div>
       </div>
 
       {/* Live Source Provenance Cards */}
       <div className="space-y-4">
-        <h3 className="text-lg font-bold text-gray-900 px-1">{t.provenanceTitle}</h3>
+        <h3 className="text-lg font-bold text-forest px-1">{t.provenanceTitle}</h3>
 
         {sources.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {sources.map((src, idx) => (
-              <div key={idx} className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between space-y-3">
+              <div key={idx} className="rounded-lg border border-divider bg-white p-5 shadow-float flex flex-col justify-between space-y-3">
                 <div>
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                     <span
-                      className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                         src.is_nasa
-                          ? "bg-emerald-100 text-emerald-900 border border-emerald-200"
-                          : "bg-sky-100 text-sky-900 border border-sky-200"
+                          ? "bg-soft text-ink-soft"
+                          : "bg-info-soft text-info"
                       }`}
                     >
                       {src.is_nasa ? t.nasaSource : t.nonNasaSource}
                     </span>
 
                     <span
-                      className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                         src.status === "LIVE"
-                          ? "bg-emerald-100 text-emerald-900"
-                          : "bg-amber-100 text-amber-900"
+                          ? "bg-action-soft text-forest"
+                          : "bg-amber-soft text-amber-ink"
                       }`}
                     >
                       {src.status === "LIVE" ? (
@@ -84,32 +84,32 @@ export default function ScreenEMethods({ data, lang }: ScreenEMethodsProps) {
                     </span>
                   </div>
 
-                  <h4 className="font-bold text-gray-900 text-base">{src.dataset_name}</h4>
-                  <p className="text-xs text-gray-500 mt-0.5">{src.source_org}</p>
+                  <h4 className="font-bold text-ink text-base">{src.dataset_name}</h4>
+                  <p className="text-xs text-ink-muted mt-0.5">{src.source_org}</p>
 
-                  <div className="mt-3 space-y-1 text-xs text-gray-700 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                    <div>
+                  <div className="mt-3 space-y-1 rounded-md border border-divider bg-soft p-3 text-xs text-ink-soft">
+                    <div className="tnum">
                       <strong>{t.latestObservation}</strong> {src.latest_observation_date || "N/A"}
                     </div>
-                    <div>
+                    <div className="tnum">
                       <strong>{t.spatialResolution}</strong> {src.spatial_resolution}
                     </div>
-                    <div>
+                    <div className="tnum">
                       <strong>{t.typicalLatency}</strong> {src.typical_latency}
                     </div>
                   </div>
 
-                  <p className="text-xs text-gray-600 mt-3 leading-relaxed">
+                  <p className="text-xs text-ink-soft mt-3 leading-relaxed">
                     <strong>{t.caveatLabel}</strong> {src.caveat}
                   </p>
                 </div>
 
-                <div className="pt-2 border-t border-gray-100 flex justify-end">
+                <div className="pt-2 border-t border-divider flex justify-end">
                   <a
                     href={src.docs_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-800 hover:text-emerald-950"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-forest hover:text-leaf"
                   >
                     {t.officialDocs} <ExternalLink className="w-3.5 h-3.5" />
                   </a>
@@ -118,7 +118,7 @@ export default function ScreenEMethods({ data, lang }: ScreenEMethodsProps) {
             ))}
           </div>
         ) : (
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 text-sm text-gray-600">
+          <div className="rounded-xl border border-divider bg-white p-6 text-sm text-ink-soft shadow-float">
             {t.provenanceEmpty}
           </div>
         )}
@@ -126,21 +126,21 @@ export default function ScreenEMethods({ data, lang }: ScreenEMethodsProps) {
 
 
       {data?.rainfall_observation.provenance && (
-        <div className="rounded-2xl border border-sky-200 bg-white p-5 space-y-2">
-          <h3 className="font-bold text-slate-900">{t.rainfallProvenanceTitle}</h3>
-          <p className="text-sm text-slate-700">{data.rainfall_observation.provenance.source_name} · {data.rainfall_observation.provenance.kind}</p>
-          <p className="text-xs text-slate-600">{t.observed} {data.rainfall_observation.provenance.observed_start_utc} – {data.rainfall_observation.provenance.observed_end_utc}</p>
-          <p className="text-xs text-slate-600">{t.fetched} {data.rainfall_observation.provenance.fetched_at_utc} · {data.rainfall_observation.provenance.spatial_resolution ?? t.resolutionNotSupplied}</p>
-          <p className="text-xs text-slate-600">{data.rainfall_observation.provenance.latency_note}</p>
-          <p className="text-xs text-slate-600">{t.provenanceCoverageNote}</p>
-          <p className="text-xs text-slate-600">{t.spatialMethodLabel} {data.rainfall_observation.provenance.spatial_method}; {t.coverageLabel} {data.rainfall_observation.provenance.coverage_fraction === null ? t.coverageNotApplicable : Math.round(data.rainfall_observation.provenance.coverage_fraction * 100) + "%"}</p>
-          <p className="text-xs text-slate-600">{t.datasetLabel} {data.rainfall_observation.provenance.dataset}, {t.versionLabel} {data.rainfall_observation.provenance.version}, {t.streamLabel} {data.rainfall_observation.provenance.stream ?? t.streamNotApplicable}</p>
+        <div className="rounded-xl border border-info/30 bg-info-soft p-5 space-y-2">
+          <h3 className="font-bold text-forest">{t.rainfallProvenanceTitle}</h3>
+          <p className="text-sm text-ink-soft">{data.rainfall_observation.provenance.source_name} · {data.rainfall_observation.provenance.kind}</p>
+          <p className="text-xs text-ink-soft tnum">{t.observed} {data.rainfall_observation.provenance.observed_start_utc} – {data.rainfall_observation.provenance.observed_end_utc}</p>
+          <p className="text-xs text-ink-soft tnum">{t.fetched} {data.rainfall_observation.provenance.fetched_at_utc} · {data.rainfall_observation.provenance.spatial_resolution ?? t.resolutionNotSupplied}</p>
+          <p className="text-xs text-ink-soft">{data.rainfall_observation.provenance.latency_note}</p>
+          <p className="text-xs text-ink-soft">{t.provenanceCoverageNote}</p>
+          <p className="text-xs text-ink-soft tnum">{t.spatialMethodLabel} {data.rainfall_observation.provenance.spatial_method}; {t.coverageLabel} {data.rainfall_observation.provenance.coverage_fraction === null ? t.coverageNotApplicable : Math.round(data.rainfall_observation.provenance.coverage_fraction * 100) + "%"}</p>
+          <p className="text-xs text-ink-soft">{t.datasetLabel} {data.rainfall_observation.provenance.dataset}, {t.versionLabel} {data.rainfall_observation.provenance.version}, {t.streamLabel} {data.rainfall_observation.provenance.stream ?? t.streamNotApplicable}</p>
         </div>
       )}
 
       {/* Explicit Disclaimer */}
-      <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-start gap-3 text-xs text-amber-950">
-        <ShieldAlert className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+      <div className="border border-amber bg-amber-soft p-4 rounded-lg flex items-start gap-3 text-xs text-amber-ink">
+        <ShieldAlert className="w-5 h-5 text-amber-ink shrink-0 mt-0.5" />
         <p>
           <strong>{t.methodsDisclaimerTitle}</strong> {t.methodsDisclaimerBody}
         </p>

@@ -1,29 +1,136 @@
 @import "tailwindcss";
 
-:root {
-  --bg-outdoor: #f4f7f2;
-  --card-bg: #ffffff;
-  --text-main: #1c2821;
-  --accent-green: #2e6930;
+/*
+ * Crop Compass — Field Intelligence design system (applied to Safe Field Nepal)
+ * Tokens below mirror CROP_COMPASS_DESIGN: deep field greens, fresh growth
+ * accents, warm cream canvases, clean white panels, restrained amber alerts.
+ */
+@theme {
+  /* Brand palette */
+  --color-forest: #174b35;
+  --color-leaf: #2f8f4e;
+  --color-growth: #55b95f;
+  --color-lime: #a8d96c;
+  --color-mint: #e8f4e8;
+
+  /* Action greens */
+  --color-action: #2fae62;
+  --color-action-pressed: #238a4c;
+  --color-action-soft: #ddf3e3;
+
+  /* Earth accents (soil-related labels only) */
+  --color-earth: #76563c;
+  --color-soil: #4d392c;
+
+  /* Canvases and surfaces */
+  --color-cream: #f5eedf;
+  --color-warm: #f8f6ef;
+  --color-canvas: #f7f8f5;
+  --color-soft: #f1f4ee;
+  --color-map-dark: #173d2c;
+  --color-charcoal: #171a18;
+
+  /* Ink scale */
+  --color-ink: #202923;
+  --color-ink-soft: #657168;
+  --color-ink-muted: #89938b;
+
+  /* Lines */
+  --color-divider: #e4e9e2;
+  --color-line: #dce4da;
+
+  /* Semantic colors */
+  --color-amber: #f2b93b;
+  --color-amber-soft: #fff2c9;
+  --color-amber-ink: #805b12;
+  --color-danger: #d94b43;
+  --color-danger-soft: #fce8e6;
+  --color-info: #4d91c6;
+  --color-info-soft: #e7f1f8;
+  --color-success: #299b58;
+  --color-warning: #d99a24;
+
+  /* Radii */
+  --radius-xs: 6px;
+  --radius-sm: 9px;
+  --radius-md: 13px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-panel: 26px;
+
+  /* Elevation */
+  --shadow-float: 0 4px 18px rgba(24, 44, 30, 0.1);
+  --shadow-sheet: 0 8px 28px rgba(24, 44, 30, 0.12);
+
+  /* Type: Inter for Latin, Noto Sans Devanagari for Nepali glyphs */
+  --font-sans: var(--font-inter), var(--font-noto-devanagari), system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 body {
-  background-color: var(--bg-outdoor);
-  color: var(--text-main);
-  font-family: var(--font-noto-sans), sans-serif;
+  background-color: var(--color-warm);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv05" 1;
 }
 
-button, select, input {
-  min-height: 48px;
+/* Tabular numerals for measurements, dates and forecast values */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Minimum touch target per the design system (44px) */
+button,
+select,
+input {
+  min-height: 44px;
 }
 
 :focus-visible {
-  outline: 3px solid #166534;
+  outline: 3px solid var(--color-action);
   outline-offset: 3px;
 }
 
+/* Slim, quiet scrollbars for scroll panels and long lists */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c7d2c5 transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #c7d2c5;
+  border-radius: 9999px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Maplibre chrome restyled to the floating white circular control language */
+.maplibregl-ctrl-group {
+  border: 1px solid var(--color-divider) !important;
+  border-radius: 9999px !important;
+  box-shadow: var(--shadow-float) !important;
+  overflow: hidden;
+  background: #ffffff !important;
+}
+.maplibregl-ctrl-group button {
+  width: 42px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+}
+.maplibregl-ctrl-group button + button {
+  border-top: 1px solid var(--color-divider) !important;
+}
+.maplibregl-ctrl-group button span {
+  filter: hue-rotate(100deg) saturate(0.7);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;

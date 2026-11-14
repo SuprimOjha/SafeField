@@ -232,7 +232,7 @@ export default function ScreenAHome({
         if (!map) return;
         if (!walkDotRef.current) {
           const dot = document.createElement("div");
-          dot.className = "h-4 w-4 rounded-full border-[3px] border-white bg-sky-500 shadow-md";
+          dot.className = "h-4 w-4 rounded-full border-[3px] border-white bg-info shadow-float";
           walkDotRef.current = new MapLibreMarker({ element: dot })
             .setLngLat([position.coords.longitude, position.coords.latitude])
             .addTo(map);
@@ -409,7 +409,7 @@ export default function ScreenAHome({
     map.addControl(new NavigationControl({ visualizePitch: true }), "top-right");
     map.addControl(new ScaleControl({ unit: "metric" }), "bottom-right");
 
-    const marker = new MapLibreMarker({ color: "#047857", draggable: true })
+    const marker = new MapLibreMarker({ color: "#2F8F4E", draggable: true })
       .setLngLat([initialLocation.lon, initialLocation.lat]).addTo(map);
     markerRef.current = marker;
     marker.on("dragend", () => {
@@ -447,11 +447,11 @@ export default function ScreenAHome({
         map.addSource("user-field", { type: "geojson", data: EMPTY_FEATURES });
         map.addLayer({
           id: "user-field-fill", type: "fill", source: "user-field",
-          paint: { "fill-color": "#10b981", "fill-opacity": 0.3 },
+          paint: { "fill-color": "#F2B93B", "fill-opacity": 0.28 },
         });
         map.addLayer({
           id: "user-field-outline", type: "line", source: "user-field",
-          paint: { "line-color": "#047857", "line-width": 3, "line-dasharray": [2, 1] },
+          paint: { "line-color": "#F2B93B", "line-width": 2, "line-dasharray": [2, 1] },
         });
         map.addLayer({
           id: "user-field-points", type: "circle", source: "user-field",
@@ -459,7 +459,7 @@ export default function ScreenAHome({
           paint: {
             "circle-radius": 6,
             "circle-color": "#ffffff",
-            "circle-stroke-color": "#047857",
+            "circle-stroke-color": "#2F8F4E",
             "circle-stroke-width": 3,
           },
         });
@@ -752,24 +752,24 @@ export default function ScreenAHome({
 
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-3xl border border-emerald-100 bg-white shadow-[0_16px_55px_rgba(15,65,40,0.08)]">
-        <div className="border-b border-emerald-50 bg-gradient-to-r from-[#f2faf5] via-white to-[#f8fbf6] px-5 py-6 sm:px-7">
+      <section className="overflow-hidden rounded-xl border border-divider bg-white shadow-float">
+        <div className="border-b border-divider bg-cream px-5 py-6 sm:px-7">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="max-w-2xl">
-              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-[.15em] text-emerald-800">
+              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-mint bg-mint px-3 py-1 text-[10px] font-bold uppercase tracking-[.15em] text-forest">
                 <LocateFixed className="h-3.5 w-3.5" /> {copy.fieldMappingBadge}
               </div>
-              <h2 className="text-2xl font-extrabold tracking-tight text-[#123c2b] sm:text-3xl">{copy.title}</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{copy.subtitle} {copy.subtitleExtra}</p>
+              <h2 className="text-2xl font-extrabold tracking-tight text-forest sm:text-3xl">{copy.title}</h2>
+              <p className="mt-2 text-sm leading-6 text-ink-soft">{copy.subtitle} {copy.subtitleExtra}</p>
             </div>
           </div>
         </div>
 
-        <div className="grid gap-3 border-b border-slate-100 bg-white p-4 sm:grid-cols-2 sm:items-end sm:p-5">
+        <div className="grid gap-3 border-b border-divider bg-white p-4 sm:grid-cols-2 sm:items-end sm:p-5">
           <label className="block">
-            <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">{copy.searchLabel}</span>
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-ink-muted">{copy.searchLabel}</span>
             <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted">
                 {searchStatus === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               </span>
               <input
@@ -778,37 +778,37 @@ export default function ScreenAHome({
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder={copy.searchPlaceholder}
                 aria-label={copy.searchLabel}
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-9 text-sm font-semibold text-slate-800 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+                className="h-12 w-full rounded-full border border-line bg-white pl-9 pr-9 text-sm font-medium text-ink outline-none transition placeholder:font-normal placeholder:text-ink-muted focus:border-action focus:ring-4 focus:ring-action/15"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
                   aria-label="Clear search"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-ink-muted transition hover:bg-soft hover:text-ink-soft"
                 >
                   <X className="h-4 w-4" />
                 </button>
               )}
               {searchQuery.trim().length >= 3 && (searchStatus === "done" || searchStatus === "error") && (
-                <div className="absolute inset-x-0 top-full z-30 mt-1.5 max-h-72 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-[0_16px_40px_rgba(15,55,35,0.14)]">
+                <div className="absolute inset-x-0 top-full z-30 mt-1.5 max-h-72 overflow-y-auto rounded-lg border border-divider bg-white p-1 shadow-float">
                   {searchStatus === "error" && (
-                    <p className="px-3 py-2.5 text-xs leading-5 text-rose-700">{copy.searchError}</p>
+                    <p className="px-3 py-2.5 text-xs leading-5 text-danger">{copy.searchError}</p>
                   )}
                   {searchStatus === "done" && searchResults.length === 0 && (
-                    <p className="px-3 py-2.5 text-xs leading-5 text-slate-500">{copy.searchNoResults}</p>
+                    <p className="px-3 py-2.5 text-xs leading-5 text-ink-muted">{copy.searchNoResults}</p>
                   )}
                   {searchResults.map((result) => (
                     <button
                       key={`${result.title}-${result.lat}-${result.lon}`}
                       type="button"
                       onClick={() => selectSearchResult(result)}
-                      className="flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left transition hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                      className="flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left transition hover:bg-mint/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
                     >
-                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" aria-hidden="true" />
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-leaf" aria-hidden="true" />
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-bold text-slate-800">{result.title}</span>
-                        {result.subtitle && <span className="block truncate text-xs text-slate-500">{result.subtitle}</span>}
+                        <span className="block truncate text-sm font-bold text-ink">{result.title}</span>
+                        {result.subtitle && <span className="block truncate text-xs text-ink-muted">{result.subtitle}</span>}
                       </span>
                     </button>
                   ))}
@@ -817,9 +817,9 @@ export default function ScreenAHome({
             </div>
           </label>
           <label className="block">
-            <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">{copy.district}</span>
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-ink-muted">{copy.district}</span>
             <select value={districtName} onChange={(event) => selectDistrict(event.target.value)} disabled={districtLoading || districts.length === 0}
-              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10">
+              className="h-12 w-full rounded-full border border-line bg-white px-3 text-sm font-medium text-ink outline-none transition focus:border-action focus:ring-4 focus:ring-action/15">
               <option value="">{districtLoading ? copy.loadingDistricts : copy.chooseDistrict}</option>
               {[...districts].sort((a,b) => (a.properties?.DISTRICT ?? "").localeCompare(b.properties?.DISTRICT ?? "")).map((item) => (
                 <option key={item.properties?.DISTRICT} value={item.properties?.DISTRICT}>{item.properties?.DISTRICT}</option>
@@ -827,27 +827,27 @@ export default function ScreenAHome({
             </select>
           </label>
           <div className="flex flex-wrap gap-2">
-            <button onClick={handleUseGps} disabled={gpsLoading} className="inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-800 px-4 text-sm font-bold text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60">
+            <button onClick={handleUseGps} disabled={gpsLoading} className="inline-flex h-11 items-center gap-2 rounded-full bg-action px-4 text-sm font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-60">
               <Navigation className={`h-4 w-4 ${gpsLoading ? "animate-pulse" : ""}`} /> {copy.gps}
             </button>
-            <button onClick={() => { drawModeRef.current = "select"; setDrawMode("select"); if (mapRef.current) mapRef.current.getCanvas().style.cursor = ""; }} className={`inline-flex h-11 items-center gap-2 rounded-xl border px-4 text-sm font-bold transition ${drawMode === "select" ? "border-emerald-700 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white text-slate-600"}`}>
+            <button onClick={() => { drawModeRef.current = "select"; setDrawMode("select"); if (mapRef.current) mapRef.current.getCanvas().style.cursor = ""; }} className={`inline-flex h-11 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition ${drawMode === "select" ? "border-forest bg-forest text-white" : "border-line bg-white text-forest hover:bg-soft"}`}>
               <MousePointer2 className="h-4 w-4" /> {copy.tap}
             </button>
-            <button onClick={beginDrawing} className={`inline-flex h-11 items-center gap-2 rounded-xl px-4 text-sm font-bold shadow-sm transition ${drawMode === "draw" ? "bg-emerald-950 text-white" : "bg-emerald-700 text-white hover:bg-emerald-800"}`}>
+            <button onClick={beginDrawing} className={`inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold transition ${drawMode === "draw" ? "bg-forest text-white" : "border border-line bg-white text-forest hover:bg-soft"}`}>
               <Pencil className="h-4 w-4" /> {copy.draw}
             </button>
           </div>
         </div>
 
         {/* Walk method: mark field corners on foot with live GPS accuracy */}
-        <div className="border-b border-emerald-100 bg-white px-4 py-4 sm:px-5">
+        <div className="border-b border-divider bg-white px-4 py-4 sm:px-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="flex items-center gap-2 text-sm font-extrabold uppercase tracking-wide text-[#123c2b]">
-              <Footprints className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+            <h3 className="flex items-center gap-2 text-sm font-extrabold uppercase tracking-wide text-forest">
+              <Footprints className="h-4 w-4 text-leaf" aria-hidden="true" />
               {copy.walkTitle}
             </h3>
             {walkStatus !== "idle" && (
-              <span aria-live="polite" className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${walkStatus === "unavailable" ? "bg-rose-50 text-rose-700" : walkStatus === "waiting" ? "bg-amber-50 text-amber-800" : "bg-emerald-50 text-emerald-800"}`}>
+              <span aria-live="polite" className={`tnum inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${walkStatus === "unavailable" ? "bg-danger-soft text-danger" : walkStatus === "waiting" ? "bg-amber-soft text-amber-ink" : "bg-action-soft text-forest"}`}>
                 {walkStatus === "unavailable"
                   ? copy.walkUnavailable
                   : walkStatus === "waiting"
@@ -857,27 +857,27 @@ export default function ScreenAHome({
             )}
           </div>
 
-          <div className="mt-2.5 flex items-start gap-2 rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2.5 text-xs leading-5 text-emerald-950">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" aria-hidden="true" />
+          <div className="mt-2.5 flex items-start gap-2 rounded-md border border-divider bg-action-soft px-3 py-2.5 text-xs leading-5 text-forest">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-leaf" aria-hidden="true" />
             <span>{copy.walkInfo} {copy.walkPrivacy}</span>
           </div>
 
-          <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs font-semibold text-slate-700">
+          <div className="mt-3 rounded-md border border-line bg-soft px-3.5 py-3 text-xs font-semibold text-ink-soft">
             {walkStatusBox}
           </div>
 
           <div className="mt-3 flex flex-wrap gap-2">
-            <button onClick={markWalkCorner} disabled={walkRequesting} className="inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-800 px-4 text-xs font-bold text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60">
+            <button onClick={markWalkCorner} disabled={walkRequesting} className="inline-flex h-10 items-center gap-2 rounded-full bg-action px-4 text-xs font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-60">
               {walkRequesting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <MapPin className="h-4 w-4" aria-hidden="true" />}
               {copy.walkMark}
             </button>
-            <button onClick={undoWalkCorner} disabled={!walkCorners.length} className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3.5 text-xs font-bold text-emerald-900 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40">
+            <button onClick={undoWalkCorner} disabled={!walkCorners.length} className="inline-flex h-10 items-center gap-1.5 rounded-full border border-line bg-white px-3.5 text-xs font-semibold text-forest transition hover:bg-soft disabled:cursor-not-allowed disabled:opacity-40">
               <Undo2 className="h-4 w-4" aria-hidden="true" /> {copy.walkUndo}
             </button>
-            <button onClick={clearWalkCorners} disabled={!walkCorners.length} className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3.5 text-xs font-bold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40">
+            <button onClick={clearWalkCorners} disabled={!walkCorners.length} className="inline-flex h-10 items-center gap-1.5 rounded-full border border-danger/30 bg-white px-3.5 text-xs font-semibold text-danger transition hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-40">
               <Trash2 className="h-4 w-4" aria-hidden="true" /> {copy.clear}
             </button>
-            <button onClick={finishWalkField} disabled={walkCorners.length < 3} className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-emerald-700 px-3.5 text-xs font-bold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-40">
+            <button onClick={finishWalkField} disabled={walkCorners.length < 3} className="inline-flex h-10 items-center gap-1.5 rounded-full bg-action px-3.5 text-xs font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-40">
               <Check className="h-4 w-4" aria-hidden="true" /> {copy.walkFinish}
             </button>
           </div>
@@ -887,7 +887,7 @@ export default function ScreenAHome({
               {walkCorners.map((corner, index) => (
                 <span
                   key={`${index}-${corner.lat}-${corner.lon}`}
-                  className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-bold ${corner.accuracy > 15 ? "border-amber-300 bg-amber-50 text-amber-900" : "border-emerald-200 bg-emerald-50 text-emerald-900"}`}
+                  className={`tnum inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-bold ${corner.accuracy > 15 ? "border-amber bg-amber-soft text-amber-ink" : "border-line bg-action-soft text-forest"}`}
                 >
                   {copy.walkCorner} {index + 1} · ±{Math.round(corner.accuracy)} m
                 </span>
@@ -897,49 +897,49 @@ export default function ScreenAHome({
         </div>
 
         {drawMode === "draw" && (
-          <div className="flex flex-col gap-3 border-b border-emerald-100 bg-emerald-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-            <div className="flex items-start gap-2 text-xs leading-5 text-emerald-950">
+          <div className="flex flex-col gap-3 border-b border-divider bg-action-soft px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+            <div className="flex items-start gap-2 text-xs leading-5 text-forest">
               <Pencil className="mt-0.5 h-4 w-4 shrink-0" />
               <span>{copy.instruction} <strong>{drawPoints.length} {copy.points}</strong></span>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button onClick={undoPoint} disabled={!drawPoints.length} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 text-xs font-bold text-emerald-900 disabled:opacity-40"><Undo2 className="h-3.5 w-3.5" />{copy.undo}</button>
-              <button onClick={clearDrawing} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3 text-xs font-bold text-rose-700"><Trash2 className="h-3.5 w-3.5" />{copy.clear}</button>
-              <button onClick={finishDrawing} disabled={drawPoints.length < 3} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-emerald-800 px-3 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"><Check className="h-3.5 w-3.5" />{copy.finish}</button>
+              <button onClick={undoPoint} disabled={!drawPoints.length} className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line bg-white px-3 text-xs font-semibold text-forest transition hover:bg-soft disabled:opacity-40"><Undo2 className="h-3.5 w-3.5" />{copy.undo}</button>
+              <button onClick={clearDrawing} className="inline-flex h-9 items-center gap-1.5 rounded-full border border-danger/30 bg-white px-3 text-xs font-semibold text-danger transition hover:bg-danger-soft"><Trash2 className="h-3.5 w-3.5" />{copy.clear}</button>
+              <button onClick={finishDrawing} disabled={drawPoints.length < 3} className="inline-flex h-9 items-center gap-1.5 rounded-full bg-action px-3 text-xs font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-40"><Check className="h-3.5 w-3.5" />{copy.finish}</button>
             </div>
           </div>
         )}
 
         <div className="flex flex-wrap items-center justify-between gap-3 bg-white px-4 py-3 sm:px-5">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-600"><Layers3 className="h-4 w-4 text-emerald-700" /> {copy.mapLayers}</div>
-          <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1">
-            <button type="button" onClick={() => setMapStyle("streets")} aria-pressed={mapStyle === "streets"} className={`rounded-lg px-4 py-2 text-xs font-bold transition ${mapStyle === "streets" ? "bg-white text-emerald-900 shadow-sm" : "text-slate-500 hover:text-slate-900"}`}>{copy.streets}</button>
-            <button type="button" onClick={() => { if (satelliteAvailable) setMapStyle("satellite"); }} disabled={!satelliteAvailable} aria-pressed={mapStyle === "satellite"} title={!satelliteAvailable ? copy.satelliteUnavailableTitle : copy.satelliteTitle} className={`rounded-lg px-4 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${mapStyle === "satellite" ? "bg-white text-emerald-900 shadow-sm" : "text-slate-500 hover:text-slate-900"}`}>{copy.satellite}</button>
+          <div className="flex items-center gap-2 text-xs font-bold text-ink-soft"><Layers3 className="h-4 w-4 text-leaf" /> {copy.mapLayers}</div>
+          <div className="inline-flex rounded-full border border-line bg-canvas p-1">
+            <button type="button" onClick={() => setMapStyle("streets")} aria-pressed={mapStyle === "streets"} className={`rounded-full px-4 py-2 text-xs font-semibold transition ${mapStyle === "streets" ? "bg-forest text-white" : "text-ink-soft hover:text-ink"}`}>{copy.streets}</button>
+            <button type="button" onClick={() => { if (satelliteAvailable) setMapStyle("satellite"); }} disabled={!satelliteAvailable} aria-pressed={mapStyle === "satellite"} title={!satelliteAvailable ? copy.satelliteUnavailableTitle : copy.satelliteTitle} className={`rounded-full px-4 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${mapStyle === "satellite" ? "bg-forest text-white" : "text-ink-soft hover:text-ink"}`}>{copy.satellite}</button>
           </div>
         </div>
 
-        <div className="relative mx-3 mb-3 h-[440px] overflow-hidden rounded-2xl border border-slate-200 bg-[#eaf1e9] shadow-inner sm:mx-5 sm:h-[560px]">
+        <div className="relative mx-3 mb-3 h-[440px] overflow-hidden rounded-lg border border-line bg-canvas sm:mx-5 sm:h-[560px]">
           <div ref={mapContainerRef} className="h-full w-full" />
-          {!mapReady && <div className="absolute inset-0 z-[2] flex items-center justify-center bg-[#edf4ec]/80 text-sm font-semibold text-emerald-900 backdrop-blur-[2px]">{copy.loadingMap}</div>}
-          {mapError && <div role="alert" className="absolute left-3 right-3 top-3 z-10 rounded-xl border border-amber-300 bg-amber-50/95 px-4 py-3 text-xs font-medium leading-5 text-amber-950 shadow-lg">{mapError}</div>}
-          {drawMode === "draw" && <div className="pointer-events-none absolute left-1/2 top-3 z-[5] -translate-x-1/2 rounded-full bg-emerald-950/90 px-4 py-2 text-xs font-bold text-white shadow-lg">{copy.drawingMode}</div>}
-          {walkCorners.length > 0 && <div className="pointer-events-none absolute left-1/2 top-3 z-[5] -translate-x-1/2 rounded-full bg-emerald-950/90 px-4 py-2 text-xs font-bold text-white shadow-lg">{copy.walkModePill}</div>}
-          <div className="absolute bottom-3 left-3 z-[5] flex max-w-[calc(100%-24px)] items-center gap-2 rounded-xl border border-white/70 bg-white/95 px-3 py-2.5 text-xs text-slate-700 shadow-lg backdrop-blur">
-            <Compass className="h-4 w-4 shrink-0 text-emerald-700" />
-            <span className="truncate">{copy.selectedLocation} <strong className="text-emerald-900">{locationName}</strong> · {selectedLat.toFixed(5)}°N, {selectedLon.toFixed(5)}°E{gpsAccuracy !== null ? ` · GPS ±${Math.round(gpsAccuracy)} m` : ""} · {copy.dragPin}</span>
+          {!mapReady && <div className="absolute inset-0 z-[2] flex items-center justify-center bg-warm/85 text-sm font-semibold text-forest backdrop-blur-[2px]">{copy.loadingMap}</div>}
+          {mapError && <div role="alert" className="absolute left-3 right-3 top-3 z-10 rounded-lg border border-amber bg-amber-soft/95 px-4 py-3 text-xs font-medium leading-5 text-amber-ink shadow-float">{mapError}</div>}
+          {drawMode === "draw" && <div className="pointer-events-none absolute left-1/2 top-3 z-[5] -translate-x-1/2 rounded-full bg-charcoal/90 px-4 py-2 text-xs font-bold text-white shadow-float">{copy.drawingMode}</div>}
+          {walkCorners.length > 0 && <div className="pointer-events-none absolute left-1/2 top-3 z-[5] -translate-x-1/2 rounded-full bg-charcoal/90 px-4 py-2 text-xs font-bold text-white shadow-float">{copy.walkModePill}</div>}
+          <div className="tnum absolute bottom-3 left-3 z-[5] flex max-w-[calc(100%-24px)] items-center gap-2 rounded-full border border-divider bg-white/95 px-3 py-2.5 text-xs text-ink-soft shadow-float backdrop-blur">
+            <Compass className="h-4 w-4 shrink-0 text-leaf" />
+            <span className="truncate">{copy.selectedLocation} <strong className="font-semibold text-forest">{locationName}</strong> · {selectedLat.toFixed(5)}°N, {selectedLon.toFixed(5)}°E{gpsAccuracy !== null ? ` · GPS ±${Math.round(gpsAccuracy)} m` : ""} · {copy.dragPin}</span>
           </div>
-          <div className="absolute bottom-3 right-3 z-[5] max-w-[85%] rounded-lg bg-white/95 px-3 py-2 text-[10px] font-semibold text-slate-700 shadow">
+          <div className="absolute bottom-3 right-3 z-[5] max-w-[85%] rounded-full bg-white/92 px-3 py-2 text-[10px] font-semibold text-ink-muted">
             {mapStyle === "satellite" ? copy.attributionSatellite : copy.attributionStreets}
           </div>
         </div>
 
         <div className="flex flex-col gap-3 px-4 pb-5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-600">
-            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-5 rounded-sm border border-emerald-700 bg-emerald-200/70" /> {copy.districtBoundaries}</span>
-            {fieldArea !== null && <span className="font-bold text-emerald-900">{copy.area}: {fieldArea.toFixed(3)} ha</span>}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-ink-soft">
+            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-5 rounded-xs border border-[#087443] bg-[#16a34a]/30" /> {copy.districtBoundaries}</span>
+            {fieldArea !== null && <span className="tnum font-bold text-forest">{copy.area}: {fieldArea.toFixed(3)} ha</span>}
             <span>{districts.length || 0} {districts.length === 1 ? (lang === "ne" ? "जिल्ला" : "district") : (lang === "ne" ? "जिल्ला" : "districts")} {districtLoading ? copy.districtsLoading : copy.districtsAvailable}</span>
           </div>
-          <button onClick={onProceedToField} className="inline-flex min-h-12 items-center justify-center gap-3 rounded-xl bg-emerald-800 px-7 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-emerald-900/15 transition hover:-translate-y-0.5 hover:bg-emerald-900">
+          <button onClick={onProceedToField} className="inline-flex min-h-12 items-center justify-center gap-3 rounded-full bg-action px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-50">
             {copy.nextField} <ArrowRight className="h-4 w-4" />
           </button>
         </div>

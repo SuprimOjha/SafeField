@@ -38,28 +38,28 @@ export default function ScreenBField({
 
   if (loading) {
     return (
-      <div role="status" aria-live="polite" className="bg-white p-12 rounded-2xl shadow-sm border border-emerald-100 text-center space-y-4">
-        <RefreshCw className="w-10 h-10 text-emerald-700 animate-spin mx-auto" />
-        <h3 className="text-xl font-bold text-emerald-900">{t.loadingAssessment}</h3>
-        <p className="text-gray-600 text-sm">{t.loadingAssessmentBody}</p>
+      <div role="status" aria-live="polite" className="rounded-xl border border-divider bg-white p-12 text-center shadow-float space-y-4">
+        <RefreshCw className="w-10 h-10 text-leaf animate-spin mx-auto" />
+        <h3 className="text-xl font-bold text-forest">{t.loadingAssessment}</h3>
+        <p className="text-ink-soft text-sm">{t.loadingAssessmentBody}</p>
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div role="alert" aria-live="assertive" className="bg-white p-8 sm:p-12 rounded-2xl shadow-sm border border-amber-200 text-center space-y-4">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-amber-700">
+      <div role="alert" aria-live="assertive" className="rounded-xl border border-amber bg-white p-8 text-center shadow-float space-y-4 sm:p-12">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-soft text-amber-ink">
           <RefreshCw className="h-6 w-6" />
         </div>
-        <h3 className="text-xl font-bold text-slate-900">{t.assessmentFailed}</h3>
-        <p className="mx-auto max-w-2xl text-sm leading-6 text-slate-600">
+        <h3 className="text-xl font-bold text-ink">{t.assessmentFailed}</h3>
+        <p className="mx-auto max-w-2xl text-sm leading-6 text-ink-soft">
           {error || t.assessmentFailedBody}
         </p>
         <button
           type="button"
           onClick={onRunAssessment}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-6 py-3 font-semibold text-white transition hover:bg-emerald-800"
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-action px-6 py-3 font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-50"
         >
           <RefreshCw className="h-4 w-4" />
           {t.retryAssessment}
@@ -90,34 +90,34 @@ export default function ScreenBField({
   return (
     <div className="space-y-6">
       {/* Freshness banner */}
-      <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex items-center justify-between text-xs text-emerald-900">
+      <div className="flex items-center justify-between rounded-lg border border-leaf bg-action-soft p-4 text-xs text-forest">
         <div className="flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+          <CheckCircle2 className="w-4 h-4 text-leaf shrink-0" />
           <span>
             <strong>{power_summary.freshness.dataset_name}</strong> | {t.freshnessLatest} {power_summary.freshness.latest_observation_date || "N/A"} ({power_summary.freshness.status})
           </span>
         </div>
-        <span className="text-emerald-700 font-mono hidden md:inline">{t.freshnessLatency} {power_summary.freshness.typical_latency}</span>
+        <span className="hidden rounded-full bg-soft px-2.5 py-1 text-[11px] font-semibold text-ink-soft md:inline">{t.freshnessLatency} {power_summary.freshness.typical_latency}</span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Local rainfall observation */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
+        <div className="flex flex-col justify-between rounded-md bg-soft p-3.5">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-gray-600">{t.localRainfall}</span>
-            <CloudRain className="w-6 h-6 text-sky-600" />
+            <span className="text-[11px] font-medium text-ink-soft">{t.localRainfall}</span>
+            <CloudRain className="w-6 h-6 text-info" />
           </div>
           {hasLocalRainfall ? (
             <div>
-              <span className="text-3xl font-bold text-gray-900">{rainfall.amount_mm}</span>
-              <span className="text-gray-500 ml-1">mm</span>
+              <span className="tnum text-3xl font-bold text-ink">{rainfall.amount_mm}</span>
+              <span className="text-ink-muted ml-1">mm</span>
             </div>
           ) : (
             <div>
-              <span className="text-xl font-bold text-amber-800">{t.notVerified}</span>
+              <span className="rounded-full bg-amber-soft px-2.5 py-1 text-[11px] font-semibold text-amber-ink">{t.notVerified}</span>
             </div>
           )}
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="tnum mt-2 text-xs text-ink-muted">
             {hasLocalRainfall && rainfall.provenance
               ? rainfall.provenance.source_name +
                 " · " +
@@ -129,9 +129,9 @@ export default function ScreenBField({
               : t.noRainfallObservation}
           </p>
           {hasRegionalPowerEstimate && (
-            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs font-semibold text-slate-700">{t.regionalEstimateOnly}</p>
-              <p className="mt-1 text-xs leading-5 text-slate-600">
+            <div className="mt-3 rounded-lg border border-line bg-white p-3">
+              <p className="text-xs font-semibold text-ink-soft">{t.regionalEstimateOnly}</p>
+              <p className="tnum mt-1 text-xs leading-5 text-ink-soft">
                 {power_summary.rain_last_72h_mm} {t.regionalEstimateBody.replace("{dates}", regionalPowerDates)}{" "}
                 {power_summary.freshness.spatial_resolution} {t.regionalEstimateTail}
               </p>
@@ -140,63 +140,63 @@ export default function ScreenBField({
         </div>
 
         {/* Soil Wetness */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
+        <div className="flex flex-col justify-between rounded-md bg-soft p-3.5">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-gray-600">{t.wetnessCard}</span>
-            <Droplets className="w-6 h-6 text-emerald-600" />
+            <span className="text-[11px] font-medium text-ink-soft">{t.wetnessCard}</span>
+            <Droplets className="w-6 h-6 text-leaf" />
           </div>
           <div>
-            <span className="text-3xl font-bold text-gray-900">
+            <span className="tnum text-3xl font-bold text-ink">
               {power_summary.latest_surface_wetness !== null ? Math.round(power_summary.latest_surface_wetness * 100) : "N/A"}
             </span>
-            <span className="text-gray-500 ml-1">%</span>
+            <span className="text-ink-muted ml-1">%</span>
           </div>
-          <span className="text-xs text-gray-400 mt-2">{t.wetnessNote}</span>
+          <span className="mt-2 text-xs text-ink-muted">{t.wetnessNote}</span>
         </div>
 
         {/* Temperature */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
+        <div className="flex flex-col justify-between rounded-md bg-soft p-3.5">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-gray-600">{t.temperatureCard}</span>
-            <Thermometer className="w-6 h-6 text-amber-600" />
+            <span className="text-[11px] font-medium text-ink-soft">{t.temperatureCard}</span>
+            <Thermometer className="w-6 h-6 text-amber" />
           </div>
           <div>
-            <span className="text-3xl font-bold text-gray-900">{power_summary.latest_temp_c ?? "N/A"}</span>
-            <span className="text-gray-500 ml-1">°C</span>
+            <span className="tnum text-3xl font-bold text-ink">{power_summary.latest_temp_c ?? "N/A"}</span>
+            <span className="text-ink-muted ml-1">°C</span>
           </div>
-          <span className="text-xs text-gray-400 mt-2">{t.temperatureNote}</span>
+          <span className="mt-2 text-xs text-ink-muted">{t.temperatureNote}</span>
         </div>
 
         {/* Slope & Terrain */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
+        <div className="flex flex-col justify-between rounded-md bg-soft p-3.5">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-gray-600">{t.terrainCard}</span>
-            <Mountain className="w-6 h-6 text-stone-600" />
+            <span className="text-[11px] font-medium text-ink-soft">{t.terrainCard}</span>
+            <Mountain className="w-6 h-6 text-ink-soft" />
           </div>
           <div>
-            <span className="text-3xl font-bold text-gray-900">{elevation.slope_percent ?? "N/A"}%</span>
-            <span className="text-xs text-emerald-800 font-semibold block mt-1">{elevation.terrain_category}</span>
+            <span className="tnum text-3xl font-bold text-ink">{elevation.slope_percent ?? "N/A"}%</span>
+            <span className="mt-1 block text-xs font-semibold text-forest">{elevation.terrain_category}</span>
           </div>
-          <span className="text-xs text-gray-400 mt-2">{t.terrainNote}</span>
+          <span className="mt-2 text-xs text-ink-muted">{t.terrainNote}</span>
         </div>
       </div>
 
-      <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">{t.screenBCaveat}</p>
+      <p className="rounded-lg border border-amber bg-amber-soft p-3 text-xs leading-5 text-amber-ink">{t.screenBCaveat}</p>
 
       {/* Input Configuration Card */}
-      <div className="bg-white p-6 rounded-2xl border border-emerald-100 shadow-sm space-y-6">
-        <h3 className="text-xl font-bold text-emerald-900">{t.selectFertilizer}</h3>
+      <div className="space-y-6 rounded-xl border border-divider bg-white p-6 shadow-float">
+        <h3 className="text-xl font-bold text-forest">{t.selectFertilizer}</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Fertilizer Type */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="mb-2 block text-sm font-semibold text-ink-soft">
               {t.fertilizerType}
             </label>
             <select
               value={fertilizerType}
               onChange={(e) => setFertilizerType(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 font-medium text-gray-900 focus:ring-2 focus:ring-emerald-600"
+              className="w-full rounded-full border border-line bg-white px-4 py-3 font-medium text-ink focus:border-action focus:ring-4 focus:ring-action/15"
             >
               <option value="Urea">{t.fertilizerUrea}</option>
               <option value="DAP">{t.fertilizerDap}</option>
@@ -206,13 +206,13 @@ export default function ScreenBField({
 
           {/* Crop Stage */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="mb-2 block text-sm font-semibold text-ink-soft">
               {t.cropStage}
             </label>
             <select
               value={cropStage}
               onChange={(e) => setCropStage(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 font-medium text-gray-900 focus:ring-2 focus:ring-emerald-600"
+              className="w-full rounded-full border border-line bg-white px-4 py-3 font-medium text-ink focus:border-action focus:ring-4 focus:ring-action/15"
             >
               <option value="Basal / Planting">{t.stageBasal}</option>
               <option value="Vegetative / Tillering">{t.stageVegetative}</option>
@@ -222,7 +222,7 @@ export default function ScreenBField({
 
           {/* Soil Texture / Sand Slider */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="mb-2 block tnum text-sm font-semibold text-ink-soft">
               {t.soilTexture}: {sandLabel}
             </label>
             <input
@@ -232,19 +232,19 @@ export default function ScreenBField({
               step="1"
               value={sandVal}
               onChange={(e) => { const raw = e.target.value; if (raw === "") { onSandOverrideChange(null); return; } const value = Number(raw); if (Number.isFinite(value) && value >= 0 && value <= 100) onSandOverrideChange(value); }}
-              className="w-full rounded-xl border border-gray-300 bg-gray-50 px-4 py-3 font-medium text-gray-900 focus:ring-2 focus:ring-emerald-600"
+              className="w-full rounded-full border border-line bg-white px-4 py-3 font-medium text-ink focus:border-action focus:ring-4 focus:ring-action/15"
             />
-            <span className="text-xs text-gray-500 mt-1 block">
+            <span className="mt-1 block text-xs text-ink-muted">
               {t.soilHelperPrefix} {soil_texture.sand_percent === null ? t.soilHelperUnavailable : `${soil_texture.texture_class} (${soil_texture.sand_percent}% sand)`}.
             </span>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-gray-100">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-divider pt-4">
           <button
             onClick={onRunAssessment}
-            className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 px-6 py-3 rounded-xl font-semibold transition"
+            className="flex items-center gap-2 rounded-full border border-line bg-white px-6 py-3 font-semibold text-forest transition hover:bg-soft"
           >
             <RefreshCw className="w-4 h-4" />
             {t.rerunAssessment}
@@ -252,7 +252,7 @@ export default function ScreenBField({
 
           <button
             onClick={onProceedToDecision}
-            className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-md transition"
+            className="flex items-center gap-2 rounded-full bg-action px-8 py-4 font-bold text-lg text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-50"
           >
             {t.nextDecision}
             <ArrowRight className="w-5 h-5" />

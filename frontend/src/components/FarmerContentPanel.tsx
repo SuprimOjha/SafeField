@@ -37,27 +37,27 @@ export default function FarmerContentPanel({ lang }: { lang: Lang }) {
   const allGuidanceExpertReviewed = allGuidance.length > 0 && !hasUnreviewedGuidance;
 
   return (
-    <section className="rounded-2xl border border-sky-200 bg-white p-5 space-y-4">
+    <section className="rounded-xl border border-divider bg-white p-5 shadow-float space-y-4">
       <div>
-        <h3 className="text-lg font-extrabold text-slate-900">
+        <h3 className="text-lg font-extrabold text-forest">
           {t.contentTitle}
         </h3>
         {hasUnreviewedGuidance && (
-          <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
+          <p className="rounded-lg border border-amber bg-amber-soft p-3 text-sm font-semibold text-amber-ink">
             {t.contentUnreviewed}
           </p>
         )}
         {allGuidanceExpertReviewed && (
-          <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-900">
+          <p className="rounded-lg border border-divider bg-mint p-3 text-sm font-semibold text-forest">
             {t.contentReviewed}
           </p>
         )}
         {!content.fertilizer_references.length && !content.home_remedies.length && (
-          <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+          <p className="rounded-xl bg-cream p-3 text-sm text-ink-soft">
             {t.contentEmpty}
           </p>
         )}
-        <p className="text-sm leading-6 text-slate-600">
+        <p className="text-sm leading-6 text-ink-soft">
           {t.contentReferencesOnly}
         </p>
       </div>
@@ -68,24 +68,24 @@ export default function FarmerContentPanel({ lang }: { lang: Lang }) {
           ? item.valueMin + "–" + item.valueMax
           : String(item.valueMin ?? item.valueMax);
         return (
-          <article key={item.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
-            <h4 className="font-bold text-slate-900">{item.crop} · {item.nutrientOrProduct}</h4>
-            <p className="text-xl font-extrabold text-emerald-900">{bound} {item.unitAsPrinted}</p>
-            <p className="text-xs text-slate-600">
+          <article key={item.id} className="rounded-lg border border-divider bg-white p-4 space-y-2">
+            <h4 className="font-bold text-ink">{item.crop} · {item.nutrientOrProduct}</h4>
+            <p className="text-xl font-extrabold text-forest tnum">{bound} {item.unitAsPrinted}</p>
+            <p className="text-xs text-ink-soft tnum">
               {t.referenceOnly} · {source?.title ?? item.sourceKey}, {item.year} · {item.page}
             </p>
             {item.secondSourceKey && content.sources[item.secondSourceKey] && (
-              <p className="text-xs text-slate-600">{t.secondSource} {content.sources[item.secondSourceKey].title} ({content.sources[item.secondSourceKey].authority})</p>
+              <p className="text-xs text-ink-soft">{t.secondSource} {content.sources[item.secondSourceKey].title} ({content.sources[item.secondSourceKey].authority})</p>
             )}
-            <p className="text-sm text-slate-700">{item.timingSplit}</p>
-            <p className="text-xs font-semibold text-slate-600">
+            <p className="text-sm text-ink-soft">{item.timingSplit}</p>
+            <p className="text-xs font-semibold text-ink-soft">
               {t.reviewLabel} {item.reviewStatus}{item.reviewer ? ` · ${item.reviewer}` : ""}
             </p>
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-ink-soft">
               {t.contentLabelNote}
             </p>
             {source?.url && (
-              <a className="text-sm font-semibold text-emerald-800 underline" href={source.url} target="_blank" rel="noreferrer">
+              <a className="text-sm font-semibold text-forest underline hover:text-leaf" href={source.url} target="_blank" rel="noreferrer">
                 {source.authority} — {t.openSource}
               </a>
             )}
@@ -96,20 +96,20 @@ export default function FarmerContentPanel({ lang }: { lang: Lang }) {
       {content.home_remedies.map((item) => {
         const source = content.sources[item.sourceKey];
         return (
-          <article key={item.id} className="rounded-xl border border-slate-200 p-4 space-y-2">
-            <h4 className="font-bold text-slate-900">{item.crop} · {item.problem}</h4>
-            <p className="text-sm text-slate-700">{item.remedyText}</p>
+          <article key={item.id} className="rounded-lg border border-divider bg-white p-4 space-y-2">
+            <h4 className="font-bold text-ink">{item.crop} · {item.problem}</h4>
+            <p className="text-sm text-ink-soft">{item.remedyText}</p>
             {item.quantitiesAsPrinted && source?.official && (
-              <p className="text-sm font-semibold text-slate-800">{t.quantityAsPrinted} {item.quantitiesAsPrinted}</p>
+              <p className="text-sm font-semibold text-ink">{t.quantityAsPrinted} {item.quantitiesAsPrinted}</p>
             )}
             {!source?.official && (
-              <p className="text-sm font-semibold text-amber-800">{t.nonOfficialSource}</p>
+              <p className="text-sm font-semibold text-amber-ink">{t.nonOfficialSource}</p>
             )}
-            {item.preparationNotesAsPrinted && <p className="text-sm text-slate-600">{item.preparationNotesAsPrinted}</p>}
-            <p className="text-sm text-slate-700">{t.safetyNotesLabel} {item.safetyNotes}</p>
-            <p className="text-xs text-slate-600">{source?.title ?? item.sourceKey} · {item.evidence} · {item.reviewStatus}{item.reviewer ? " by " + item.reviewer : ""}</p>
+            {item.preparationNotesAsPrinted && <p className="text-sm text-ink-soft">{item.preparationNotesAsPrinted}</p>}
+            <p className="text-sm text-ink-soft">{t.safetyNotesLabel} {item.safetyNotes}</p>
+            <p className="text-xs text-ink-soft">{source?.title ?? item.sourceKey} · {item.evidence} · {item.reviewStatus}{item.reviewer ? " by " + item.reviewer : ""}</p>
             {source?.url && (
-              <a className="text-sm font-semibold text-emerald-800 underline" href={source.url} target="_blank" rel="noreferrer">
+              <a className="text-sm font-semibold text-forest underline hover:text-leaf" href={source.url} target="_blank" rel="noreferrer">
                 {source.authority} — {t.openSource}
               </a>
             )}

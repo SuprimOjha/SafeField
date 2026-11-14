@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
-import { Noto_Sans, Noto_Sans_Devanagari } from "next/font/google";
+import { Inter, Noto_Sans_Devanagari } from "next/font/google";
 import "./globals.css";
 
-const notoSans = Noto_Sans({
+// Inter is the primary interface typeface of the design system. Devanagari
+// glyphs (Nepali) fall through to Noto Sans Devanagari per glyph.
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  variable: "--font-noto-sans",
+  variable: "--font-inter",
 });
 
 const notoDevanagari = Noto_Sans_Devanagari({
   subsets: ["devanagari"],
-  weight: ["400", "600", "700"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-noto-devanagari",
 });
 
@@ -33,9 +34,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${notoSans.variable} ${notoDevanagari.variable}`}>
-      <body className="bg-[#f4f7f2] text-[#1c2821] antialiased selection:bg-emerald-200">
-        <a href="#main-content" className="sr-only focus:not-sr-only focus:p-3 focus:bg-emerald-700 focus:text-white">
+    <html lang="en" className={`${inter.variable} ${notoDevanagari.variable}`}>
+      <body className="bg-warm text-ink antialiased selection:bg-mint selection:text-forest">
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:p-3 focus:bg-forest focus:text-white">
           Skip to main content
         </a>
         {children}

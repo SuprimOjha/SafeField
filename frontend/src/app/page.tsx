@@ -151,15 +151,15 @@ function LanguageToggle({ lang, setLang }: { lang: Lang; setLang: (next: Lang) =
     <div
       role="group"
       aria-label={lang === "en" ? "Language selection" : "भाषा छनोट"}
-      className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
+      className="inline-flex min-h-10 items-center rounded-full border border-line bg-white p-1"
     >
-      <Globe2 className="mx-1.5 h-4 w-4 text-emerald-700" aria-hidden="true" />
+      <Globe2 className="mx-1.5 h-4 w-4 text-ink-soft" aria-hidden="true" />
       <button
         type="button"
         onClick={() => setLang("en")}
         aria-pressed={lang === "en"}
-        className={`rounded-lg px-3 py-1.5 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${
-          lang === "en" ? "bg-emerald-700 text-white shadow-sm" : "text-slate-500 hover:text-emerald-800"
+        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+          lang === "en" ? "bg-forest text-white" : "text-ink-soft hover:text-ink"
         }`}
       >
         EN
@@ -168,8 +168,8 @@ function LanguageToggle({ lang, setLang }: { lang: Lang; setLang: (next: Lang) =
         type="button"
         onClick={() => setLang("ne")}
         aria-pressed={lang === "ne"}
-        className={`rounded-lg px-3 py-1.5 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${
-          lang === "ne" ? "bg-emerald-700 text-white shadow-sm" : "text-slate-500 hover:text-emerald-800"
+        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+          lang === "ne" ? "bg-forest text-white" : "text-ink-soft hover:text-ink"
         }`}
       >
         ने
@@ -334,10 +334,10 @@ export default function SafeFieldNepalApp() {
   };
 
   return (
-    <main id="main-content" tabIndex={-1} className="flex min-h-screen flex-col bg-[#f5f8f4] text-[#183326]">
-      <a href="#main-content" className="sr-only z-[100] rounded-lg bg-white px-4 py-3 font-bold text-emerald-900 focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:ring-2 focus:ring-emerald-700">Skip to main content</a>
+    <main id="main-content" tabIndex={-1} className="flex min-h-screen flex-col bg-warm text-ink">
+      <a href="#main-content" className="sr-only z-[100] rounded-full bg-white px-4 py-3 font-semibold text-forest focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:shadow-float focus:ring-2 focus:ring-action">Skip to main content</a>
       {!isOnline && (
-        <div className="bg-rose-800 px-4 py-2.5 text-center text-xs font-semibold text-white flex items-center justify-center gap-2">
+        <div className="flex items-center justify-center gap-2 bg-danger px-4 py-2.5 text-center text-xs font-semibold text-white">
           <WifiOff className="h-4 w-4 shrink-0" />
           <span>{t.offlineBanner}</span>
         </div>
@@ -345,11 +345,11 @@ export default function SafeFieldNepalApp() {
 
       <div className="flex w-full flex-1">
         {/* Left sidebar navigation (desktop) */}
-        <aside className="sticky top-0 hidden h-screen w-[260px] shrink-0 flex-col border-r border-emerald-950/10 bg-white shadow-[4px_0_24px_rgba(15,55,35,0.05)] lg:flex">
+        <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-divider bg-white lg:flex">
           <button
             type="button"
             onClick={() => selectTab("home")}
-            className="group flex px-5 pb-4 pt-6 text-left outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+            className="group flex px-5 pb-4 pt-6 text-left outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
             aria-label="Safe Field Nepal home"
           >
             <Image
@@ -372,35 +372,34 @@ export default function SafeFieldNepalApp() {
                   type="button"
                   onClick={() => selectTab(item.id)}
                   aria-current={isActive ? "page" : undefined}
-                  className={`flex min-h-[46px] items-center gap-3 rounded-xl px-3.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${
+                  className={`flex min-h-[46px] items-center gap-3 rounded-md px-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
                     isActive
-                      ? "bg-emerald-50 text-emerald-900 shadow-[inset_0_0_0_1px_rgba(2,102,61,0.14)]"
-                      : "text-slate-500 hover:bg-emerald-50/70 hover:text-emerald-800"
+                      ? "bg-mint text-forest shadow-[inset_0_0_0_2px_var(--color-leaf)]"
+                      : "text-ink-soft hover:bg-canvas hover:text-ink"
                   }`}
                 >
-                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${isActive ? "bg-emerald-700 text-white shadow-sm" : "bg-slate-100 text-slate-500"}`}>
+                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${isActive ? "bg-action text-white" : "bg-soft text-ink-muted"}`}>
                     <Icon className="h-4 w-4" />
                   </span>
                   <span className="truncate">{lang === "ne" ? item.labelNe : item.labelEn}</span>
-                  {isActive && <span className="ml-auto h-2 w-2 shrink-0 rounded-full bg-emerald-600" aria-hidden="true" />}
                 </button>
               );
             })}
           </nav>
 
-          <div className="border-t border-slate-100 px-5 py-4">
+          <div className="border-t border-divider px-5 py-4">
             <LanguageToggle lang={lang} setLang={setLang} />
           </div>
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
           {/* Mobile top header */}
-          <header className="sticky top-0 z-50 border-b border-emerald-950/10 bg-white/95 shadow-[0_8px_30px_rgba(15,55,35,0.07)] backdrop-blur-xl lg:hidden">
-            <div className="flex min-h-[68px] items-center justify-between gap-3 px-4">
+          <header className="sticky top-0 z-50 border-b border-divider bg-white/95 backdrop-blur-xl lg:hidden">
+            <div className="flex min-h-[64px] items-center justify-between gap-3 px-4">
               <button
                 type="button"
                 onClick={() => selectTab("home")}
-                className="group flex min-w-0 items-center rounded-2xl text-left outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+                className="group flex min-w-0 items-center rounded-xl text-left outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
                 aria-label="Safe Field Nepal home"
               >
                 <Image
@@ -468,8 +467,11 @@ export default function SafeFieldNepalApp() {
         </div>
       </div>
 
-      <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-[60] border-t border-emerald-900/10 bg-white/95 px-1 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-8px_28px_rgba(15,55,35,0.10)] backdrop-blur-xl lg:hidden">
-        <div className="mx-auto grid max-w-xl grid-cols-5 gap-0.5">
+      <nav
+        aria-label="Mobile navigation"
+        className="fixed inset-x-0 bottom-0 z-[60] flex justify-center px-4 pb-[max(env(safe-area-inset-bottom),12px)] lg:hidden"
+      >
+        <div className="grid w-full max-w-md grid-cols-5 gap-0.5 rounded-full bg-charcoal p-1.5 shadow-[0_8px_28px_rgba(24,44,30,0.32)]">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -479,9 +481,15 @@ export default function SafeFieldNepalApp() {
                 type="button"
                 onClick={() => selectTab(item.id)}
                 aria-current={isActive ? "page" : undefined}
-                className={`flex min-w-0 min-h-[58px] flex-col items-center justify-center gap-1 rounded-xl px-1 py-1 text-[10px] font-semibold transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600 ${isActive ? "bg-emerald-50 text-emerald-800" : "text-slate-500 hover:bg-slate-50"}`}
+                className={`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-full px-1 py-1.5 text-[9px] font-medium transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+                  isActive ? "text-white" : "text-white/55 hover:text-white"
+                }`}
               >
-                <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${isActive ? "bg-emerald-700 text-white shadow-sm" : "text-slate-500"}`}>
+                <span
+                  className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
+                    isActive ? "bg-action text-white" : "text-white/70"
+                  }`}
+                >
                   <Icon className="h-[17px] w-[17px]" />
                 </span>
                 <span className="max-w-full truncate">{lang === "ne" ? item.labelNe : item.shortEn}</span>
