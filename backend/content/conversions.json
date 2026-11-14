@@ -1,0 +1,9 @@
+{
+  "records": [],
+  "_example": {
+    "unit": "ropani",
+    "toHectare": null,
+    "sourceKey": "source-key-from-sources-json",
+    "verified": false
+  }
+}
