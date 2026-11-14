@@ -57,6 +57,11 @@ export interface DailyForecastItem {
   date: string;
   precipitation_sum_mm: number | null;
   precipitation_probability_max: number | null;
+  temperature_2m_max_c?: number | null;
+  temperature_2m_min_c?: number | null;
+  wind_speed_10m_max_kmh?: number | null;
+  weather_code?: number | null;
+  precipitation_hours?: number | null;
 }
 
 export interface ForecastResponse {
