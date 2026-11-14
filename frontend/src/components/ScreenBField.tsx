@@ -11,6 +11,7 @@ interface ScreenBFieldProps {
   setFertilizerType: (val: string) => void;
   cropStage: string;
   setCropStage: (val: string) => void;
+  onSandOverrideChange: (val: number | null) => void;
   onRunAssessment: () => void;
   onProceedToDecision: () => void;
   lang: "en" | "ne";
@@ -23,6 +24,7 @@ export default function ScreenBField({
   setFertilizerType,
   cropStage,
   setCropStage,
+  onSandOverrideChange,
   onRunAssessment,
   onProceedToDecision,
   lang,
@@ -176,7 +178,7 @@ export default function ScreenBField({
               min="10"
               max="80"
               value={sandVal}
-              onChange={(e) => setCustomSand(Number(e.target.value))}
+              onChange={(e) => { const value = Number(e.target.value); setCustomSand(value); onSandOverrideChange(value); }}
               className="w-full accent-emerald-700 h-2 bg-gray-200 rounded-lg cursor-pointer mt-3"
             />
             <span className="text-xs text-gray-500 mt-1 block">
