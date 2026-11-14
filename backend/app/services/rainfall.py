@@ -1,12 +1,13 @@
 from datetime import datetime
 from typing import Literal, Protocol
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 RainfallKind = Literal["observation", "model", "forecast", "fallback", "farmer_input", "assumption"]
 
 
 class RainfallProvenance(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
     source_name: str
     kind: RainfallKind
     observed_start_utc: datetime
@@ -30,6 +31,7 @@ class RainfallProvenance(BaseModel):
 
 
 class RainfallObservation(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
     status: Literal["AVAILABLE", "UNAVAILABLE"]
     amount_mm: float | None = Field(default=None, ge=0)
     window_hours: int = Field(gt=0)
@@ -41,7 +43,7 @@ class RainfallObservation(BaseModel):
         if self.status == "AVAILABLE":
             if self.amount_mm is None or self.provenance is None:
                 raise ValueError("available rainfall requires an amount and source provenance")
-            if not self.unavailable_reason is None:
+            if self.unavailable_reason is not None:
                 raise ValueError("available rainfall cannot include an unavailable reason")
         else:
             if self.amount_mm is not None:
