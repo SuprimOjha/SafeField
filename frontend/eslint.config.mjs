@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Public assets (including bundled MapLibre workers) are served as-is, not application source.
+    "public/**",
   ]),
 ]);
 
