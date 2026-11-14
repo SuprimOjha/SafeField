@@ -214,7 +214,8 @@ class ImergGridCache:
 
     def _build_observation(self, dates, hours, amount, rows, spatial_method, coverage, spatial_resolution, granule_ids=None, fetched_at=None):
         selected = rows
-        versions = {str(row["version"]) for row in selected}
+        version_rows = [row for row in selected if not granule_ids or row["granule_id"] in granule_ids]
+        versions = {str(row["version"]) for row in version_rows}
         if len(versions) != 1:
             return RainfallObservation(status="UNAVAILABLE", window_hours=hours, unavailable_reason="Cached IMERG records contain mixed product versions; no cross-version rainfall total is reported.")
         product_version = next(iter(versions))
