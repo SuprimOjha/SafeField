@@ -14,11 +14,12 @@ import {
   Legend,
 } from "recharts";
 import { TrendingUp, Activity, AlertCircle, CheckCircle2, ArrowRight } from "lucide-react";
+import { getDict, type Lang } from "@/i18n";
 
 interface ScreenDTrendsProps {
   data: FieldAssessmentResponse | null;
   onProceedToMethods: () => void;
-  lang: "en" | "ne";
+  lang: Lang;
 }
 
 export default function ScreenDTrends({
@@ -26,6 +27,7 @@ export default function ScreenDTrends({
   onProceedToMethods,
   lang,
 }: ScreenDTrendsProps) {
+  const t = getDict(lang);
   const annualSeries = useMemo(() => {
     if (!data?.power_summary?.historical_daily_records) return [];
 
@@ -58,9 +60,7 @@ export default function ScreenDTrends({
   if (!data) {
     return (
       <div className="bg-white p-8 rounded-2xl border border-gray-200 text-center text-gray-600">
-        {lang === "ne"
-          ? "कृपया पहिले स्थान छान्नुहोस् र डेटा लोड गर्नुहोस्।"
-          : "Please select a field location and run the assessment first."}
+        {t.selectFirst}
       </div>
     );
   }
@@ -75,9 +75,7 @@ export default function ScreenDTrends({
           <div className="flex items-center gap-2.5">
             <TrendingUp className="w-6 h-6 text-emerald-800" />
             <h2 className="text-2xl font-bold text-emerald-950">
-              {lang === "ne"
-                ? "४. दीर्घकालीन वर्षा र जलवायु परिवर्तन प्रमाण"
-                : "4. Changing Conditions: Heavy-Rain Frequency Trend"}
+              {t.trendsTitle}
             </h2>
           </div>
 
@@ -91,12 +89,12 @@ export default function ScreenDTrends({
             {climate_trend.significant_after_fdr ? (
               <>
                 <AlertCircle className="w-4 h-4 text-amber-700" />
-                Statistically Significant Shift (FDR Adjusted)
+                {t.badgeSignificant}
               </>
             ) : (
               <>
                 <CheckCircle2 className="w-4 h-4 text-slate-600" />
-                No Significant Shift Detected (Natural Variability)
+                {t.badgeNotSignificant}
               </>
             )}
           </span>
@@ -109,38 +107,38 @@ export default function ScreenDTrends({
         {/* Key Statistical Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
           <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
-            <div className="text-xs font-semibold text-gray-500 uppercase">Theil-Sen Slope</div>
+            <div className="text-xs font-semibold text-gray-500 uppercase">{t.metricTheilSen}</div>
             <div className="text-2xl font-bold text-gray-900 mt-1">
               {climate_trend.theil_sen_slope_per_decade > 0 ? "+" : ""}
               {climate_trend.theil_sen_slope_per_decade}
-              <span className="text-xs font-normal text-gray-500 ml-1">days / decade</span>
+              <span className="text-xs font-normal text-gray-500 ml-1">{t.daysPerDecade}</span>
             </div>
           </div>
 
           <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
-            <div className="text-xs font-semibold text-gray-500 uppercase">95% Confidence Interval</div>
+            <div className="text-xs font-semibold text-gray-500 uppercase">{t.metricCi}</div>
             <div className="text-lg font-bold text-gray-900 mt-1 font-mono">
               [{climate_trend.confidence_interval_lower}, {climate_trend.confidence_interval_upper}]
             </div>
-            <div className="text-xs text-gray-500 mt-0.5">days / decade</div>
+            <div className="text-xs text-gray-500 mt-0.5">{t.daysPerDecade}</div>
           </div>
 
           <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
-            <div className="text-xs font-semibold text-gray-500 uppercase">FDR-Corrected p-value</div>
+            <div className="text-xs font-semibold text-gray-500 uppercase">{t.metricPValue}</div>
             <div className="text-2xl font-bold text-gray-900 mt-1 font-mono">
               {climate_trend.corrected_p_value}
             </div>
             <div className="text-xs text-gray-500 mt-0.5">
-              Raw MK p = {climate_trend.mann_kendall_p_value.toFixed(4)}
+              {t.rawMkP} {climate_trend.mann_kendall_p_value.toFixed(4)}
             </div>
           </div>
 
           <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
-            <div className="text-xs font-semibold text-gray-500 uppercase">Record Length</div>
+            <div className="text-xs font-semibold text-gray-500 uppercase">{t.metricRecordLength}</div>
             <div className="text-2xl font-bold text-gray-900 mt-1">
-              {climate_trend.years_analyzed} <span className="text-sm font-normal text-gray-600">years</span>
+              {climate_trend.years_analyzed} <span className="text-sm font-normal text-gray-600">{t.years}</span>
             </div>
-            <div className="text-xs text-gray-500 mt-0.5">NASA POWER Daily Archive</div>
+            <div className="text-xs text-gray-500 mt-0.5">{t.recordSource}</div>
           </div>
         </div>
       </div>
@@ -150,9 +148,7 @@ export default function ScreenDTrends({
         <div className="flex items-center gap-2 mb-4">
           <Activity className="w-5 h-5 text-emerald-700" />
           <h3 className="text-lg font-bold text-gray-900">
-            {lang === "ne"
-              ? "वार्षिक भारी वर्षा दिनहरू (≥ १५ मिमी/दिन) र प्रवृत्ति रेखा"
-              : "Annual Heavy-Rain Days (≥ 15 mm/day) & Theil-Sen Trend"}
+            {t.chartTitle}
           </h3>
         </div>
 
@@ -164,7 +160,7 @@ export default function ScreenDTrends({
                 <XAxis dataKey="year" tick={{ fontSize: 12, fill: "#374151" }} />
                 <YAxis
                   tick={{ fontSize: 12, fill: "#374151" }}
-                  label={{ value: "Heavy Rain Days", angle: -90, position: "insideLeft", fontSize: 12 }}
+                  label={{ value: t.yAxisLabel, angle: -90, position: "insideLeft", fontSize: 12 }}
                 />
                 <Tooltip
                   contentStyle={{
@@ -177,14 +173,14 @@ export default function ScreenDTrends({
                 <Legend />
                 <Bar
                   dataKey="heavyRainDays"
-                  name="Heavy Rain Days (≥ 15 mm)"
+                  name={t.legendHeavyDays}
                   fill="#2e6930"
                   radius={[6, 6, 0, 0]}
                 />
                 <Line
                   type="monotone"
                   dataKey="trendLine"
-                  name="Theil-Sen Trend Line"
+                  name={t.legendTrend}
                   stroke="#d97706"
                   strokeWidth={3}
                   dot={false}
@@ -193,7 +189,7 @@ export default function ScreenDTrends({
             </ResponsiveContainer>
           </div>
         ) : (
-          <p className="text-sm text-gray-500">No historical yearly data available to chart.</p>
+          <p className="text-sm text-gray-500">{t.noChartData}</p>
         )}
       </div>
 
@@ -203,7 +199,7 @@ export default function ScreenDTrends({
           onClick={onProceedToMethods}
           className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-md transition"
         >
-          {lang === "ne" ? "डाटा स्रोत र वैज्ञानिक विधि हेर्नुहोस्" : "Next: Methods & Data Provenance"}
+          {t.nextMethods}
           <ArrowRight className="w-5 h-5" />
         </button>
       </div>

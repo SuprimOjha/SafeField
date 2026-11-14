@@ -18,6 +18,7 @@ import {
   WifiOff,
   Leaf,
 } from "lucide-react";
+import { getDict, type Lang } from "@/i18n";
 
 type TabId = "home" | "field" | "decision" | "trends" | "methods";
 
@@ -31,7 +32,7 @@ function subscribeToLanguage(onChange: () => void) {
   };
 }
 
-function getLanguageSnapshot(): "en" | "ne" {
+function getLanguageSnapshot(): Lang {
   if (typeof window === "undefined") return "ne";
   try {
     const saved = window.localStorage.getItem("safefield_language");
@@ -41,11 +42,11 @@ function getLanguageSnapshot(): "en" | "ne" {
   }
 }
 
-function getServerLanguageSnapshot(): "en" | "ne" {
+function getServerLanguageSnapshot(): Lang {
   return "ne";
 }
 
-function updateStoredLanguage(next: "en" | "ne") {
+function updateStoredLanguage(next: Lang) {
   try {
     window.localStorage.setItem("safefield_language", next);
   } catch {
@@ -82,7 +83,8 @@ const NAV_ITEMS = [
 export default function SafeFieldNepalApp() {
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const lang = useSyncExternalStore(subscribeToLanguage, getLanguageSnapshot, getServerLanguageSnapshot);
-  const setLang = useCallback((next: "en" | "ne") => updateStoredLanguage(next), []);
+  const t = getDict(lang);
+  const setLang = useCallback((next: Lang) => updateStoredLanguage(next), []);
   const requestSequence = useRef(0);
 
   const isOnline = useSyncExternalStore(subscribeToOnlineStatus, getOnlineStatus, getServerOnlineStatus);
@@ -153,11 +155,7 @@ export default function SafeFieldNepalApp() {
       {!isOnline && (
         <div className="bg-rose-800 text-white px-4 py-2.5 text-center text-xs font-semibold flex items-center justify-center gap-2">
           <WifiOff className="w-4 h-4 shrink-0" />
-          <span>
-            {lang === "ne"
-              ? "तपाईं अफलाइन हुनुहुन्छ। स्थानीय क्यासबाट पछिल्लो सुरक्षित डाटा देखाइएको छ।"
-              : "You are offline. Showing the latest available cached data."}
-          </span>
+          <span>{t.offlineBanner}</span>
         </div>
       )}
 
@@ -176,7 +174,7 @@ export default function SafeFieldNepalApp() {
                 className="h-11 w-auto max-w-[190px] shrink-0 object-contain sm:h-12 sm:max-w-[220px]"
               />
               <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-emerald-700 sm:text-[10px] sm:tracking-[0.16em]">
-                Earth intelligence for every field
+                {t.brandTagline}
               </span>
             </span>
           </button>
@@ -185,14 +183,14 @@ export default function SafeFieldNepalApp() {
 
           <div className="hidden min-w-0 flex-1 items-center justify-center gap-2 lg:flex">
             <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-800 ring-1 ring-emerald-700/10">
-              NASA Earth data
+              {t.nasaEarthData}
             </span>
-            <span className="text-xs font-medium text-slate-500">Field decisions, backed by evidence</span>
+            <span className="text-xs font-medium text-slate-500">{t.evidenceLine}</span>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
             {partnerLogoVisible && (
-              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 sm:h-11 sm:w-11" title="Partner logo — replace the image in frontend/public">
+              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 sm:h-11 sm:w-11" title={t.partnerLogoTitle}>
                 <img
                   src="/partner-logo.png"
                   alt="Partner organization logo"
@@ -202,18 +200,36 @@ export default function SafeFieldNepalApp() {
               </div>
             )}
             <span className="hidden rounded-full border border-emerald-100 bg-emerald-50 px-3 py-2 text-[11px] font-semibold text-emerald-800 sm:inline-flex sm:items-center sm:gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              {isOnline ? "System online" : "Offline"}
+              <span className={`h-1.5 w-1.5 rounded-full ${isOnline ? "bg-emerald-500" : "bg-rose-500"}`} />
+              {isOnline ? t.systemOnline : t.systemOffline}
             </span>
-            <button
-              type="button"
-              onClick={() => setLang(lang === "en" ? "ne" : "en")}
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
-              aria-label={lang === "en" ? "Switch to Nepali" : "Switch to English"}
+            <div
+              role="group"
+              aria-label={lang === "en" ? "Language selection" : "भाषा छनोट"}
+              className="inline-flex min-h-10 items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
             >
-              <Globe2 className="h-4 w-4 text-emerald-700" />
-              <span>{lang === "en" ? "नेपाली" : "English"}</span>
-            </button>
+              <Globe2 className="mx-1.5 h-4 w-4 text-emerald-700" aria-hidden="true" />
+              <button
+                type="button"
+                onClick={() => setLang("en")}
+                aria-pressed={lang === "en"}
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${
+                  lang === "en" ? "bg-emerald-700 text-white shadow-sm" : "text-slate-500 hover:text-emerald-800"
+                }`}
+              >
+                EN
+              </button>
+              <button
+                type="button"
+                onClick={() => setLang("ne")}
+                aria-pressed={lang === "ne"}
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${
+                  lang === "ne" ? "bg-emerald-700 text-white shadow-sm" : "text-slate-500 hover:text-emerald-800"
+                }`}
+              >
+                ने
+              </button>
+            </div>
           </div>
         </div>
 
@@ -254,14 +270,14 @@ export default function SafeFieldNepalApp() {
       <section className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-3 py-5 pb-28 sm:px-6 sm:py-7 sm:pb-28 lg:px-8 lg:py-9 lg:pb-9">
         <div className="mb-5 flex items-center justify-between gap-3 px-1">
           <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700 sm:text-[11px]">SAFE FIELD NEPAL / 2026</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700 sm:text-[11px]">{t.safeField2026}</p>
             <h1 className="mt-1 truncate text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">
               {lang === "ne" ? currentTab?.labelNe : currentTab?.labelEn}
             </h1>
           </div>
           <div className="hidden items-center gap-2 rounded-full border border-emerald-100 bg-white px-3 py-2 text-[11px] font-semibold text-slate-500 shadow-sm sm:flex">
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            Nepal pilot region
+            {t.nepalPilotRegion}
           </div>
         </div>
 
@@ -342,17 +358,17 @@ export default function SafeFieldNepalApp() {
         <div className="mx-auto grid max-w-[1440px] gap-9 px-5 py-10 sm:px-8 md:grid-cols-2 lg:grid-cols-[1.25fr_0.8fr_1.2fr] lg:gap-12 lg:px-10 lg:py-12">
           <div>
             <img src="/logo.png" alt="Safe Field logo" className="h-12 w-auto max-w-[210px] object-contain object-left" />
-            <p className="mt-3 max-w-sm text-sm leading-6 text-emerald-50/75">Earth intelligence for every field. Safe Field Nepal helps farmers explore satellite, weather and environmental evidence alongside their own field information.</p>
-            <p className="mt-4 text-xs font-semibold text-emerald-200">NASA International Space Apps Challenge 2026</p>
+            <p className="mt-3 max-w-sm text-sm leading-6 text-emerald-50/75">{t.footerAbout}</p>
+            <p className="mt-4 text-xs font-semibold text-emerald-200">{t.footerChallenge}</p>
           </div>
 
           <div>
-            <h2 className="text-xs font-extrabold uppercase tracking-[0.16em] text-white">Explore</h2>
+            <h2 className="text-xs font-extrabold uppercase tracking-[0.16em] text-white">{t.footerExplore}</h2>
             <ul className="mt-4 space-y-3 text-sm text-emerald-50/75">
               {NAV_ITEMS.map((item) => (
                 <li key={item.id}>
                   <button type="button" onClick={() => { selectTab(item.id); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="transition hover:text-white focus-visible:outline-none focus-visible:underline">
-                    {item.labelEn}
+                    {lang === "ne" ? item.labelNe : item.labelEn}
                   </button>
                 </li>
               ))}
@@ -360,15 +376,15 @@ export default function SafeFieldNepalApp() {
           </div>
 
           <div>
-            <h2 className="text-xs font-extrabold uppercase tracking-[0.16em] text-white">Data & responsible use</h2>
-            <p className="mt-4 text-sm leading-6 text-emerald-50/75">The current assessment calls NASA POWER, Open-Meteo, ISRIC SoilGrids and Open-Elevation. GPM IMERG, SMAP and NASADEM are not connected to this assessment endpoint. Availability, resolution and update frequency vary by source.</p>
-            <p className="mt-3 text-xs leading-5 text-emerald-100/60">This tool provides research-informed estimates, not a substitute for field measurements, official land surveys or advice from local agricultural experts. Verify important decisions on the ground.</p>
+            <h2 className="text-xs font-extrabold uppercase tracking-[0.16em] text-white">{t.footerDataTitle}</h2>
+            <p className="mt-4 text-sm leading-6 text-emerald-50/75">{t.footerDataBody}</p>
+            <p className="mt-3 text-xs leading-5 text-emerald-100/60">{t.footerDisclaimer}</p>
           </div>
         </div>
         <div className="border-t border-white/10">
           <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-5 py-4 text-[11px] text-emerald-100/55 sm:px-8 md:flex-row md:items-center md:justify-between lg:px-10">
-            <span>© {new Date().getFullYear()} Safe Field Nepal. Built for Nepal&apos;s farming communities.</span>
-            <span>Earth intelligence for every field.</span>
+            <span>© {new Date().getFullYear()} {t.footerCopyright}</span>
+            <span>{t.footerTagline}</span>
           </div>
         </div>
       </footer>

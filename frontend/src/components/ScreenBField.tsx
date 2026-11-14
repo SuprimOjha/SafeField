@@ -3,6 +3,7 @@
 import React from "react";
 import { FieldAssessmentResponse } from "@/types/safefield";
 import { CloudRain, Droplets, Thermometer, Mountain, CheckCircle2, RefreshCw, ArrowRight } from "lucide-react";
+import { getDict, type Lang } from "@/i18n";
 
 interface ScreenBFieldProps {
   data: FieldAssessmentResponse | null;
@@ -16,7 +17,7 @@ interface ScreenBFieldProps {
   onSandOverrideChange: (val: number | null) => void;
   onRunAssessment: () => void;
   onProceedToDecision: () => void;
-  lang: "en" | "ne";
+  lang: Lang;
 }
 
 export default function ScreenBField({
@@ -33,20 +34,14 @@ export default function ScreenBField({
   onProceedToDecision,
   lang,
 }: ScreenBFieldProps) {
-
+  const t = getDict(lang);
 
   if (loading) {
     return (
       <div role="status" aria-live="polite" className="bg-white p-12 rounded-2xl shadow-sm border border-emerald-100 text-center space-y-4">
         <RefreshCw className="w-10 h-10 text-emerald-700 animate-spin mx-auto" />
-        <h3 className="text-xl font-bold text-emerald-900">
-          {lang === "ne" ? "खेतको डाटा लोड हुँदैछ..." : "Loading field assessment..."}
-        </h3>
-        <p className="text-gray-600 text-sm">
-          {lang === "ne"
-            ? "मौसम, माटो र भू-आकृति स्रोतहरूको जवाफ पर्खँदै।"
-            : "Waiting for the backend assessment. This may take a little longer while the server wakes up."}
-        </p>
+        <h3 className="text-xl font-bold text-emerald-900">{t.loadingAssessment}</h3>
+        <p className="text-gray-600 text-sm">{t.loadingAssessmentBody}</p>
       </div>
     );
   }
@@ -57,11 +52,9 @@ export default function ScreenBField({
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-amber-700">
           <RefreshCw className="h-6 w-6" />
         </div>
-        <h3 className="text-xl font-bold text-slate-900">
-          {lang === "ne" ? "खेतको मूल्याङ्कन लोड हुन सकेन" : "Field assessment could not be loaded"}
-        </h3>
+        <h3 className="text-xl font-bold text-slate-900">{t.assessmentFailed}</h3>
         <p className="mx-auto max-w-2xl text-sm leading-6 text-slate-600">
-          {error || (lang === "ne" ? "सर्भरबाट डाटा प्राप्त भएन।" : "The backend did not return an assessment.")}
+          {error || t.assessmentFailedBody}
         </p>
         <button
           type="button"
@@ -69,7 +62,7 @@ export default function ScreenBField({
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-6 py-3 font-semibold text-white transition hover:bg-emerald-800"
         >
           <RefreshCw className="h-4 w-4" />
-          {lang === "ne" ? "पुनः प्रयास गर्नुहोस्" : "Retry assessment"}
+          {t.retryAssessment}
         </button>
       </div>
     );
@@ -87,7 +80,12 @@ export default function ScreenBField({
     regionalPowerRainDays.length === 3;
   const regionalPowerDates = regionalPowerRainDays.map((record) => record.date).join(", ");
   const sandVal = sandPercentOverride ?? soil_texture.sand_percent ?? "";
-  const sandLabel = sandPercentOverride !== null ? `${sandPercentOverride}% (farmer override)` : soil_texture.sand_percent !== null ? `${soil_texture.sand_percent}% (SoilGrids estimate)` : "Not available — enter a local estimate";
+  const sandLabel =
+    sandPercentOverride !== null
+      ? `${sandPercentOverride}${t.sandFarmerOverride}`
+      : soil_texture.sand_percent !== null
+        ? `${soil_texture.sand_percent}${t.sandSoilgrids}`
+        : t.sandUnavailable;
 
   return (
     <div className="space-y-6">
@@ -96,20 +94,18 @@ export default function ScreenBField({
         <div className="flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
           <span>
-            <strong>{power_summary.freshness.dataset_name}</strong> | Latest Observation: {power_summary.freshness.latest_observation_date || "N/A"} ({power_summary.freshness.status})
+            <strong>{power_summary.freshness.dataset_name}</strong> | {t.freshnessLatest} {power_summary.freshness.latest_observation_date || "N/A"} ({power_summary.freshness.status})
           </span>
         </div>
-        <span className="text-emerald-700 font-mono hidden md:inline">Latency: {power_summary.freshness.typical_latency}</span>
+        <span className="text-emerald-700 font-mono hidden md:inline">{t.freshnessLatency} {power_summary.freshness.typical_latency}</span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Local rainfall observation */}
         <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-gray-600">
-              {lang === "ne" ? "स्थानीय वर्षा (पछिल्लो ७२ घण्टा)" : "Local rainfall · past 72 hours"}
-            </span>
-            <CloudRain className="w-6 h-6 text-blue-600" />
+            <span className="text-sm font-semibold text-gray-600">{t.localRainfall}</span>
+            <CloudRain className="w-6 h-6 text-sky-600" />
           </div>
           {hasLocalRainfall ? (
             <div>
@@ -118,9 +114,7 @@ export default function ScreenBField({
             </div>
           ) : (
             <div>
-              <span className="text-xl font-bold text-amber-800">
-                {lang === "ne" ? "प्रमाणित छैन" : "Not verified"}
-              </span>
+              <span className="text-xl font-bold text-amber-800">{t.notVerified}</span>
             </div>
           )}
           <p className="text-xs text-gray-500 mt-2">
@@ -128,22 +122,18 @@ export default function ScreenBField({
               ? rainfall.provenance.source_name +
                 " · " +
                 rainfall.provenance.observed_start_utc.slice(0, 10) +
-                " to " +
+                " → " +
                 rainfall.provenance.observed_end_utc.slice(0, 10) +
                 " · " +
                 rainfall.provenance.spatial_method
-              : lang === "ne"
-                ? "यस अवधिका लागि खेत-स्तरको GPM IMERG वर्षा अवलोकन उपलब्ध छैन।"
-                : "No usable field-scale GPM IMERG rainfall observation is available for this period."}
+              : t.noRainfallObservation}
           </p>
           {hasRegionalPowerEstimate && (
             <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs font-semibold text-slate-700">
-                {lang === "ne" ? "क्षेत्रीय अनुमान मात्र · NASA POWER" : "Regional estimate only · NASA POWER"}
-              </p>
+              <p className="text-xs font-semibold text-slate-700">{t.regionalEstimateOnly}</p>
               <p className="mt-1 text-xs leading-5 text-slate-600">
-                {power_summary.rain_last_72h_mm} mm across {regionalPowerDates}.{" "}
-                {power_summary.freshness.spatial_resolution} grid; modelled regional data, not rainfall measured at this field.
+                {power_summary.rain_last_72h_mm} {t.regionalEstimateBody.replace("{dates}", regionalPowerDates)}{" "}
+                {power_summary.freshness.spatial_resolution} {t.regionalEstimateTail}
               </p>
             </div>
           )}
@@ -152,9 +142,7 @@ export default function ScreenBField({
         {/* Soil Wetness */}
         <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-gray-600">
-              {lang === "ne" ? "मोडेल गरिएको सतही चिस्यान" : "Modelled Surface Wetness Proxy"}
-            </span>
+            <span className="text-sm font-semibold text-gray-600">{t.wetnessCard}</span>
             <Droplets className="w-6 h-6 text-emerald-600" />
           </div>
           <div>
@@ -163,85 +151,79 @@ export default function ScreenBField({
             </span>
             <span className="text-gray-500 ml-1">%</span>
           </div>
-          <span className="text-xs text-gray-400 mt-2">NASA POWER GWETTOP · modelled proxy, not a SMAP or in-situ observation</span>
+          <span className="text-xs text-gray-400 mt-2">{t.wetnessNote}</span>
         </div>
 
         {/* Temperature */}
         <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-gray-600">
-              {lang === "ne" ? "दैनिक हावाको तापक्रम" : "Air Temperature"}
-            </span>
+            <span className="text-sm font-semibold text-gray-600">{t.temperatureCard}</span>
             <Thermometer className="w-6 h-6 text-amber-600" />
           </div>
           <div>
             <span className="text-3xl font-bold text-gray-900">{power_summary.latest_temp_c ?? "N/A"}</span>
             <span className="text-gray-500 ml-1">°C</span>
           </div>
-          <span className="text-xs text-gray-400 mt-2">NASA POWER Daily T2M</span>
+          <span className="text-xs text-gray-400 mt-2">{t.temperatureNote}</span>
         </div>
 
         {/* Slope & Terrain */}
         <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-gray-600">
-              {lang === "ne" ? "ढाल र सतह (Slope)" : "Terrain & Slope"}
-            </span>
+            <span className="text-sm font-semibold text-gray-600">{t.terrainCard}</span>
             <Mountain className="w-6 h-6 text-stone-600" />
           </div>
           <div>
             <span className="text-3xl font-bold text-gray-900">{elevation.slope_percent ?? "N/A"}%</span>
             <span className="text-xs text-emerald-800 font-semibold block mt-1">{elevation.terrain_category}</span>
           </div>
-          <span className="text-xs text-gray-400 mt-2">Open-Elevation API · DEM lineage/resolution not verified</span>
+          <span className="text-xs text-gray-400 mt-2">{t.terrainNote}</span>
         </div>
       </div>
 
-      <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">NASA POWER is a coarse (~55 km) reanalysis-based grid, not an on-farm sensor; recent daily values may be delayed 2–4 days. GWETTOP/GWETROOT are modelled wetness proxies. SoilGrids is a predicted 250 m estimate for 0–5 cm depth, not a field test. Open-Elevation DEM lineage is not verified.</p>
+      <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">{t.screenBCaveat}</p>
 
       {/* Input Configuration Card */}
       <div className="bg-white p-6 rounded-2xl border border-emerald-100 shadow-sm space-y-6">
-        <h3 className="text-xl font-bold text-emerald-900">
-          {lang === "ne" ? "मल र बाली विवरण छाنوहोस्" : "Select Fertilizer & Crop Stage"}
-        </h3>
+        <h3 className="text-xl font-bold text-emerald-900">{t.selectFertilizer}</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Fertilizer Type */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              {lang === "ne" ? "मलको प्रकार (Fertilizer Type)" : "Fertilizer Type"}
+              {t.fertilizerType}
             </label>
             <select
               value={fertilizerType}
               onChange={(e) => setFertilizerType(e.target.value)}
               className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 font-medium text-gray-900 focus:ring-2 focus:ring-emerald-600"
             >
-              <option value="Urea">Urea (High Volatilization Risk)</option>
-              <option value="DAP">DAP (Diammonium Phosphate)</option>
-              <option value="Compost/FYM">Compost / Farmyard Manure</option>
+              <option value="Urea">{t.fertilizerUrea}</option>
+              <option value="DAP">{t.fertilizerDap}</option>
+              <option value="Compost/FYM">{t.fertilizerCompost}</option>
             </select>
           </div>
 
           {/* Crop Stage */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              {lang === "ne" ? "बालीको चरण (Crop Stage)" : "Crop Stage"}
+              {t.cropStage}
             </label>
             <select
               value={cropStage}
               onChange={(e) => setCropStage(e.target.value)}
               className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 font-medium text-gray-900 focus:ring-2 focus:ring-emerald-600"
             >
-              <option value="Basal / Planting">Basal / Planting</option>
-              <option value="Vegetative / Tillering">Vegetative / Tillering</option>
-              <option value="Flowering / Grain Filling">Flowering / Grain Filling</option>
+              <option value="Basal / Planting">{t.stageBasal}</option>
+              <option value="Vegetative / Tillering">{t.stageVegetative}</option>
+              <option value="Flowering / Grain Filling">{t.stageFlowering}</option>
             </select>
           </div>
 
           {/* Soil Texture / Sand Slider */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              {lang === "ne" ? `माटोको बनावट: ${sandLabel}` : `Soil Texture: ${sandLabel}`}
+              {t.soilTexture}: {sandLabel}
             </label>
             <input
               type="number"
@@ -253,7 +235,7 @@ export default function ScreenBField({
               className="w-full rounded-xl border border-gray-300 bg-gray-50 px-4 py-3 font-medium text-gray-900 focus:ring-2 focus:ring-emerald-600"
             />
             <span className="text-xs text-gray-500 mt-1 block">
-              ISRIC SoilGrids predicted 250 m topsoil (0–5 cm): {soil_texture.sand_percent === null ? "Unavailable" : `${soil_texture.texture_class} (${soil_texture.sand_percent}% sand)`}. Estimated, not a field test; verify locally.
+              {t.soilHelperPrefix} {soil_texture.sand_percent === null ? t.soilHelperUnavailable : `${soil_texture.texture_class} (${soil_texture.sand_percent}% sand)`}.
             </span>
           </div>
         </div>
@@ -265,14 +247,14 @@ export default function ScreenBField({
             className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800 px-6 py-3 rounded-xl font-semibold transition"
           >
             <RefreshCw className="w-4 h-4" />
-            {lang === "ne" ? "डेटा ताजा गर्नुहोस्" : "Re-run Assessment"}
+            {t.rerunAssessment}
           </button>
 
           <button
             onClick={onProceedToDecision}
             className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-md transition"
           >
-            {lang === "ne" ? "निर्णय हेर्नुहोस् (View Decision)" : "Next: View Fertilizer Decision"}
+            {t.nextDecision}
             <ArrowRight className="w-5 h-5" />
           </button>
         </div>

@@ -2,13 +2,18 @@
 
 import React, { useEffect, useState } from "react";
 import type { FarmerContentResponse } from "@/types/safefield";
+import { getDict, type Lang } from "@/i18n";
 
-export default function FarmerContentPanel({ lang }: { lang: "en" | "ne" }) {
+export default function FarmerContentPanel({ lang }: { lang: Lang }) {
   const [content, setContent] = useState<FarmerContentResponse | null>(null);
+  const t = getDict(lang);
 
   useEffect(() => {
     const controller = new AbortController();
-    const base = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    // Optional backend-only content packs. Keep the last-known hosted backend
+    // as fallback; the panel simply hides when it is unreachable.
+    const base = process.env.NEXT_PUBLIC_API_BASE_URL || "https://safefield-nepal-spaceapps-2026.onrender.com";
     fetch(base + "/api/content", { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Content endpoint unavailable");
@@ -18,7 +23,10 @@ export default function FarmerContentPanel({ lang }: { lang: "en" | "ne" }) {
       .catch((error: unknown) => {
         if (error instanceof Error && error.name !== "AbortError") setContent(null);
       });
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      clearTimeout(timeout);
+    };
   }, []);
 
   if (!content) return null;
@@ -32,27 +40,25 @@ export default function FarmerContentPanel({ lang }: { lang: "en" | "ne" }) {
     <section className="rounded-2xl border border-sky-200 bg-white p-5 space-y-4">
       <div>
         <h3 className="text-lg font-extrabold text-slate-900">
-          {lang === "ne" ? "स्रोतमा आधारित कृषि सन्दर्भ" : "Source-verified farmer references"}
+          {t.contentTitle}
         </h3>
         {hasUnreviewedGuidance && (
           <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
-            {lang === "ne" ? "केही अभिलेख विज्ञद्वारा समीक्षा गरिएको भनेर चिनाइएको छैन। कुनै कदम चाल्नुअघि स्थानीय कृषि कार्यालयसँग सल्लाह लिनुहोस्।" : "Some records have not been marked as expert-reviewed. Check with a local agriculture office before acting."}
+            {t.contentUnreviewed}
           </p>
         )}
         {allGuidanceExpertReviewed && (
           <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-900">
-            {lang === "ne" ? "देखाइएका सबै अभिलेखमा नामसहितका विज्ञ समीक्षक उल्लेख छन्। यो स्रोत सन्दर्भ मात्र हो, व्यक्तिगत मल सिफारिस होइन।" : "Every displayed record includes a named expert reviewer. This remains a source reference, not a personalized prescription."}
+            {t.contentReviewed}
           </p>
         )}
         {!content.fertilizer_references.length && !content.home_remedies.length && (
           <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-            No source-backed local guidance has been published yet. Add researched records to the backend content files; unverified records are not displayed.
+            {t.contentEmpty}
           </p>
         )}
         <p className="text-sm leading-6 text-slate-600">
-          {lang === "ne"
-            ? "यी स्रोतका सन्दर्भ मात्र हुन्, व्यक्तिगत मल सिफारिस होइनन्।"
-            : "These are source references, not prescriptions or personalized doses."}
+          {t.contentReferencesOnly}
         </p>
       </div>
 
@@ -66,21 +72,21 @@ export default function FarmerContentPanel({ lang }: { lang: "en" | "ne" }) {
             <h4 className="font-bold text-slate-900">{item.crop} · {item.nutrientOrProduct}</h4>
             <p className="text-xl font-extrabold text-emerald-900">{bound} {item.unitAsPrinted}</p>
             <p className="text-xs text-slate-600">
-              Reference only · {source?.title ?? item.sourceKey}, {item.year} · {item.page}
+              {t.referenceOnly} · {source?.title ?? item.sourceKey}, {item.year} · {item.page}
             </p>
             {item.secondSourceKey && content.sources[item.secondSourceKey] && (
-              <p className="text-xs text-slate-600">Second source: {content.sources[item.secondSourceKey].title} ({content.sources[item.secondSourceKey].authority})</p>
+              <p className="text-xs text-slate-600">{t.secondSource} {content.sources[item.secondSourceKey].title} ({content.sources[item.secondSourceKey].authority})</p>
             )}
             <p className="text-sm text-slate-700">{item.timingSplit}</p>
             <p className="text-xs font-semibold text-slate-600">
-              Review: {item.reviewStatus}{item.reviewer ? ` · ${item.reviewer}` : ""}
+              {t.reviewLabel} {item.reviewStatus}{item.reviewer ? ` · ${item.reviewer}` : ""}
             </p>
             <p className="text-xs text-slate-600">
-              Follow the product label. Soil testing is recommended. Not a prescription.
+              {t.contentLabelNote}
             </p>
             {source?.url && (
               <a className="text-sm font-semibold text-emerald-800 underline" href={source.url} target="_blank" rel="noreferrer">
-                {source.authority} — open source
+                {source.authority} — {t.openSource}
               </a>
             )}
           </article>
@@ -94,17 +100,17 @@ export default function FarmerContentPanel({ lang }: { lang: "en" | "ne" }) {
             <h4 className="font-bold text-slate-900">{item.crop} · {item.problem}</h4>
             <p className="text-sm text-slate-700">{item.remedyText}</p>
             {item.quantitiesAsPrinted && source?.official && (
-              <p className="text-sm font-semibold text-slate-800">Quantity exactly as printed: {item.quantitiesAsPrinted}</p>
+              <p className="text-sm font-semibold text-slate-800">{t.quantityAsPrinted} {item.quantitiesAsPrinted}</p>
             )}
             {!source?.official && (
-              <p className="text-sm font-semibold text-amber-800">Check with your local agriculture office. Non-official source quantities are not shown.</p>
+              <p className="text-sm font-semibold text-amber-800">{t.nonOfficialSource}</p>
             )}
             {item.preparationNotesAsPrinted && <p className="text-sm text-slate-600">{item.preparationNotesAsPrinted}</p>}
-            <p className="text-sm text-slate-700">Safety notes: {item.safetyNotes}</p>
+            <p className="text-sm text-slate-700">{t.safetyNotesLabel} {item.safetyNotes}</p>
             <p className="text-xs text-slate-600">{source?.title ?? item.sourceKey} · {item.evidence} · {item.reviewStatus}{item.reviewer ? " by " + item.reviewer : ""}</p>
             {source?.url && (
               <a className="text-sm font-semibold text-emerald-800 underline" href={source.url} target="_blank" rel="noreferrer">
-                {source.authority} — open source
+                {source.authority} — {t.openSource}
               </a>
             )}
           </article>

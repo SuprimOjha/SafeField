@@ -14,6 +14,7 @@ import {
 import type { Feature, FeatureCollection, Geometry, Polygon, MultiPolygon } from "geojson";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { createMap, addSatelliteLayer, setSatellite, isSatelliteSourceError } from "@/lib/basemap";
+import { getDict, type Lang } from "@/i18n";
 import {
   MapPin, Navigation, Compass, ArrowRight, Pencil, Undo2, Trash2,
   Check, Layers3, LocateFixed, MousePointer2,
@@ -25,7 +26,7 @@ interface ScreenAHomeProps {
   onLocationSelect: (lat: number, lon: number, name: string) => void;
   onFieldPolygonSelect: (polygon: [number, number][] | null) => void;
   onProceedToField: () => void;
-  lang: "en" | "ne";
+  lang: Lang;
 }
 
 type DrawMode = "select" | "draw";
@@ -87,6 +88,7 @@ export default function ScreenAHome({
   onProceedToField,
   lang,
 }: ScreenAHomeProps) {
+  const t = getDict(lang);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<MapLibreMarker | null>(null);
@@ -125,6 +127,46 @@ export default function ScreenAHome({
     area: lang === "ne" ? "अनुमानित क्षेत्रफल" : "Estimated area",
     instruction: lang === "ne" ? "खेतको कुनाकाप्चामा ट्याप गरेर सीमा कोर्नुहोस्। कम्तीमा ३ बिन्दु चाहिन्छ।" : "Optional: tap at least 3 field corners to estimate the boundary and area.",
     gps: lang === "ne" ? "मेरो GPS स्थान" : "Use my GPS",
+    heroBadge: t.heroBadge,
+    heroTitle: t.heroTitle,
+    heroBody: t.heroBody,
+    heroScroll: t.heroScroll,
+    fieldMappingBadge: t.fieldMappingBadge,
+    subtitleExtra: t.subtitleExtra,
+    loadingDistricts: t.loadingDistricts,
+    chooseDistrict: t.chooseDistrict,
+    mapLayers: t.mapLayers,
+    loadingMap: t.loadingMap,
+    drawingMode: t.drawingMode,
+    selectedLocation: t.selectedLocation,
+    dragPin: t.dragPin,
+    districtBoundaries: t.districtBoundaries,
+    districtsAvailable: t.districtsAvailable,
+    districtsLoading: t.districtsLoading,
+    nextField: t.nextField,
+    satelliteUnavailableTitle: t.satelliteUnavailableTitle,
+    satelliteTitle: t.satelliteTitle,
+    attributionSatellite: t.mapAttributionSatellite,
+    attributionStreets: t.mapAttributionStreets,
+    errorDistrictsFile: t.errorDistrictsFile,
+    errorMarkerOutside: t.errorMarkerOutside,
+    locationManuallyAdjusted: t.locationManuallyAdjusted,
+    locationAdjusted: t.locationAdjusted,
+    errorClickOutside: t.errorClickOutside,
+    errorTooManyVertices: t.errorTooManyVertices,
+    locationSelected: t.locationSelected,
+    errorSatellite: t.errorSatellite,
+    errorTiles: t.errorTiles,
+    locationDistrictCentre: t.locationDistrictCentre,
+    locationDrawn: t.locationDrawn,
+    errorGeolocationUnsupported: t.errorGeolocationUnsupported,
+    errorGpsOutside: t.errorGpsOutside,
+    locationGps: t.locationGps,
+    gpsFix: t.gpsFix,
+    errorGpsDenied: t.errorGpsDenied,
+    errorGpsUnavailable: t.errorGpsUnavailable,
+    errorGpsTimeout: t.errorGpsTimeout,
+    mapFootnote: t.mapFootnote,
   };
 
   useEffect(() => { onLocationSelectRef.current = onLocationSelect; }, [onLocationSelect]);
@@ -132,6 +174,10 @@ export default function ScreenAHome({
   useEffect(() => { districtsRef.current = districts; }, [districts]);
   useEffect(() => { drawModeRef.current = drawMode; }, [drawMode]);
   useEffect(() => { mapStyleRef.current = mapStyle; }, [mapStyle]);
+  // Mirror the latest translated strings for long-lived map/fetch callbacks so
+  // effect dependencies stay stable across language switches.
+  const copyRef = useRef(copy);
+  useEffect(() => { copyRef.current = copy; });
   useEffect(() => {
     selectedCoordinatesRef.current = { lat: selectedLat, lon: selectedLon };
   }, [selectedLat, selectedLon]);
@@ -148,7 +194,7 @@ export default function ScreenAHome({
       })
       .catch((error) => {
         console.error("Could not load Nepal district boundaries:", error);
-        if (!cancelled) setMapError("Nepal district boundaries could not be loaded. Refresh the page or check the deployment build.");
+        if (!cancelled) setMapError(copyRef.current.errorDistrictsFile);
       })
       .finally(() => { if (!cancelled) setDistrictLoading(false); });
     return () => { cancelled = true; };
@@ -199,13 +245,13 @@ export default function ScreenAHome({
       const point = marker.getLngLat();
       if (point.lng < 80.0 || point.lng > 88.3 || point.lat < 26.3 || point.lat > 30.5) {
         marker.setLngLat([selectedCoordinatesRef.current.lon, selectedCoordinatesRef.current.lat]);
-        setMapError("Keep the selected field marker inside the Nepal pilot area.");
+        setMapError(copyRef.current.errorMarkerOutside);
         return;
       }
-      onLocationSelectRef.current(point.lat, point.lng, "Manually adjusted field");
+      onLocationSelectRef.current(point.lat, point.lng, copyRef.current.locationManuallyAdjusted);
       onFieldPolygonSelect(null);
       setDistrictName("");
-      setLocationName(`Adjusted field · ${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}`);
+      setLocationName(`${copyRef.current.locationAdjusted} · ${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}`);
       setGpsAccuracy(null);
     });
 
@@ -259,12 +305,12 @@ export default function ScreenAHome({
     map.on("click", (event: MapMouseEvent) => {
       const { lng, lat } = event.lngLat;
       if (lng < 80.0 || lng > 88.3 || lat < 26.3 || lat > 30.5) {
-        setMapError("Choose a point or draw the field boundary inside the Nepal pilot area.");
+        setMapError(copyRef.current.errorClickOutside);
         return;
       }
       if (drawModeRef.current === "draw") {
         if (drawPointsRef.current.length >= 200) {
-          setMapError("A field boundary can contain at most 200 vertices.");
+          setMapError(copyRef.current.errorTooManyVertices);
           return;
         }
         const next = [...drawPointsRef.current, [lng, lat] as [number, number]];
@@ -274,10 +320,10 @@ export default function ScreenAHome({
         return;
       }
       // A normal map tap always drops a pin; district selection is handled by the picker.
-      onLocationSelectRef.current(lat, lng, `Selected field (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
+      onLocationSelectRef.current(lat, lng, `${copyRef.current.locationSelected} (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
       onFieldPolygonSelect(null);
       setDistrictName("");
-      setLocationName(`Selected field · ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+      setLocationName(`${copyRef.current.locationSelected} · ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
       marker.setLngLat([lng, lat]);
     });
 
@@ -286,11 +332,11 @@ export default function ScreenAHome({
       if (isSatelliteSourceError(event)) {
         setSatelliteAvailable(false);
         setMapStyle("streets");
-        setMapError("Satellite imagery is unavailable here. The OpenFreeMap street map remains selected.");
+        setMapError(copyRef.current.errorSatellite);
         return;
       }
       setMapReady(true);
-      setMapError("Map tiles could not be loaded. Use the district picker or GPS while the map reconnects.");
+      setMapError(copyRef.current.errorTiles);
     });
 
     return () => {
@@ -334,7 +380,7 @@ export default function ScreenAHome({
     const lon = (bounds.minLon + bounds.maxLon) / 2;
     const lat = (bounds.minLat + bounds.maxLat) / 2;
     setDistrictName(name);
-    setLocationName(`${name} District · approximate centre`);
+    setLocationName(`${name} · ${copy.locationDistrictCentre}`);
     onLocationSelect(lat, lon, `${name} District`);
     onFieldPolygonSelect(null);
     markerRef.current?.setLngLat([lon, lat]);
@@ -373,8 +419,8 @@ export default function ScreenAHome({
     setDrawMode("select");
     if (mapRef.current) mapRef.current.getCanvas().style.cursor = "";
     const [lon, lat] = polygonCentroid(drawPoints);
-    setLocationName("My drawn field");
-    onLocationSelect(lat, lon, "My drawn field");
+    setLocationName(copy.locationDrawn);
+    onLocationSelect(lat, lon, copy.locationDrawn);
     onFieldPolygonSelect([...drawPoints, drawPoints[0]]);
     markerRef.current?.setLngLat([lon, lat]);
     mapRef.current?.fitBounds(drawPoints.reduce((bounds, point) => bounds.extend(point), new LngLatBounds(drawPoints[0], drawPoints[0])), { padding: 60, maxZoom: 16 });
@@ -382,7 +428,7 @@ export default function ScreenAHome({
 
   const handleUseGps = () => {
     if (!navigator.geolocation) {
-      setMapError("Geolocation is not supported by this browser.");
+      setMapError(copy.errorGeolocationUnsupported);
       return;
     }
     setGpsLoading(true);
@@ -393,24 +439,24 @@ export default function ScreenAHome({
         const lon = position.coords.longitude;
         setGpsLoading(false);
         if (lat < 26.3 || lat > 30.5 || lon < 80.0 || lon > 88.3) {
-          setMapError("Your GPS fix is outside the Nepal pilot area. You can still place or drag the pin manually.");
+          setMapError(copy.errorGpsOutside);
           return;
         }
         setGpsAccuracy(position.coords.accuracy);
         setDistrictName("");
-        onLocationSelect(lat, lon, "My GPS field");
+        onLocationSelect(lat, lon, copy.locationGps);
         onFieldPolygonSelect(null);
-        setLocationName(`GPS fix · ±${Math.round(position.coords.accuracy)} m`);
+        setLocationName(`${copy.gpsFix} · ±${Math.round(position.coords.accuracy)} m`);
         markerRef.current?.setLngLat([lon, lat]);
         mapRef.current?.flyTo({ center: [lon, lat], zoom: 17 });
       },
       (error) => {
         setGpsLoading(false);
         const reason = error.code === error.PERMISSION_DENIED
-          ? "Location permission was denied. Allow location access for this site in your browser settings."
+          ? copy.errorGpsDenied
           : error.code === error.POSITION_UNAVAILABLE
-            ? "Your device could not determine a location. Enable device location services or drag the map pin manually."
-            : "GPS timed out. Try again outdoors or drag the map pin to the exact field location.";
+            ? copy.errorGpsUnavailable
+            : copy.errorGpsTimeout;
         setMapError(reason);
       },
       { enableHighAccuracy: true, timeout: 25000, maximumAge: 0 }
@@ -423,17 +469,17 @@ export default function ScreenAHome({
         <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-emerald-100/60 blur-3xl" />
         <div className="relative max-w-3xl">
           <p className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/80 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-emerald-800">
-            <MapPin className="h-3.5 w-3.5" /> NASA-powered agricultural intelligence
+            <MapPin className="h-3.5 w-3.5" /> {copy.heroBadge}
           </p>
           <h1 className="mt-4 max-w-2xl text-3xl font-black leading-tight tracking-tight text-[#123c2b] sm:text-4xl lg:text-5xl">
-            Understand your land. Make more informed farming decisions.
+            {copy.heroTitle}
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
-            Safe Field Nepal brings together satellite observations, weather and environmental datasets with the details you provide about your field. Select a district, use GPS or tap the map for a first location-based result. Drawing a field boundary is optional and can refine the location and estimate area.
+            {copy.heroBody}
           </p>
           <p className="mt-5 inline-flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.13em] text-emerald-800 sm:text-sm">
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-800 text-white"><ArrowRight className="h-4 w-4 rotate-90" /></span>
-            Scroll down to start your analysis
+            {copy.heroScroll}
           </p>
         </div>
       </section>
@@ -443,10 +489,10 @@ export default function ScreenAHome({
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="max-w-2xl">
               <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-[.15em] text-emerald-800">
-                <LocateFixed className="h-3.5 w-3.5" /> Nepal field mapping
+                <LocateFixed className="h-3.5 w-3.5" /> {copy.fieldMappingBadge}
               </div>
               <h2 className="text-2xl font-extrabold tracking-tight text-[#123c2b] sm:text-3xl">{copy.title}</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{copy.subtitle} You can start with one tap; drawing is optional.</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{copy.subtitle} {copy.subtitleExtra}</p>
             </div>
           </div>
         </div>
@@ -456,15 +502,15 @@ export default function ScreenAHome({
             <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">{copy.district}</span>
             <select value={districtName} onChange={(event) => selectDistrict(event.target.value)} disabled={districtLoading || districts.length === 0}
               className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 sm:max-w-md">
-              <option value="">{districtLoading ? "Loading Nepal districts…" : "Choose a district (77 districts)"}</option>
+              <option value="">{districtLoading ? copy.loadingDistricts : copy.chooseDistrict}</option>
               {[...districts].sort((a,b) => (a.properties?.DISTRICT ?? "").localeCompare(b.properties?.DISTRICT ?? "")).map((item) => (
                 <option key={item.properties?.DISTRICT} value={item.properties?.DISTRICT}>{item.properties?.DISTRICT}</option>
               ))}
             </select>
           </label>
           <div className="flex flex-wrap gap-2">
-            <button onClick={handleUseGps} className="inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-800 px-4 text-sm font-bold text-white transition hover:bg-emerald-900">
-              <Navigation className="h-4 w-4" /> {copy.gps}
+            <button onClick={handleUseGps} disabled={gpsLoading} className="inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-800 px-4 text-sm font-bold text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60">
+              <Navigation className={`h-4 w-4 ${gpsLoading ? "animate-pulse" : ""}`} /> {copy.gps}
             </button>
             <button onClick={() => { drawModeRef.current = "select"; setDrawMode("select"); if (mapRef.current) mapRef.current.getCanvas().style.cursor = ""; }} className={`inline-flex h-11 items-center gap-2 rounded-xl border px-4 text-sm font-bold transition ${drawMode === "select" ? "border-emerald-700 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white text-slate-600"}`}>
               <MousePointer2 className="h-4 w-4" /> {copy.tap}
@@ -490,39 +536,39 @@ export default function ScreenAHome({
         )}
 
         <div className="flex flex-wrap items-center justify-between gap-3 bg-white px-4 py-3 sm:px-5">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-600"><Layers3 className="h-4 w-4 text-emerald-700" /> Map layers</div>
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-600"><Layers3 className="h-4 w-4 text-emerald-700" /> {copy.mapLayers}</div>
           <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1">
             <button type="button" onClick={() => setMapStyle("streets")} aria-pressed={mapStyle === "streets"} className={`rounded-lg px-4 py-2 text-xs font-bold transition ${mapStyle === "streets" ? "bg-white text-emerald-900 shadow-sm" : "text-slate-500 hover:text-slate-900"}`}>{copy.streets}</button>
-            <button type="button" onClick={() => { if (satelliteAvailable) setMapStyle("satellite"); }} disabled={!satelliteAvailable} aria-pressed={mapStyle === "satellite"} title={!satelliteAvailable ? "Satellite imagery unavailable; street map remains active" : "Show Esri World Imagery"} className={`rounded-lg px-4 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${mapStyle === "satellite" ? "bg-white text-emerald-900 shadow-sm" : "text-slate-500 hover:text-slate-900"}`}>{copy.satellite}</button>
+            <button type="button" onClick={() => { if (satelliteAvailable) setMapStyle("satellite"); }} disabled={!satelliteAvailable} aria-pressed={mapStyle === "satellite"} title={!satelliteAvailable ? copy.satelliteUnavailableTitle : copy.satelliteTitle} className={`rounded-lg px-4 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${mapStyle === "satellite" ? "bg-white text-emerald-900 shadow-sm" : "text-slate-500 hover:text-slate-900"}`}>{copy.satellite}</button>
           </div>
         </div>
 
         <div className="relative mx-3 mb-3 h-[440px] overflow-hidden rounded-2xl border border-slate-200 bg-[#eaf1e9] shadow-inner sm:mx-5 sm:h-[560px]">
           <div ref={mapContainerRef} className="h-full w-full" />
-          {!mapReady && <div className="absolute inset-0 z-[2] flex items-center justify-center bg-[#edf4ec]/80 text-sm font-semibold text-emerald-900 backdrop-blur-[2px]">Loading Nepal map…</div>}
+          {!mapReady && <div className="absolute inset-0 z-[2] flex items-center justify-center bg-[#edf4ec]/80 text-sm font-semibold text-emerald-900 backdrop-blur-[2px]">{copy.loadingMap}</div>}
           {mapError && <div role="alert" className="absolute left-3 right-3 top-3 z-10 rounded-xl border border-amber-300 bg-amber-50/95 px-4 py-3 text-xs font-medium leading-5 text-amber-950 shadow-lg">{mapError}</div>}
-          {drawMode === "draw" && <div className="pointer-events-none absolute left-1/2 top-3 z-[5] -translate-x-1/2 rounded-full bg-emerald-950/90 px-4 py-2 text-xs font-bold text-white shadow-lg">Drawing mode · tap field corners</div>}
+          {drawMode === "draw" && <div className="pointer-events-none absolute left-1/2 top-3 z-[5] -translate-x-1/2 rounded-full bg-emerald-950/90 px-4 py-2 text-xs font-bold text-white shadow-lg">{copy.drawingMode}</div>}
           <div className="absolute bottom-3 left-3 z-[5] flex max-w-[calc(100%-24px)] items-center gap-2 rounded-xl border border-white/70 bg-white/95 px-3 py-2.5 text-xs text-slate-700 shadow-lg backdrop-blur">
             <Compass className="h-4 w-4 shrink-0 text-emerald-700" />
-            <span className="truncate">Selected location: <strong className="text-emerald-900">{locationName}</strong> · {selectedLat.toFixed(5)}°N, {selectedLon.toFixed(5)}°E{gpsAccuracy !== null ? ` · GPS accuracy ±${Math.round(gpsAccuracy)} m` : ""} · Drag pin to adjust</span>
+            <span className="truncate">{copy.selectedLocation} <strong className="text-emerald-900">{locationName}</strong> · {selectedLat.toFixed(5)}°N, {selectedLon.toFixed(5)}°E{gpsAccuracy !== null ? ` · GPS ±${Math.round(gpsAccuracy)} m` : ""} · {copy.dragPin}</span>
           </div>
           <div className="absolute bottom-3 right-3 z-[5] max-w-[85%] rounded-lg bg-white/95 px-3 py-2 text-[10px] font-semibold text-slate-700 shadow">
-            {mapStyle === "satellite" ? "Sources: Esri, Maxar, Earthstar Geographics, and the GIS User Community." : "OpenFreeMap · © OpenMapTiles · © OpenStreetMap contributors"}
+            {mapStyle === "satellite" ? copy.attributionSatellite : copy.attributionStreets}
           </div>
         </div>
 
         <div className="flex flex-col gap-3 px-4 pb-5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-600">
-            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-5 rounded-sm border border-emerald-700 bg-emerald-200/70" /> District boundaries</span>
+            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-5 rounded-sm border border-emerald-700 bg-emerald-200/70" /> {copy.districtBoundaries}</span>
             {fieldArea !== null && <span className="font-bold text-emerald-900">{copy.area}: {fieldArea.toFixed(3)} ha</span>}
-            <span>{districts.length || 0} districts {districtLoading ? "loading…" : "available"}</span>
+            <span>{districts.length || 0} {districts.length === 1 ? (lang === "ne" ? "जिल्ला" : "district") : (lang === "ne" ? "जिल्ला" : "districts")} {districtLoading ? copy.districtsLoading : copy.districtsAvailable}</span>
           </div>
           <button onClick={onProceedToField} className="inline-flex min-h-12 items-center justify-center gap-3 rounded-xl bg-emerald-800 px-7 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-emerald-900/15 transition hover:-translate-y-0.5 hover:bg-emerald-900">
-            {lang === "ne" ? "माटो र बाली विवरण भर्नुहोस्" : "Next: Enter Soil & Crop Details"} <ArrowRight className="h-4 w-4" />
+            {copy.nextField} <ArrowRight className="h-4 w-4" />
           </button>
         </div>
       </section>
-      <p className="px-1 text-[11px] leading-5 text-slate-500">District boundaries are administrative reference data. A hand-drawn field boundary is an approximate outline from map clicks; verify it on the ground before using it for official land measurement. When a fresh GPM IMERG Late cache is installed, a drawn field uses equal-area cell intersections if at least 80% sample-weighted coverage is available. Point selection uses the nearest ~10 km cell. If IMERG coverage is unavailable, NASA POWER (~55 km) is used as a clearly labelled point fallback; it is not a polygon average.</p>
+      <p className="px-1 text-[11px] leading-5 text-slate-500">{copy.mapFootnote}</p>
     </div>
   );
 }

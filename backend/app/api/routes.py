@@ -13,6 +13,7 @@ from app.decision.fertilizer_engine import FertilizerDecisionEngine, DecisionRes
 from app.content_packs.loader import validate_content
 from app.services.rainfall import RainfallObservation, RainfallProvenance
 from app.services.imerg.provider import ImergLateProvider
+from app.services.open_meteo_past_client import get_recent_rain_reanalysis
 from datetime import date, datetime, time, timedelta, timezone
 
 
@@ -95,30 +96,37 @@ async def assess_field(
     parsed_field_polygon = parse_field_polygon(field_polygon)
     rainfall_observation = ImergLateProvider().get_recent_rain(lat, lon, 72, parsed_field_polygon)
     if rainfall_observation.status != "AVAILABLE":
-        # NASA POWER is a coarse (~55 km) reanalysis grid with multi-day latency.
-        # Keep its numeric estimate visible only as regional context in power_summary;
-        # never promote it to an on-field 72-hour rainfall observation or feed it
-        # into the field-timing decision as if rain were verified at this location.
-        power_records = [record for record in power_res.recent_daily_records if record.precip_mm is not None][-3:]
-        power_dates = [record.date for record in power_records]
-        power_context = (
-            f" NASA POWER regional estimate: {power_res.rain_last_72h_mm} mm "
-            f"across available daily records {', '.join(power_dates)} "
-            f"({power_res.freshness.spatial_resolution}); this coarse reanalysis "
-            "is not verification of rainfall at the selected field."
-            if power_res.rain_last_72h_mm is not None and len(power_records) == 3
-            else ""
-        )
-        rainfall_observation = RainfallObservation(
-            status="UNAVAILABLE",
-            amount_mm=None,
-            window_hours=72,
-            provenance=None,
-            unavailable_reason=(
-                "No usable local-scale GPM IMERG rainfall observation is available "
-                "for the selected field and requested window." + power_context
-            ),
-        )
+        # Without an installed IMERG cache, fall back to the freshest real
+        # daily precipitation available without credentials: Open-Meteo's
+        # reanalysis past-days totals (~9-11 km), with honest "model" provenance.
+        # The coarse NASA POWER estimate stays context-only and is never
+        # promoted to an on-field 72-hour rainfall observation.
+        reanalysis_observation = get_recent_rain_reanalysis(lat, lon, 72)
+        if reanalysis_observation.status == "AVAILABLE":
+            rainfall_observation = reanalysis_observation
+        else:
+            power_records = [record for record in power_res.recent_daily_records if record.precip_mm is not None][-3:]
+            power_dates = [record.date for record in power_records]
+            power_context = (
+                f" NASA POWER regional estimate: {power_res.rain_last_72h_mm} mm "
+                f"across available daily records {', '.join(power_dates)} "
+                f"({power_res.freshness.spatial_resolution}); this coarse reanalysis "
+                "is not verification of rainfall at the selected field."
+                if power_res.rain_last_72h_mm is not None and len(power_records) == 3
+                else ""
+            )
+            rainfall_observation = RainfallObservation(
+                status="UNAVAILABLE",
+                amount_mm=None,
+                window_hours=72,
+                provenance=None,
+                unavailable_reason=(
+                    "No usable local-scale rainfall observation is available "
+                    "for the selected field and requested window."
+                    + (f" {reanalysis_observation.unavailable_reason}" if reanalysis_observation.unavailable_reason else "")
+                    + power_context
+                ),
+            )
 
     # Evaluate decision engine
     decision_engine = FertilizerDecisionEngine()
