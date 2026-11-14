@@ -75,3 +75,8 @@ def test_cache_rejects_non_whole_day_window(tmp_path):
     result = cache.get_recent_rain(27.0, 85.0, 25)
     assert result.status == "UNAVAILABLE"
     assert "whole-day" in (result.unavailable_reason or "")
+
+
+def test_cache_reports_fresh_recent_data(tmp_path):
+    cache = make_cache(tmp_path)
+    assert cache.has_fresh_data() is True
