@@ -110,7 +110,7 @@ async def assess_field(
                         latency_note="POWER daily reanalysis-based data, typically delayed 2–4 days; not an IMERG observation.",
                         dataset="NASA POWER PRECTOTCORR", version="daily API",
                         units="mm/day summed over three consecutive UTC days",
-                        spatial_method="point_grid",
+                        spatial_method="nearest_grid_cell",
                     ),
                 )
 
