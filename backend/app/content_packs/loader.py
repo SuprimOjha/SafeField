@@ -10,7 +10,7 @@ from app.content_packs.models import (
 CONTENT_DIR = Path(__file__).resolve().parents[2] / "content"
 DOSE_PATTERN = re.compile(
     r"\b\d+(?:[.,]\d+)?\s*(?:mg|milligrams?|g|grams?|kg|kilograms?|ml|milliliters?|millilitres?|mL|l|litres?|liters?|L|%|ppm|spoons?|tablespoons?|teaspoons?|tbsp|tsp|cups?|tonnes?|tons?|quintals?|bags?|sacks?|packets?|ropani|bigha|kattha)\b"
-    r"|\bper\s+(?:hectare|ropani|bigha|kattha)\b|\bkg\s*/\s*ha\b|\bg\s*/\s*l\b",
+    r"|\b\d+(?:[.,]\d+)?\s*%|\bper\s+(?:hectare|ropani|bigha|kattha)\b|\bkg\s*/\s*ha\b|\bg\s*/\s*l\b",
     re.IGNORECASE,
 )
 
