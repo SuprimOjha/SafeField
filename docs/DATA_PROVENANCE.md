@@ -12,7 +12,7 @@ This document describes only the current `GET /api/field-assessment` integration
 | Elevation/slope | Open-Elevation API | 3×3 stencil elevation and slope estimate | Integration requests Open-Elevation; underlying DEM lineage and resolution are not verified |
 
 ## Connection state
-GPM IMERG Late is used when a fresh local daily cache is installed. The API does not download granules during farmer requests. If the cache is missing or stale, the field assessment uses NASA POWER only when three consecutive daily values are available, and labels it as a fallback. GPM IMERG Final, SMAP and NASADEM are not queried by the current field-assessment endpoint.
+GPM IMERG Late is used when a fresh local daily cache is installed. Point estimates require at least 39 of 48 half-hour samples per daily cell; polygon estimates weight cell intersections by sample_count/48 and require at least 80% effective coverage on every day. These are software quality gates, not NASA-issued flags. The API does not download granules during farmer requests. If the cache is missing or stale, the field assessment uses NASA POWER only when three consecutive daily values are available, and labels it as a fallback. GPM IMERG Final, SMAP and NASADEM are not queried by the current field-assessment endpoint.
 
 ## Freshness semantics
 - `LIVE`: fetched successfully from the upstream service.
