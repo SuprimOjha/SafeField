@@ -209,3 +209,14 @@ def test_pre_1900_fertilizer_reference_year_is_rejected(tmp_path):
 def test_non_finite_fertilizer_upper_bound_is_rejected(tmp_path):
     write_pack(tmp_path, fertilizers=[fertilizer(valueMax=float("nan"))])
     assert validate_content(tmp_path)["fertilizer_references"] == 0
+
+
+@pytest.mark.parametrize("text", [
+    "Mix 5 ml into the spray tank.",
+    "Apply 3% solution to affected leaves.",
+    "Use 4 kg per hectare.",
+    "Mix 2 tablespoons in water.",
+])
+def test_remedy_dose_detector_blocks_common_quantity_units(tmp_path, text):
+    write_pack(tmp_path, remedies=[remedy(remedyText=text)])
+    assert validate_content(tmp_path)["home_remedies"] == 0
