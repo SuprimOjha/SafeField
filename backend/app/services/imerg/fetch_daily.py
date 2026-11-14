@@ -62,7 +62,7 @@ def fetch_imerg(days: int = 7, lookback_extra_days: int = 5, cache: ImergGridCac
         day_string = candidate.isoformat()
         granules = earthaccess.search_data(
             short_name=COLLECTION, version=COLLECTION_VERSION,
-            temporal=(day_string, day_string), bounding_box=NEPAL_BBOX, count=10,
+            temporal=(f"{day_string}T00:00:00Z", f"{day_string}T23:59:59Z"), bounding_box=NEPAL_BBOX, count=10,
         )
         if granules:
             found.append((candidate, granules[0]))
