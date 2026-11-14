@@ -185,3 +185,17 @@ def test_fertilizer_reference_rejects_year_mismatch_even_with_valid_source(tmp_p
     report = validate_content(tmp_path)
     assert report["fertilizer_references"] == 0
     assert report["skipped"]["fertilizer"] == 1
+
+
+def test_non_finite_fertilizer_reference_values_are_rejected(tmp_path):
+    write_pack(tmp_path, fertilizers=[fertilizer(valueMin=float("inf"))])
+    assert validate_content(tmp_path)["fertilizer_references"] == 0
+
+
+def test_source_accessed_field_requires_a_real_calendar_date(tmp_path):
+    bad_source = source()
+    bad_source["accessed"] = "2026-02-30"
+    write_pack(tmp_path, sources={"source-a": bad_source}, fertilizers=[fertilizer()])
+    report = validate_content(tmp_path)
+    assert report["sources"] == 0
+    assert report["fertilizer_references"] == 0
