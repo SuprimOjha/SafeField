@@ -37,13 +37,6 @@ class FertilizerReference(BaseModel):
     @model_validator(mode="after")
     def expert_review_requires_reviewer(self):
         if self.reviewStatus == "expert-reviewed" and not self.reviewer:
-            raise ValueError("expert-reviewed home remedy requires reviewer")
-        return self
-    reviewer: str | None
-
-    @model_validator(mode="after")
-    def expert_review_requires_reviewer(self):
-        if self.reviewStatus == "expert-reviewed" and not self.reviewer:
             raise ValueError("expert-reviewed fertilizer reference requires reviewer")
         return self
 
@@ -69,3 +62,10 @@ class HomeRemedy(BaseModel):
     verified: bool
     safetyNotes: str
     reviewStatus: Literal["not-expert-reviewed", "expert-reviewed"]
+    reviewer: str | None = None
+
+    @model_validator(mode="after")
+    def expert_review_requires_reviewer(self):
+        if self.reviewStatus == "expert-reviewed" and not self.reviewer:
+            raise ValueError("expert-reviewed home remedy requires reviewer")
+        return self
