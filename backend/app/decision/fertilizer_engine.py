@@ -67,7 +67,7 @@ class FertilizerDecisionEngine:
                 rainfall_detail = "Rainfall source unavailable; no provenance supplied."
             else:
                 source = rainfall_observation.provenance
-                rainfall_detail = f"{source.source_name}; kind={source.kind}; observed {source.observed_start_utc.isoformat()} to {source.observed_end_utc.isoformat()}; fetched {source.fetched_at_utc.isoformat()}."
+                rainfall_detail = f"{source.source_name}; dataset={source.dataset} version={source.version} stream={source.stream}; kind={source.kind}; spatial_method={source.spatial_method}; coverage_fraction={source.coverage_fraction}; observed {source.observed_start_utc.isoformat()} to {source.observed_end_utc.isoformat()}; fetched {source.fetched_at_utc.isoformat()}."
             contributions.append(RuleContribution(
                 parameter="Rainfall provenance",
                 observed_value="Unavailable" if rainfall_observation.amount_mm is None else f"{rainfall_observation.amount_mm} mm over {rainfall_observation.window_hours} hours",

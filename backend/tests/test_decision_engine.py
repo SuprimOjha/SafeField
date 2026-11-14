@@ -89,3 +89,4 @@ def test_typed_rainfall_observation_controls_decision_and_records_source():
     provenance_rule = next(rule for rule in result.rule_contributions if rule.parameter == "Rainfall provenance")
     assert "NASA GPM IMERG Late Run" in provenance_rule.explanation
     assert "kind=observation" in provenance_rule.explanation
+    assert "spatial_method=nearest_grid_cell" in provenance_rule.explanation
