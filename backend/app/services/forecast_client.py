@@ -65,7 +65,10 @@ def _hourly_total(hourly: dict, window_hours: int) -> float | None:
         return None
 
     now = datetime.now(NEPAL_TZ)
-    current_hour = now.replace(minute=0, second=0, microsecond=0)\n    # Hourly precipitation is accumulated over the hour ending at its timestamp.\n    # If now is part-way through an hour, skip that partially elapsed interval.\n    first_future_hour = current_hour + timedelta(hours=1 if now.minute == 0 and now.second == 0 else 2)
+    current_hour = now.replace(minute=0, second=0, microsecond=0)
+    # Hourly precipitation is accumulated over the hour ending at its timestamp.
+    # If now is part-way through an hour, skip that partially elapsed interval.
+    first_future_hour = current_hour + timedelta(hours=1 if now.minute == 0 and now.second == 0 else 2)
     future_values: list[tuple[datetime, float | None]] = []
 
     for index, raw_time in enumerate(times):
@@ -84,9 +87,12 @@ def _hourly_total(hourly: dict, window_hours: int) -> float | None:
 
     future_values.sort(key=lambda item: item[0])
     window = future_values[:window_hours]
-    # Never turn missing hourly periods into zero precipitation.
+    # Never turn missing/non-consecutive hourly periods into zero precipitation.
     if len(window) != window_hours or any(value is None for _, value in window):
         return None
+    for previous, current in zip(window, window[1:]):
+        if current[0] - previous[0] != timedelta(hours=1):
+            return None
     return round(sum(value for _, value in window if value is not None), 2)
 
 
