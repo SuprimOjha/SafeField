@@ -387,9 +387,6 @@ export default function ScreenAHome({
               <h2 className="text-2xl font-extrabold tracking-tight text-[#123c2b] sm:text-3xl">{copy.title}</h2>
               <p className="mt-2 text-sm leading-6 text-slate-600">{copy.subtitle} You can start with one tap; drawing is optional.</p>
             </div>
-            <button onClick={handleUseGps} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-800 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-900/15 transition hover:bg-emerald-900">
-              <Navigation className="h-4 w-4" /> {copy.gps}
-            </button>
           </div>
         </div>
 
@@ -405,6 +402,9 @@ export default function ScreenAHome({
             </select>
           </label>
           <div className="flex flex-wrap gap-2">
+            <button onClick={handleUseGps} className="inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-800 px-4 text-sm font-bold text-white transition hover:bg-emerald-900">
+              <Navigation className="h-4 w-4" /> {copy.gps}
+            </button>
             <button onClick={() => { drawModeRef.current = "select"; setDrawMode("select"); if (mapRef.current) mapRef.current.getCanvas().style.cursor = ""; }} className={`inline-flex h-11 items-center gap-2 rounded-xl border px-4 text-sm font-bold transition ${drawMode === "select" ? "border-emerald-700 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white text-slate-600"}`}>
               <MousePointer2 className="h-4 w-4" /> {copy.tap}
             </button>
@@ -461,7 +461,7 @@ export default function ScreenAHome({
           </button>
         </div>
       </section>
-      <p className="px-1 text-[11px] leading-5 text-slate-500">District boundaries are administrative reference data. A hand-drawn field boundary is an approximate outline from map clicks; verify it on the ground before using it for official land measurement. The current assessment uses a selected point/field centre with coarse NASA POWER grid data (about 55 km); drawing a boundary does not make rainfall or soil data field-resolution. GPM IMERG is not yet connected to this assessment.</p>
+      <p className="px-1 text-[11px] leading-5 text-slate-500">District boundaries are administrative reference data. A hand-drawn field boundary is an approximate outline from map clicks; verify it on the ground before using it for official land measurement. When a fresh GPM IMERG Late cache is installed, rainfall screening uses the nearest ~10 km grid cell; otherwise NASA POWER (~55 km) is the fallback. A drawn boundary currently estimates area and centre only; it does not yet produce a polygon-average rainfall value.</p>
     </div>
   );
 }
