@@ -101,14 +101,13 @@ export default function SafeFieldNepalApp() {
             className="group flex min-w-0 items-center gap-3 rounded-2xl text-left outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-4"
             aria-label="Safe Field Nepal home"
           >
-            <img src="/logo.png" alt="Safe Field Nepal logo" className="h-11 w-11 shrink-0 object-contain sm:h-12 sm:w-12" />
-            <span className="min-w-0">
-              <span className="block truncate text-[15px] font-extrabold leading-tight tracking-[-0.035em] text-[#123c2b] sm:text-lg">
-                {lang === "ne" ? "सेफ फिल्ड नेपाल" : "Safe Field Nepal"}
-              </span>
-              <span className="mt-1 hidden text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700 sm:block">
-                Earth intelligence for every field
-              </span>
+            <img
+              src="/logo.png"
+              alt="Safe Field logo"
+              className="h-11 w-auto max-w-[190px] shrink-0 object-contain sm:h-12 sm:max-w-[220px]"
+            />
+            <span className="hidden text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700 xl:block">
+              Earth intelligence for every field
             </span>
           </button>
 
