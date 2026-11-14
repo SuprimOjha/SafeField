@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   Map as MapLibreMap,
+  setWorkerUrl,
   Marker as MapLibreMarker,
   NavigationControl,
   ScaleControl,
@@ -55,6 +56,8 @@ export default function ScreenAHome({
       setMapError("MapTiler API key is missing. Add NEXT_PUBLIC_MAPTILER_KEY to frontend/.env.local and restart the dev server.");
       return;
     }
+
+    setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
 
     const map = new MapLibreMap({
       container,
