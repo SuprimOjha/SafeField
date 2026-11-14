@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 from typing import Any
 from app.cache.sqlite_cache import SQLiteCache
@@ -25,6 +26,8 @@ class ForecastResponse(BaseModel):
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 OPEN_METEO_DOCS = "https://open-meteo.com/en/docs"
 FORECAST_CACHE_TTL_SECONDS = 3 * 3600  # 3 hours
+RATE_LIMIT_COOLDOWN_SECONDS = 15 * 60
+logger = logging.getLogger(__name__)
 
 
 class OpenMeteoForecastClient:
@@ -45,7 +48,8 @@ class OpenMeteoForecastClient:
         if hit is not None:
             payload, fetched_at, _ = hit
             parsed = ForecastResponse.model_validate(payload)
-            parsed.freshness.status = "CACHED_FALLBACK"
+            if parsed.freshness.status == "LIVE":
+                parsed.freshness.status = "CACHED_FALLBACK"
             parsed.freshness.fetched_at_utc = fetched_at
             return parsed
 
@@ -116,15 +120,25 @@ class OpenMeteoForecastClient:
             return response
 
         except Exception as exc:
+            logger.warning("Open-Meteo forecast request failed for %.3f, %.3f: %s", lat_r, lon_r, exc)
             stale = self.cache.get(cache_key, allow_stale=True)
             if stale is not None:
                 payload, fetched_at, _ = stale
                 parsed = ForecastResponse.model_validate(payload)
-                parsed.freshness.status = "CACHED_FALLBACK"
-                parsed.freshness.fetched_at_utc = fetched_at
-                return parsed
+                if parsed.forecast_days:
+                    parsed.freshness.status = "CACHED_FALLBACK"
+                    parsed.freshness.fetched_at_utc = fetched_at
+                    return parsed
 
-            return ForecastResponse(
+            is_rate_limited = "429" in str(exc) or "too many requests" in str(exc).lower()
+            if is_rate_limited:
+                caveat = "Open-Meteo is temporarily rate limiting requests (HTTP 429). No forecast value is assumed. Check local weather and try again later."
+                negative_cache_ttl = RATE_LIMIT_COOLDOWN_SECONDS
+            else:
+                caveat = "The weather provider did not return a usable forecast. No forecast value is assumed. Check local weather and try again later."
+                negative_cache_ttl = 5 * 60
+
+            unavailable = ForecastResponse(
                 latitude=lat_r,
                 longitude=lon_r,
                 freshness=FreshnessBadge(
@@ -136,7 +150,7 @@ class OpenMeteoForecastClient:
                     fetched_at_utc=utc_now_iso(),
                     typical_latency="Real-time",
                     spatial_resolution="~10 km",
-                    caveat=f"UNAVAILABLE: Forecast API unreachable ({exc}). Relying on NASA observed soil/rain only.",
+                    caveat=caveat,
                     docs_url=OPEN_METEO_DOCS,
                 ),
                 forecast_days=[],
@@ -144,3 +158,5 @@ class OpenMeteoForecastClient:
                 expected_rain_next_120h_mm=None,
                 rain_expected_soon=None,
             )
+            self.cache.set(cache_key, unavailable.model_dump(), utc_now_iso(), negative_cache_ttl)
+            return unavailable
