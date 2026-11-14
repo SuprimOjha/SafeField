@@ -21,7 +21,7 @@ export async function fetchFieldAssessment(
   if (sandPercentOverride !== null) url.searchParams.set("sand_percent_override", String(sandPercentOverride));
   if (fieldPolygon && fieldPolygon.length >= 4) url.searchParams.set("field_polygon", JSON.stringify(fieldPolygon));
 
-  const cacheKey = `${STORAGE_PREFIX}${lat.toFixed(2)}:${lon.toFixed(2)}:${fertilizerType}:${cropStage}:${sandPercentOverride ?? "soilgrids"}`;
+  const cacheKey = `${STORAGE_PREFIX}${lat.toFixed(2)}:${lon.toFixed(2)}:${fertilizerType}:${cropStage}:${sandPercentOverride ?? "soilgrids"}:${fieldPolygon ? JSON.stringify(fieldPolygon) : "point"}`;
 
   try {
     const response = await fetch(url.toString(), {
