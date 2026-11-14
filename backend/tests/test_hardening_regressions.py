@@ -143,3 +143,16 @@ def test_point_lookup_rejects_a_gap_between_daily_granules(tmp_path):
     result = cache.get_recent_rain(27.0, 85.0, 72)
     assert result.status == "UNAVAILABLE"
     assert "gap" in (result.unavailable_reason or "")
+
+
+def test_point_lookup_requires_same_nearest_cell_on_every_day(tmp_path):
+    cache = ImergGridCache(str(tmp_path / "missing-cell.sqlite"))
+    today = datetime.now(timezone.utc).date()
+    fetched = datetime.now(timezone.utc)
+    for offset in (3, 2):
+        day = today - timedelta(days=offset)
+        cache.store_daily_grid(day, [27.1], [85.1], [[1.0]], [[48]], f"other-{day}", fetched)
+    day = today - timedelta(days=1)
+    cache.store_daily_grid(day, [27.0], [27.1], [[2.0], [3.0]], [[48], [48]], f"latest-{day}", fetched)
+    result = cache.get_recent_rain(27.0, 85.0, 72)
+    assert result.status == "UNAVAILABLE"
