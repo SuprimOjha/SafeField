@@ -93,6 +93,7 @@ export default function SafeFieldNepalApp() {
   const [fertilizerType, setFertilizerType] = useState<string>("Urea");
   const [cropStage, setCropStage] = useState<string>("Vegetative / Tillering");
   const [sandPercentOverride, setSandPercentOverride] = useState<number | null>(null);
+  const [selectedFieldPolygon, setSelectedFieldPolygon] = useState<[number, number][] | null>(null);
 
   const [assessmentData, setAssessmentData] = useState<FieldAssessmentResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -110,6 +111,7 @@ export default function SafeFieldNepalApp() {
         cropStage,
         true,
         sandPercentOverride,
+        selectedFieldPolygon,
       );
       if (requestId === requestSequence.current) startTransition(() => setAssessmentData(data));
     } catch (err) {
@@ -117,7 +119,7 @@ export default function SafeFieldNepalApp() {
     } finally {
       if (requestId === requestSequence.current) setLoading(false);
     }
-  }, [selectedLat, selectedLon, fertilizerType, cropStage, sandPercentOverride, startTransition]);
+  }, [selectedLat, selectedLon, fertilizerType, cropStage, sandPercentOverride, selectedFieldPolygon, startTransition]);
 
   const handleRunAssessment = useCallback(() => {
     setLoading(true);
@@ -259,7 +261,9 @@ export default function SafeFieldNepalApp() {
             onLocationSelect={(lat, lon) => {
               setSelectedLat(lat);
               setSelectedLon(lon);
+              setSelectedFieldPolygon(null);
             }}
+            onFieldPolygonSelect={setSelectedFieldPolygon}
             onProceedToField={() => selectTab("field")}
             lang={lang}
           />

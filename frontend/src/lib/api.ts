@@ -9,7 +9,8 @@ export async function fetchFieldAssessment(
   fertilizerType: string = "Urea",
   cropStage: string = "Vegetative / Tillering",
   saveMoney: boolean = true,
-  sandPercentOverride: number | null = null
+  sandPercentOverride: number | null = null,
+  fieldPolygon: [number, number][] | null = null
 ): Promise<FieldAssessmentResponse> {
   const url = new URL(`${API_BASE_URL}/api/field-assessment`);
   url.searchParams.set("lat", lat.toString());
@@ -18,6 +19,7 @@ export async function fetchFieldAssessment(
   url.searchParams.set("crop_stage", cropStage);
   url.searchParams.set("save_money", saveMoney ? "true" : "false");
   if (sandPercentOverride !== null) url.searchParams.set("sand_percent_override", String(sandPercentOverride));
+  if (fieldPolygon && fieldPolygon.length >= 4) url.searchParams.set("field_polygon", JSON.stringify(fieldPolygon));
 
   const cacheKey = `${STORAGE_PREFIX}${lat.toFixed(2)}:${lon.toFixed(2)}:${fertilizerType}:${cropStage}:${sandPercentOverride ?? "soilgrids"}`;
 

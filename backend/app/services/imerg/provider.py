@@ -12,5 +12,5 @@ class ImergLateProvider(RainfallProvider):
     def is_available(self) -> bool:
         return self.cache.has_fresh_data()
 
-    def get_recent_rain(self, latitude: float, longitude: float, hours: int) -> RainfallObservation:
-        return self.cache.get_recent_rain(latitude, longitude, hours)
+    def get_recent_rain(self, latitude: float, longitude: float, hours: int, field_polygon: list[tuple[float, float]] | None = None) -> RainfallObservation:
+        return self.cache.get_recent_rain(latitude, longitude, hours, field_polygon)

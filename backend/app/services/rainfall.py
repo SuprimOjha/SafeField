@@ -19,6 +19,8 @@ class RainfallProvenance(BaseModel):
     stream: str | None = None
     granule_ids: list[str] = Field(default_factory=list)
     units: str
+    spatial_method: Literal["nearest_grid_cell", "area_weighted_polygon"] = "nearest_grid_cell"
+    coverage_fraction: float | None = Field(default=None, ge=0, le=1)
 
 
 class RainfallObservation(BaseModel):
@@ -30,5 +32,5 @@ class RainfallObservation(BaseModel):
 
 
 class RainfallProvider(Protocol):
-    def get_recent_rain(self, latitude: float, longitude: float, hours: int) -> RainfallObservation:
+    def get_recent_rain(self, latitude: float, longitude: float, hours: int, field_polygon: list[tuple[float, float]] | None = None) -> RainfallObservation:
         """Return a cached observation with its true observation interval and provenance."""

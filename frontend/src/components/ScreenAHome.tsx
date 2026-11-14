@@ -23,6 +23,7 @@ interface ScreenAHomeProps {
   selectedLat: number;
   selectedLon: number;
   onLocationSelect: (lat: number, lon: number, name: string) => void;
+  onFieldPolygonSelect: (polygon: [number, number][] | null) => void;
   onProceedToField: () => void;
   lang: "en" | "ne";
 }
@@ -63,6 +64,7 @@ export default function ScreenAHome({
   selectedLat,
   selectedLon,
   onLocationSelect,
+  onFieldPolygonSelect,
   onProceedToField,
   lang,
 }: ScreenAHomeProps) {
@@ -231,6 +233,7 @@ export default function ScreenAHome({
       }
       // A normal map tap always drops a pin; district selection is handled by the picker.
       onLocationSelectRef.current(lat, lng, `Selected field (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
+      onFieldPolygonSelect(null);
       setDistrictName("");
       setLocationName(`Selected field · ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
       marker.setLngLat([lng, lat]);
@@ -291,6 +294,7 @@ export default function ScreenAHome({
     setDistrictName(name);
     setLocationName(`${name} District · approximate centre`);
     onLocationSelect(lat, lon, `${name} District`);
+    onFieldPolygonSelect(null);
     markerRef.current?.setLngLat([lon, lat]);
     mapRef.current?.fitBounds([[bounds.minLon, bounds.minLat], [bounds.maxLon, bounds.maxLat]], { padding: 55, maxZoom: 9, essential: true });
   };
@@ -301,6 +305,7 @@ export default function ScreenAHome({
     setDrawMode("draw");
     setDrawPoints([]);
     setFieldArea(null);
+    onFieldPolygonSelect(null);
     setDistrictName("");
     if (mapRef.current) mapRef.current.getCanvas().style.cursor = "crosshair";
   };
@@ -314,6 +319,7 @@ export default function ScreenAHome({
     drawPointsRef.current = [];
     setDrawPoints([]);
     setFieldArea(null);
+    onFieldPolygonSelect(null);
     if (mapRef.current) updateDrawLayer(mapRef.current, []);
   };
 
@@ -329,6 +335,7 @@ export default function ScreenAHome({
     const lat = center[1] / drawPoints.length;
     setLocationName("My drawn field");
     onLocationSelect(lat, lon, "My drawn field");
+    onFieldPolygonSelect([...drawPoints, drawPoints[0]]);
     markerRef.current?.setLngLat([lon, lat]);
     mapRef.current?.fitBounds(drawPoints.reduce((bounds, point) => bounds.extend(point), new LngLatBounds(drawPoints[0], drawPoints[0])), { padding: 60, maxZoom: 16 });
   };
@@ -348,6 +355,7 @@ export default function ScreenAHome({
         }
         setDistrictName("");
         onLocationSelect(lat, lon, "My GPS field");
+        onFieldPolygonSelect(null);
         setLocationName("My GPS field");
         markerRef.current?.setLngLat([lon, lat]);
         mapRef.current?.flyTo({ center: [lon, lat], zoom: 14 });

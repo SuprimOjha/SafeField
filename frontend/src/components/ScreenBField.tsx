@@ -79,7 +79,7 @@ export default function ScreenBField({
             <span className="text-3xl font-bold text-gray-900">{data.rainfall_observation.amount_mm ?? "N/A"}</span>
             <span className="text-gray-500 ml-1">mm</span>
           </div>
-          <span className="text-xs text-gray-400 mt-2">{data.rainfall_observation.provenance ? data.rainfall_observation.provenance.source_name + " · " + data.rainfall_observation.provenance.kind + " · observed through " + data.rainfall_observation.provenance.observed_end_utc.slice(0, 10) : data.rainfall_observation.unavailable_reason}</span>
+          <span className="text-xs text-gray-400 mt-2">{data.rainfall_observation.provenance ? data.rainfall_observation.provenance.source_name + " · " + data.rainfall_observation.provenance.kind + " · observed through " + data.rainfall_observation.provenance.observed_end_utc.slice(0, 10) + " · " + data.rainfall_observation.provenance.spatial_method + (data.rainfall_observation.provenance.coverage_fraction === null ? "" : " · " + Math.round(data.rainfall_observation.provenance.coverage_fraction * 100) + "% coverage") : data.rainfall_observation.unavailable_reason}</span>
         </div>
 
         {/* Soil Wetness */}

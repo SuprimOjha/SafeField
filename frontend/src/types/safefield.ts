@@ -118,6 +118,8 @@ export interface RainfallProvenance {
   stream?: string | null;
   granule_ids: string[];
   units: string;
+  spatial_method: "nearest_grid_cell" | "area_weighted_polygon";
+  coverage_fraction: number | null;
 }
 
 export interface RainfallObservation {
