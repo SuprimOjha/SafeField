@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useTransition } from "react";
+import React, { useCallback, useEffect, useState, useSyncExternalStore, useTransition } from "react";
 import { FieldAssessmentResponse } from "@/types/safefield";
 import { fetchFieldAssessment } from "@/lib/api";
 import ScreenAHome from "@/components/ScreenAHome";
@@ -21,6 +21,23 @@ import {
 
 type TabId = "home" | "field" | "decision" | "trends" | "methods";
 
+function subscribeToOnlineStatus(onChange: () => void) {
+  window.addEventListener("online", onChange);
+  window.addEventListener("offline", onChange);
+  return () => {
+    window.removeEventListener("online", onChange);
+    window.removeEventListener("offline", onChange);
+  };
+}
+
+function getOnlineStatus() {
+  return navigator.onLine;
+}
+
+function getServerOnlineStatus() {
+  return true;
+}
+
 const NAV_ITEMS = [
   { id: "home", labelEn: "Choose location", shortEn: "Location", labelNe: "स्थान छान्नुहोस्", icon: MapPin },
   { id: "field", labelEn: "My field", shortEn: "My field", labelNe: "मेरो खेत", icon: SlidersHorizontal },
@@ -32,7 +49,7 @@ const NAV_ITEMS = [
 export default function SafeFieldNepalApp() {
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [lang, setLang] = useState<"en" | "ne">("en");
-  const [isOnline, setIsOnline] = useState(true);
+  const isOnline = useSyncExternalStore(subscribeToOnlineStatus, getOnlineStatus, getServerOnlineStatus);
   const [partnerLogoVisible, setPartnerLogoVisible] = useState(true);
 
   const [selectedLat, setSelectedLat] = useState<number>(26.45);
@@ -42,38 +59,37 @@ export default function SafeFieldNepalApp() {
   const [sandPercentOverride, setSandPercentOverride] = useState<number | null>(null);
 
   const [assessmentData, setAssessmentData] = useState<FieldAssessmentResponse | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [, startTransition] = useTransition();
 
-  useEffect(() => {
-    function handleOnline() { setIsOnline(true); }
-    function handleOffline() { setIsOnline(false); }
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-    setIsOnline(navigator.onLine);
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
-
-  const handleRunAssessment = async () => {
-    setLoading(true);
+  // Fetching starts after the effect runs; state updates happen only after the
+  // asynchronous request settles, avoiding synchronous state updates in effects.
+  const refreshAssessment = useCallback(async () => {
     try {
-      const data = await fetchFieldAssessment(selectedLat, selectedLon, fertilizerType, cropStage, true, sandPercentOverride);
-      startTransition(() => {
-        setAssessmentData(data);
-        setLoading(false);
-      });
+      const data = await fetchFieldAssessment(
+        selectedLat,
+        selectedLon,
+        fertilizerType,
+        cropStage,
+        true,
+        sandPercentOverride,
+      );
+      startTransition(() => setAssessmentData(data));
     } catch (err) {
       console.error("Failed to fetch field assessment:", err);
+    } finally {
       setLoading(false);
     }
-  };
+  }, [selectedLat, selectedLon, fertilizerType, cropStage, sandPercentOverride, startTransition]);
+
+  const handleRunAssessment = useCallback(() => {
+    setLoading(true);
+    void refreshAssessment();
+  }, [refreshAssessment]);
 
   useEffect(() => {
-    handleRunAssessment();
-  }, [selectedLat, selectedLon, fertilizerType, cropStage, sandPercentOverride]);
+    void refreshAssessment();
+  }, [refreshAssessment]);
 
   const selectTab = (tab: TabId) => {
     setActiveTab(tab);
@@ -178,7 +194,7 @@ export default function SafeFieldNepalApp() {
             })}
             <div className="ml-auto flex items-center gap-2 py-2 text-[11px] font-medium text-slate-400">
               <Leaf className="h-3.5 w-3.5 text-emerald-600" />
-              Built for Nepal's farming communities
+              Built for Nepal&apos;s farming communities
             </div>
           </div>
         </nav>
@@ -297,7 +313,7 @@ export default function SafeFieldNepalApp() {
         </div>
         <div className="border-t border-white/10">
           <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-5 py-4 text-[11px] text-emerald-100/55 sm:px-8 md:flex-row md:items-center md:justify-between lg:px-10">
-            <span>© {new Date().getFullYear()} Safe Field Nepal. Built for Nepal's farming communities.</span>
+            <span>© {new Date().getFullYear()} Safe Field Nepal. Built for Nepal&apos;s farming communities.</span>
             <span>Earth intelligence for every field.</span>
           </div>
         </div>
