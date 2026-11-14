@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { FieldAssessmentResponse, DecisionSignal } from "@/types/safefield";
+import FarmerContentPanel from "@/components/FarmerContentPanel";
 import {
   CheckCircle2,
   AlertTriangle,
@@ -203,6 +204,8 @@ export default function ScreenCDecision({
         )}
       </div>
 
+      <FarmerContentPanel lang={lang} />
+
       <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 space-y-3">
         <div className="flex items-center gap-2 text-emerald-950"><ShieldCheck className="h-5 w-5" /><h3 className="font-extrabold">Stay safe when handling fertilizer</h3></div>
         <ul className="grid gap-2 text-sm text-emerald-950 sm:grid-cols-2">
@@ -212,8 +215,9 @@ export default function ScreenCDecision({
           <li>• Wash hands and exposed skin after handling; change contaminated clothing.</li>
           <li>• Keep fertilizer in its original labelled container, away from children, food and drinking water.</li>
           <li>• Do not mix products unless the label or a qualified adviser explicitly permits it.</li>
+          <li>• Avoid the hottest part of the day; follow label instructions for wind direction and stop in gusty conditions.</li>
         </ul>
-        <p className="text-xs leading-5 text-emerald-900">General precautions only. Follow the specific product label and safety data sheet. Seek medical advice if exposure or illness occurs.</p>
+        <p className="text-xs leading-5 text-emerald-900">General guidance only. Follow the specific product label and safety data sheet. Seek medical advice if exposure or illness occurs.</p>
       </section>
 
       {/* Next Step Navigation */}
