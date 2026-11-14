@@ -4,7 +4,6 @@
 .env.*.local
 
 # Python
-backend/.venv/
 __pycache__/
 *.py[cod]
 *$py.class
@@ -25,4 +24,3 @@ Thumbs.db
 .idea/
 .venv/
 venv/
-backend/.venv/
