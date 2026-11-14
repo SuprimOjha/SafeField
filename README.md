@@ -74,3 +74,38 @@ This is an educational research prototype, not formal agronomic advice. Check th
 ## Validation still required
 
 The repository does not claim completed farmer trials, expert sign-off, Nepal-specific farmer-health study validation, real-device acceptance testing, or production readiness. See the validation plan before making those claims.
+
+
+## Safe Field data setup and manual tasks
+
+### 1. Install IMERG Late rainfall data
+
+Create a root `.env` from `.env.example` and enter your NASA Earthdata Login credentials as `EARTHDATA_USERNAME` and `EARTHDATA_PASSWORD`. Never commit `.env`. From the `backend` directory, install requirements and run the one fetch command:
+
+```bash
+python -m pip install -r requirements.txt
+python -m app.cli fetch-imerg --days 7
+```
+
+The command downloads only outside API request handling and writes Nepal-cropped daily GPM_3IMERGDL grid cells to the local SQLite cache. See [IMERG fetch instructions](backend/docs/IMERG_FETCH.md). Live Earthdata authentication and upstream availability must be checked locally.
+
+### 2. Add researched farmer guidance
+
+Drop source records into `backend/content/sources.json`, and researched fertilizer references, verified conversions and home remedies into the corresponding JSON files. Keep the `_example` keys as templates; the loader ignores them. Run:
+
+```bash
+cd backend
+python -m app.cli validate-content
+```
+
+Only records with verified provenance are eligible. Fertilizer reference ranges require an official source and are displayed as source references, not personalized prescriptions. Non-official remedy quantities are hidden. Free-text remedy fields reject dose-like expressions. The API exposes validation counts at `GET /api/content-status`.
+
+### Data use and limitations
+
+- NASA POWER is a coarse gridded reanalysis-based data source; it is not an on-farm sensor.
+- GPM IMERG Late is a separate ~0.1° daily precipitation product. The local grid cache is not a field-boundary average.
+- Open-Meteo is a non-NASA forecast; SoilGrids is a non-NASA modeled soil estimate; elevation lineage remains unverified.
+- The decision engine is a prototype screening aid, not an agronomist-approved recommendation or safety certification.
+- **Independent project, not endorsed by NASA.**
+
+AI-use disclosure: generative AI assistance was used during software implementation and documentation; scientific source records and local agronomic content must be independently researched and reviewed before publication.

@@ -19,3 +19,10 @@ GPM IMERG, SMAP and NASADEM are not queried by the current field-assessment endp
 - `UNAVAILABLE`: no usable value is available. Null values must remain null and must never be silently converted to zero or a favorable default.
 
 A fetch timestamp is not the same as the observation date. Always show both where available.
+
+
+## GPM IMERG Late cache
+
+The optional IMERG ingestion command uses the GPM_3IMERGDL daily Late collection (CMR version 07; NASA's current GPM directory describes the V07B algorithm line). The daily `precipitation` field is stored in mm/day, with `precipitation_cnt` used to exclude cells with no valid half-hourly samples. The code fails closed if the expected variables or units are absent. NASA's IMERG V07 FAQ identifies `precipitation` as the recommended multi-satellite field and documents its units; consult the current collection metadata before future upgrades.
+
+The fetch timestamp is distinct from the observation UTC day. The Late Run is intended for near-real-time monitoring, while Final Run is a retrospective research product with substantially longer latency. Do not mix Late and Final streams in one time series.

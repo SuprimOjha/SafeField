@@ -8,7 +8,15 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Safe Field Nepal data and content utilities")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("validate-content", help="Validate source and farmer guidance JSON files")
+    fetch_parser = subparsers.add_parser("fetch-imerg", help="Download and cache recent GPM IMERG Late daily granules")
+    fetch_parser.add_argument("--days", type=int, default=7, help="Number of latest available daily granules to install (1-30)")
     args = parser.parse_args()
+
+    if args.command == "fetch-imerg":
+        from app.services.imerg.fetch_daily import fetch_imerg
+        result = fetch_imerg(days=args.days)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
 
     if args.command == "validate-content":
         report = validate_content()
