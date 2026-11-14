@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "copy:maplibre-workers": "node scripts/copy-maplibre-workers.mjs",
+    "predev": "npm run copy:maplibre-workers",
+    "prebuild": "npm run copy:maplibre-workers"
   },
   "dependencies": {
     "lucide-react": "^1.72.0",
