@@ -266,3 +266,9 @@ def test_polygon_parser_closes_an_open_ring():
     points = parse_field_polygon("[[85,27],[85.1,27],[85.1,27.1]]")
     assert points[0] == points[-1]
     assert len(points) == 4
+
+
+def test_polygon_parser_does_not_duplicate_an_existing_closing_point():
+    raw = "[[85,27],[85.1,27],[85.1,27.1],[85,27]]"
+    points = parse_field_polygon(raw)
+    assert len(points) == 4
