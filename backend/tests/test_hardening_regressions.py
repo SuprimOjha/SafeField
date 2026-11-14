@@ -168,3 +168,10 @@ def test_point_lookup_uses_the_nearest_grid_cell(tmp_path):
     result = cache.get_recent_rain(27.09, 85.09, 72)
     assert result.status == "AVAILABLE"
     assert result.amount_mm == 12.0
+
+
+def test_polygon_accepts_exactly_80_percent_effective_sample_coverage(tmp_path):
+    cache = make_cache(tmp_path, counts=(39, 39, 39))
+    result = cache.get_recent_rain(27.0, 85.0, 72, field_box())
+    assert result.status == "AVAILABLE"
+    assert result.provenance.coverage_fraction >= 0.8
