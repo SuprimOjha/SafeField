@@ -11,6 +11,7 @@
     "evidence": "extension",
     "verified": false,
     "safetyNotes": "Source-backed safety information only.",
-    "reviewStatus": "not-expert-reviewed"
+    "reviewStatus": "not-expert-reviewed",
+    "reviewer": null
   }
 }

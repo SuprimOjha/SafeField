@@ -21,7 +21,10 @@ export default function FarmerContentPanel({ lang }: { lang: "en" | "ne" }) {
     return () => controller.abort();
   }, []);
 
-  if (!content || (!content.fertilizer_references.length && !content.home_remedies.length)) return null;
+  if (!content) return null;
+  const hasExpertReview =
+    content.fertilizer_references.some((item) => item.reviewStatus === "expert-reviewed" && Boolean(item.reviewer)) ||
+    content.home_remedies.some((item) => item.reviewStatus === "expert-reviewed" && Boolean(item.reviewer));
 
   return (
     <section className="rounded-2xl border border-sky-200 bg-white p-5 space-y-4">
@@ -29,6 +32,16 @@ export default function FarmerContentPanel({ lang }: { lang: "en" | "ne" }) {
         <h3 className="text-lg font-extrabold text-slate-900">
           {lang === "ne" ? "स्रोतमा आधारित कृषि सन्दर्भ" : "Source-verified farmer references"}
         </h3>
+        {!hasExpertReview && (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
+            Not yet reviewed by a Nepali agronomist.
+          </p>
+        )}
+        {!content.fertilizer_references.length && !content.home_remedies.length && (
+          <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+            No source-backed local guidance has been published yet. Add researched records to the backend content files; unverified records are not displayed.
+          </p>
+        )}
         <p className="text-sm leading-6 text-slate-600">
           {lang === "ne"
             ? "यी स्रोतका सन्दर्भ मात्र हुन्, व्यक्तिगत मल सिफारिस होइनन्।"

@@ -67,7 +67,7 @@ def test_remedy_quantities_are_hidden_for_non_official_sources(tmp_path):
         "quantitiesAsPrinted": "2 kg per ropani", "preparationNotesAsPrinted": "As printed",
         "sourceKey": "extension", "evidence": "extension", "verified": True,
         "safetyNotes": "Use general protective handling precautions.",
-        "reviewStatus": "not-expert-reviewed",
+        "reviewStatus": "not-expert-reviewed", "reviewer": None,
     }
     write_pack(tmp_path, sources={"extension": source(False)}, remedy_records=[remedy])
     report = validate_content(tmp_path)

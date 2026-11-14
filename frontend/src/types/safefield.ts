@@ -171,6 +171,7 @@ export interface HomeRemedy {
   verified: boolean;
   safetyNotes: string;
   reviewStatus: "not-expert-reviewed" | "expert-reviewed";
+  reviewer: string | null;
 }
 
 export interface FarmerContentResponse {
