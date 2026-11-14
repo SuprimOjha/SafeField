@@ -10,7 +10,8 @@ The map uses MapLibre GL JS with OpenFreeMap Bright as the default street basema
 
 | Input | Provider | Role and limitation |
 |---|---|---|
-| Daily rainfall, air temperature, modelled wetness proxies | NASA POWER | Coarse gridded reanalysis-based data (~55 km); newest daily values may be delayed |
+| Rainfall | GPM IMERG Late daily cache when fresh; NASA POWER fallback | IMERG ~10 km; POWER ~55 km and may be delayed; point lookup only, not a field-polygon average |
+| Air temperature and modelled wetness proxies | NASA POWER | Coarse gridded reanalysis-based data (~55 km); not an on-farm sensor |
 | Rain forecast | Open-Meteo | Non-NASA forecast; used for a short-term outlook |
 | Predicted soil texture | ISRIC SoilGrids | 250 m prediction for 0–5 cm topsoil; not a field soil test |
 | Elevation and slope estimate | Open-Elevation API | Underlying DEM lineage/resolution are not verified by this integration |

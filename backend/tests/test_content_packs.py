@@ -95,3 +95,13 @@ def test_conversion_requires_verified_source_and_value(tmp_path):
     write_pack(tmp_path, conversion_records=[conversion])
     report = validate_content(tmp_path)
     assert report["conversions"] == 0
+
+
+
+def test_expert_review_status_requires_a_named_reviewer(tmp_path):
+    item = fertilizer()
+    item.update(reviewStatus="expert-reviewed", reviewer=None)
+    write_pack(tmp_path, fertilizer_records=[item])
+    report = validate_content(tmp_path)
+    assert report["fertilizer_references"] == 0
+    assert report["skipped"]["fertilizer"] == 1
