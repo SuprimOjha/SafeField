@@ -20,7 +20,7 @@ def test_missing_input_requires_local_review_instead_of_zero_fallback():
     result = FertilizerDecisionEngine().evaluate_timing(**valid_inputs(rain_last_72h_mm=None))
     assert result.signal == "LOCAL REVIEW NEEDED"
     assert result.confidence == "CAUTION"
-    assert "not treated as zero" in result.detailed_explanation
+    assert any("not treated as zero" in rule.explanation for rule in result.rule_contributions)
 
 
 def test_heavy_forecast_triggers_wait_and_recheck():
