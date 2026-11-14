@@ -299,7 +299,7 @@ export default function ScreenAHome({
     if (markerRef.current && mapRef.current && drawMode === "select") {
       markerRef.current.setLngLat([selectedLon, selectedLat]);
     }
-  }, [selectedLat, selectedLon, drawMode]);
+  }, [selectedLat, selectedLon, drawMode, onFieldPolygonSelect]);
 
   useEffect(() => {
     if (mapRef.current) updateDrawLayer(mapRef.current, drawPoints);

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { FieldAssessmentResponse } from "@/types/safefield";
-import { CloudRain, Droplets, Thermometer, Mountain, Layers, CheckCircle2, RefreshCw, ArrowRight } from "lucide-react";
+import { CloudRain, Droplets, Thermometer, Mountain, CheckCircle2, RefreshCw, ArrowRight } from "lucide-react";
 
 interface ScreenBFieldProps {
   data: FieldAssessmentResponse | null;
@@ -49,7 +49,7 @@ export default function ScreenBField({
     );
   }
 
-  const { power_summary, elevation, soil_texture, forecast } = data;
+  const { power_summary, elevation, soil_texture } = data;
   const sandVal = sandPercentOverride ?? soil_texture.sand_percent ?? "";
   const sandLabel = sandPercentOverride !== null ? `${sandPercentOverride}% (farmer override)` : soil_texture.sand_percent !== null ? `${soil_texture.sand_percent}% (SoilGrids estimate)` : "Not available — enter a local estimate";
 

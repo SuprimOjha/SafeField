@@ -46,7 +46,7 @@ export async function fetchFieldAssessment(
     }
 
     return data;
-  } catch (err) {
+  } catch {
     // Fallback to browser localStorage cache if offline or backend unreachable
     if (typeof window !== "undefined") {
       const cached = window.localStorage.getItem(cacheKey);

@@ -82,7 +82,7 @@ const NAV_ITEMS = [
 export default function SafeFieldNepalApp() {
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const lang = useSyncExternalStore(subscribeToLanguage, getLanguageSnapshot, getServerLanguageSnapshot);
-  const setLang = useCallback(updateStoredLanguage, []);
+  const setLang = useCallback((next: "en" | "ne") => updateStoredLanguage(next), []);
   const requestSequence = useRef(0);
 
   const isOnline = useSyncExternalStore(subscribeToOnlineStatus, getOnlineStatus, getServerOnlineStatus);
