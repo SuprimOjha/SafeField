@@ -48,7 +48,7 @@ const NAV_ITEMS = [
 
 export default function SafeFieldNepalApp() {
   const [activeTab, setActiveTab] = useState<TabId>("home");
-  const [lang, setLang] = useState<"en" | "ne">("en");
+  const [lang, setLang] = useState<"en" | "ne">("ne");
   const [languageLoaded, setLanguageLoaded] = useState(false);
   const requestSequence = useRef(0);
 
@@ -56,18 +56,22 @@ export default function SafeFieldNepalApp() {
     try {
       const saved = window.localStorage.getItem("safefield_language");
       if (saved === "en" || saved === "ne") setLang(saved);
-      setLanguageLoaded(true);
     } catch {
       // Language preference remains session-only when storage is unavailable.
+    } finally {
+      setLanguageLoaded(true);
     }
   }, []);
 
   useEffect(() => {
     if (!languageLoaded) return;
-    try { window.localStorage.setItem("safefield_language", lang); } catch {
+    try {
+      window.localStorage.setItem("safefield_language", lang);
+    } catch {
       // Ignore storage restrictions; the in-memory preference still works.
     }
-  }, [lang]);
+  }, [lang, languageLoaded]);
+
   const isOnline = useSyncExternalStore(subscribeToOnlineStatus, getOnlineStatus, getServerOnlineStatus);
   const [partnerLogoVisible, setPartnerLogoVisible] = useState(true);
 
