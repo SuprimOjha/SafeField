@@ -31,6 +31,9 @@ def validate_content(content_dir: Path = CONTENT_DIR) -> dict[str, Any]:
     except (OSError, json.JSONDecodeError) as exc:
         return {**report, "status": "error", "error": f"sources.json: {exc}"}
 
+    if not isinstance(raw_sources, dict):
+        return {**report, "status": "error", "error": "sources.json must be a JSON object keyed by sourceKey"}
+
     sources: dict[str, SourceRecord] = {}
     for key, raw in raw_sources.items():
         if key == "_example":
