@@ -214,3 +214,9 @@ def test_polygon_rejects_self_intersecting_boundary(tmp_path):
     result = cache.get_recent_rain(27.0, 85.0, 72, bow_tie)
     assert result.status == "UNAVAILABLE"
     assert "invalid" in (result.unavailable_reason or "")
+
+
+def test_polygon_rejects_fewer_than_three_vertices(tmp_path):
+    cache = make_cache(tmp_path)
+    result = cache.get_recent_rain(27.0, 85.0, 72, [(85.0, 27.0), (85.1, 27.0), (85.0, 27.0)])
+    assert result.status == "UNAVAILABLE"
