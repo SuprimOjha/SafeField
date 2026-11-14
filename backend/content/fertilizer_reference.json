@@ -12,6 +12,7 @@
     "unitAsPrinted": "Copy the unit exactly as printed; do not convert",
     "timingSplit": "Copy the timing/split description from the source",
     "sourceKey": "source-key-from-sources-json",
+    "secondSourceKey": null,
     "year": 2024,
     "page": "page or section reference",
     "shortQuote": "Short exact source excerpt (within copyright limits)",

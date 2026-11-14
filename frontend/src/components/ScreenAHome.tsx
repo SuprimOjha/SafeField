@@ -286,7 +286,7 @@ export default function ScreenAHome({
       setMapReady(false);
     };
   // Keep one OpenFreeMap vector map; satellite imagery is toggled as a raster overlay.
-  }, [updateDrawLayer]);
+  }, [updateDrawLayer, onFieldPolygonSelect]);
 
   useEffect(() => {
     const map = mapRef.current;

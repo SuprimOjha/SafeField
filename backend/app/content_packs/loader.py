@@ -9,8 +9,8 @@ from app.content_packs.models import (
 
 CONTENT_DIR = Path(__file__).resolve().parents[2] / "content"
 DOSE_PATTERN = re.compile(
-    r"\b\d+(?:[.,]\d+)?\s*(?:mg|g|kg|ml|mL|l|L|%|ppm|spoon|cup|litre|liter|ropani|bigha|kattha)\b"
-    r"|\bper\s+hectare\b|\bkg\s*/\s*ha\b|\bg\s*/\s*l\b",
+    r"\b\d+(?:[.,]\d+)?\s*(?:mg|milligrams?|g|grams?|kg|kilograms?|ml|milliliters?|millilitres?|mL|l|litres?|liters?|L|%|ppm|spoons?|tablespoons?|teaspoons?|tbsp|tsp|cups?|tonnes?|tons?|quintals?|bags?|sacks?|packets?|ropani|bigha|kattha)\b"
+    r"|\bper\s+(?:hectare|ropani|bigha|kattha)\b|\bkg\s*/\s*ha\b|\bg\s*/\s*l\b",
     re.IGNORECASE,
 )
 
@@ -44,7 +44,7 @@ def validate_content(content_dir: Path = CONTENT_DIR) -> dict[str, Any]:
         except ValidationError as exc:
             report["warnings"].append(f"sources.{key}: {exc.errors()[0]['msg']}")
     report["sources"] = len(sources)
-    report["source_records"] = {key: source.model_dump() for key, source in sources.items()}
+    report["source_records"] = {key: source.model_dump(mode="json") for key, source in sources.items()}
     if report["warnings"]:
         report["status"] = "partial"
 
@@ -71,18 +71,32 @@ def validate_content(content_dir: Path = CONTENT_DIR) -> dict[str, Any]:
                 if kind == "fertilizer":
                     if not source.official:
                         raise ValueError("fertilizer references require an official source")
+                    if record.year != source.year:
+                        raise ValueError("fertilizer reference year must match its cited source")
                     if record.valueMin is None and record.valueMax is None:
                         raise ValueError("at least one printed reference bound is required")
                     if record.valueMin is not None and record.valueMax is not None and record.valueMin > record.valueMax:
                         raise ValueError("valueMin cannot exceed valueMax")
                     if len(record.shortQuote.split()) > 25:
                         raise ValueError("shortQuote must be no more than 25 words")
+                    if DOSE_PATTERN.search(record.timingSplit):
+                        raise ValueError("fertilizer rates belong in valueMin/valueMax and unitAsPrinted, not timingSplit")
                     if not record.unitAsPrinted.strip():
                         raise ValueError("unitAsPrinted is required exactly as printed")
+                    if record.secondSourceKey:
+                        if record.secondSourceKey == record.sourceKey:
+                            raise ValueError("secondSourceKey must identify a different source")
+                        second_source = sources.get(record.secondSourceKey)
+                        if second_source is None or not second_source.official:
+                            raise ValueError("two-source confidence requires a second official source")
                 elif kind == "conversion":
+                    if not source.official:
+                        raise ValueError("area conversions require an official source")
                     if not record.toHectare or record.toHectare <= 0:
                         raise ValueError("verified conversion requires a positive toHectare value")
                 elif kind == "remedy":
+                    if record.evidence == "official" and not source.official:
+                        raise ValueError("official remedy evidence requires an official source")
                     free_text = " ".join([record.remedyText, record.preparationNotesAsPrinted or "", record.safetyNotes])
                     if DOSE_PATTERN.search(free_text):
                         raise ValueError("dose-like quantity must be stored only in quantitiesAsPrinted")

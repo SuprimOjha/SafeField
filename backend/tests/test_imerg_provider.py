@@ -14,3 +14,13 @@ def test_imerg_late_provider_implements_read_only_rainfall_contract(tmp_path):
     assert result.amount_mm == 3.0
     assert result.provenance is not None
     assert result.provenance.kind == "observation"
+
+
+def test_imerg_late_provider_reports_uninstalled_cache_as_unavailable(tmp_path):
+    cache = ImergGridCache(str(tmp_path / "empty.sqlite"))
+    provider = ImergLateProvider(cache)
+    assert provider.is_available is False
+    result = provider.get_recent_rain(27.0, 85.0, 72)
+    assert result.status == "UNAVAILABLE"
+    assert result.amount_mm is None
+    assert "installed" in result.unavailable_reason.lower()

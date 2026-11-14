@@ -73,7 +73,7 @@ export default function ScreenCDecision({
   return (
     <div className="space-y-6">
       {/* Primary Outdoor Decision Banner */}
-      <div className={`${theme.bg} ${theme.border} border-2 text-white p-6 md:p-8 rounded-2xl shadow-md`}>
+      <section aria-label={lang === "ne" ? "खेतको अवस्था मूल्याङ्कन" : "Field assessment result"} aria-live="polite" className={`${theme.bg} ${theme.border} border-2 text-white p-6 md:p-8 rounded-2xl shadow-md`}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-start md:items-center gap-4">
             {theme.icon}
@@ -98,7 +98,7 @@ export default function ScreenCDecision({
         <p className="mt-4 text-lg font-semibold text-white/95">{decision.primary_reason}</p>
         <p className="mt-2 text-sm text-white/85 leading-relaxed">{decision.detailed_explanation}</p>
         <p className="mt-4 rounded-xl border border-white/25 bg-white/10 p-3 text-xs leading-5 text-white">Check the fertilizer product label, crop-specific recommendation and a soil test. This prototype does not determine whether fertilizer is needed, set application rates, or certify that application is safe.</p>
-      </div>
+      </section>
 
       {/* 5-Day Non-NASA Rain Outlook Strip */}
       <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
@@ -118,7 +118,7 @@ export default function ScreenCDecision({
         {forecast.forecast_days.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             {forecast.forecast_days.map((day) => {
-              const isWet = day.precipitation_sum_mm >= 5.0;
+              const isWet = day.precipitation_sum_mm !== null && day.precipitation_sum_mm >= 5.0;
               return (
                 <div
                   key={day.date}

@@ -9,7 +9,7 @@
       "title": {"type": "string", "minLength": 3},
       "authority": {"type": "string", "minLength": 2},
       "year": {"type": "integer", "minimum": 1900},
-      "url": {"type": "string", "format": "uri"},
+      "url": {"type": "string", "format": "uri", "pattern": "^https?://"},
       "accessed": {"type": "string", "format": "date"},
       "official": {"type": "boolean"},
       "language": {"type": "string", "minLength": 2}

@@ -61,6 +61,13 @@ def summarize_intersecting_cells(
     if not 0 < minimum_coverage_fraction <= 1:
         raise ValueError("minimum_coverage_fraction must be in (0, 1]")
 
+    cell_ids = [cell.cell_id for cell in cells]
+    if len(cell_ids) != len(set(cell_ids)):
+        raise ValueError("intersecting cell identifiers must be unique")
+    total_intersection_area = sum(cell.intersection_area_km2 for cell in cells)
+    if total_intersection_area > expected_field_area_km2 * 1.01:
+        raise ValueError("intersecting cell areas exceed the expected field area")
+
     valid = [cell for cell in cells if cell.quality == "GOOD" and cell.precipitation_mm is not None]
     rejected_count = len(cells) - len(valid)
     valid_area = sum(cell.intersection_area_km2 for cell in valid)

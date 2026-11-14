@@ -101,3 +101,30 @@ def test_polygon_coverage_includes_daily_sample_completeness(tmp_path):
     result = cache.get_recent_rain(27.0, 85.0, 72, polygon)
     assert result.status == "UNAVAILABLE"
     assert "coverage" in (result.unavailable_reason or "")
+
+
+def test_grid_cache_rejects_more_than_48_half_hour_samples(tmp_path):
+    cache = ImergGridCache(str(tmp_path / "cache.sqlite"))
+    inserted = cache.store_daily_grid(
+        date(2026, 11, 13), [27.0], [85.0], [[1.0]], [[49]],
+        "too-many-samples", datetime.now(timezone.utc),
+    )
+    assert inserted == 0
+
+
+def test_grid_cache_rejects_non_finite_precipitation(tmp_path):
+    cache = ImergGridCache(str(tmp_path / "cache.sqlite"))
+    inserted = cache.store_daily_grid(
+        date(2026, 11, 13), [27.0], [85.0], [[float("nan")]], [[48]],
+        "nan-rain", datetime.now(timezone.utc),
+    )
+    assert inserted == 0
+
+
+def test_grid_cache_rejects_cells_outside_nepal_pilot_bounds(tmp_path):
+    cache = ImergGridCache(str(tmp_path / "cache.sqlite"))
+    inserted = cache.store_daily_grid(
+        date(2026, 11, 13), [31.0], [85.0], [[1.0]], [[48]],
+        "outside-nepal", datetime.now(timezone.utc),
+    )
+    assert inserted == 0
