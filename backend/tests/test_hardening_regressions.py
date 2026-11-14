@@ -175,3 +175,10 @@ def test_polygon_accepts_exactly_80_percent_effective_sample_coverage(tmp_path):
     result = cache.get_recent_rain(27.0, 85.0, 72, field_box())
     assert result.status == "AVAILABLE"
     assert result.provenance.coverage_fraction >= 0.8
+
+
+def test_polygon_rejects_effective_coverage_below_80_percent(tmp_path):
+    cache = make_cache(tmp_path, counts=(38, 38, 38))
+    result = cache.get_recent_rain(27.0, 85.0, 72, field_box())
+    assert result.status == "UNAVAILABLE"
+    assert "coverage" in (result.unavailable_reason or "")
