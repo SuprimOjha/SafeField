@@ -190,3 +190,11 @@ def test_polygon_rejects_unexpected_grid_spacing(tmp_path):
     result = cache.get_recent_rain(27.1, 85.1, 72, polygon)
     assert result.status == "UNAVAILABLE"
     assert "spacing" in (result.unavailable_reason or "")
+
+
+def test_polygon_rejects_insufficient_cached_spatial_coverage(tmp_path):
+    cache = make_cache(tmp_path)
+    polygon = field_box(84.9, 26.9, 85.1, 27.1)
+    result = cache.get_recent_rain(27.0, 85.0, 72, polygon)
+    assert result.status == "UNAVAILABLE"
+    assert "coverage" in (result.unavailable_reason or "")
