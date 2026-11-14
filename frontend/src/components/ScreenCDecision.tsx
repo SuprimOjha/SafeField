@@ -73,7 +73,7 @@ export default function ScreenCDecision({
   return (
     <div className="space-y-6">
       {/* Primary Outdoor Decision Banner */}
-      <div className={`${theme.bg} ${theme.border} border-2 text-white p-6 md:p-8 rounded-2xl shadow-md`}>
+      <section aria-label={lang === "ne" ? "खेतको अवस्था मूल्याङ्कन" : "Field assessment result"} aria-live="polite" className={`${theme.bg} ${theme.border} border-2 text-white p-6 md:p-8 rounded-2xl shadow-md`}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-start md:items-center gap-4">
             {theme.icon}
