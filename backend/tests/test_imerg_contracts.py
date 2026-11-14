@@ -54,3 +54,18 @@ def test_invalid_granule_interval_is_rejected():
             observation_end=datetime(2026, 11, 14, 0, tzinfo=timezone.utc),
             spatial_resolution_km=10, source_url="https://example.nasa.gov",
         )
+
+
+def test_duplicate_intersecting_cell_ids_are_rejected():
+    cell = IMERGIntersectingCell(cell_id="same", intersection_area_km2=1, precipitation_mm=10, quality="GOOD")
+    with pytest.raises(ValueError, match="unique"):
+        summarize_intersecting_cells(granule(), [cell, cell], expected_field_area_km2=2)
+
+
+def test_intersection_area_cannot_exceed_expected_field_area():
+    cells = [
+        IMERGIntersectingCell(cell_id="a", intersection_area_km2=2, precipitation_mm=10, quality="GOOD"),
+        IMERGIntersectingCell(cell_id="b", intersection_area_km2=2, precipitation_mm=20, quality="GOOD"),
+    ]
+    with pytest.raises(ValueError, match="exceed"):
+        summarize_intersecting_cells(granule(), cells, expected_field_area_km2=3)
