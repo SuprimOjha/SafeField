@@ -64,7 +64,7 @@ async def assess_field(
     # Prefer installed IMERG Late grid cells; POWER remains an explicit fallback.
     rainfall_observation = ImergGridCache().get_recent_rain(lat, lon, 72)
     if rainfall_observation.status != "AVAILABLE" and power_res.rain_last_72h_mm is not None:
-        records = power_res.recent_daily_records[-3:]
+        records = [record for record in power_res.recent_daily_records if record.precip_mm is not None][-3:]
         if len(records) == 3:
             dates = [date.fromisoformat(record.date) for record in records]
             if dates[1] - dates[0] == timedelta(days=1) and dates[2] - dates[1] == timedelta(days=1):

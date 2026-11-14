@@ -9,8 +9,8 @@ from app.content_packs.models import (
 
 CONTENT_DIR = Path(__file__).resolve().parents[2] / "content"
 DOSE_PATTERN = re.compile(
-    r"\\b\\d+(?:[.,]\\d+)?\\s*(?:mg|g|kg|ml|mL|l|L|%|ppm|spoon|cup|litre|liter|ropani|bigha|kattha)\\b"
-    r"|\\bper\\s+hectare\\b|\\bkg\\s*/\\s*ha\\b|\\bg\\s*/\\s*l\\b",
+    r"\b\d+(?:[.,]\d+)?\s*(?:mg|g|kg|ml|mL|l|L|%|ppm|spoon|cup|litre|liter|ropani|bigha|kattha)\b"
+    r"|\bper\s+hectare\b|\bkg\s*/\s*ha\b|\bg\s*/\s*l\b",
     re.IGNORECASE,
 )
 
