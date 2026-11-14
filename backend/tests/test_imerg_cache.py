@@ -79,3 +79,25 @@ def test_polygon_rainfall_rejects_self_intersecting_geometry(tmp_path):
     result = cache.get_recent_rain(27.0, 85.0, 72, polygon)
     assert result.status == "UNAVAILABLE"
     assert result.amount_mm is None
+
+
+
+def test_point_rainfall_rejects_insufficient_half_hour_samples(tmp_path):
+    cache = ImergGridCache(str(tmp_path / "cache.sqlite"))
+    fetched = datetime(2026, 11, 14, 12, tzinfo=timezone.utc)
+    for day in [date(2026, 11, 11), date(2026, 11, 12), date(2026, 11, 13)]:
+        cache.store_daily_grid(day, [27.0], [85.0], [[5.0]], [[24]], f"granule-{day}", fetched)
+    result = cache.get_recent_rain(27.0, 85.0, 72)
+    assert result.status == "UNAVAILABLE"
+    assert result.amount_mm is None
+
+
+def test_polygon_coverage_includes_daily_sample_completeness(tmp_path):
+    cache = ImergGridCache(str(tmp_path / "cache.sqlite"))
+    fetched = datetime(2026, 11, 14, 12, tzinfo=timezone.utc)
+    for day in [date(2026, 11, 11), date(2026, 11, 12), date(2026, 11, 13)]:
+        cache.store_daily_grid(day, [27.0], [85.0], [[5.0]], [[24]], f"granule-{day}", fetched)
+    polygon = [(84.95, 26.95), (85.05, 26.95), (85.05, 27.05), (84.95, 27.05), (84.95, 26.95)]
+    result = cache.get_recent_rain(27.0, 85.0, 72, polygon)
+    assert result.status == "UNAVAILABLE"
+    assert "coverage" in (result.unavailable_reason or "")

@@ -5,6 +5,11 @@ from statistics import median
 from app.config import get_settings
 from app.services.rainfall import RainfallObservation, RainfallProvenance
 
+TOTAL_DAILY_SAMPLES = 48
+MIN_VALID_DAILY_SAMPLES = 39  # ceil(80% of 48 half-hour slots); software quality gate, not a NASA flag.
+MIN_POLYGON_COVERAGE = 0.8
+MAX_CACHE_AGE_DAYS = 5
+
 
 class ImergGridCache:
     """Persistent daily IMERG grid-cell cache; API reads never download granules."""
@@ -48,7 +53,7 @@ class ImergGridCache:
         if not row or not row["latest_date"]:
             return False
         age_days = (datetime.now(timezone.utc).date() - date.fromisoformat(row["latest_date"])).days
-        return 0 <= age_days <= 5
+        return 0 <= age_days <= MAX_CACHE_AGE_DAYS
 
     def get_recent_rain(self, latitude: float, longitude: float, hours: int, field_polygon: list[tuple[float, float]] | None = None) -> RainfallObservation:
         if field_polygon:
@@ -65,7 +70,7 @@ class ImergGridCache:
             return RainfallObservation(status="UNAVAILABLE", window_hours=hours, unavailable_reason=f"Only {len(rows)} daily IMERG record(s) are cached; {required_days} consecutive days are required.")
         dates = [date.fromisoformat(row["date_utc"]) for row in rows[:required_days]]
         newest_age_days = (datetime.now(timezone.utc).date() - dates[0]).days
-        if newest_age_days < 0 or newest_age_days > 5:
+        if newest_age_days < 0 or newest_age_days > MAX_CACHE_AGE_DAYS:
             return RainfallObservation(status="UNAVAILABLE", window_hours=hours, unavailable_reason="The newest cached IMERG day is outside the five-day freshness window; no stale rainfall total is used.")
         if any(dates[index] - dates[index + 1] != timedelta(days=1) for index in range(len(dates) - 1)):
             return RainfallObservation(status="UNAVAILABLE", window_hours=hours, unavailable_reason="Cached IMERG daily records contain a date gap; no rolling total is reported.")
@@ -164,8 +169,8 @@ class ImergGridCache:
                 fetched_values.append(datetime.fromisoformat(row["fetched_at_utc"]))
             coverage = min(valid_area / field_area, 1.0)
             coverage_fractions.append(coverage)
-            if coverage < 0.8 or valid_area <= 0:
-                return RainfallObservation(status="UNAVAILABLE", window_hours=hours, unavailable_reason=f"Valid IMERG polygon coverage for {day.isoformat()} is {coverage:.0%}; at least 80% is required.")
+            if coverage < MIN_POLYGON_COVERAGE or valid_area <= 0:
+                return RainfallObservation(status="UNAVAILABLE", window_hours=hours, unavailable_reason=f"Valid IMERG polygon coverage for {day.isoformat()} is {coverage:.0%}; at least {MIN_POLYGON_COVERAGE:.0%} is required.")
             daily_totals.append(weighted_total / valid_area)
 
         return self._build_observation(
