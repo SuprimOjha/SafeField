@@ -26,6 +26,7 @@ class FertilizerReference(BaseModel):
     unitAsPrinted: str = Field(min_length=1)
     timingSplit: str
     sourceKey: str
+    secondSourceKey: str | None = None
     year: int
     page: str
     shortQuote: str
@@ -42,6 +43,10 @@ class FertilizerReference(BaseModel):
             raise ValueError("valueMin cannot exceed valueMax")
         if self.reviewStatus == "expert-reviewed" and not self.reviewer:
             raise ValueError("expert-reviewed fertilizer reference requires reviewer")
+        if self.confidence == "two-sources" and not self.secondSourceKey:
+            raise ValueError("two-sources confidence requires secondSourceKey")
+        if self.confidence == "single-source" and self.secondSourceKey:
+            raise ValueError("single-source confidence cannot include secondSourceKey")
         return self
 
 
