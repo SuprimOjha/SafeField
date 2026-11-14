@@ -22,9 +22,11 @@ export default function FarmerContentPanel({ lang }: { lang: "en" | "ne" }) {
   }, []);
 
   if (!content) return null;
-  const hasExpertReview =
-    content.fertilizer_references.some((item) => item.reviewStatus === "expert-reviewed" && Boolean(item.reviewer)) ||
-    content.home_remedies.some((item) => item.reviewStatus === "expert-reviewed" && Boolean(item.reviewer));
+  const allGuidance = [...content.fertilizer_references, ...content.home_remedies];
+  const hasUnreviewedGuidance = allGuidance.some(
+    (item) => item.reviewStatus !== "expert-reviewed" || !item.reviewer,
+  );
+  const allGuidanceExpertReviewed = allGuidance.length > 0 && !hasUnreviewedGuidance;
 
   return (
     <section className="rounded-2xl border border-sky-200 bg-white p-5 space-y-4">
@@ -32,9 +34,14 @@ export default function FarmerContentPanel({ lang }: { lang: "en" | "ne" }) {
         <h3 className="text-lg font-extrabold text-slate-900">
           {lang === "ne" ? "स्रोतमा आधारित कृषि सन्दर्भ" : "Source-verified farmer references"}
         </h3>
-        {!hasExpertReview && (
+        {hasUnreviewedGuidance && (
           <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
-            Not yet reviewed by a Nepali agronomist.
+            Some records have not been marked as expert-reviewed. Check with a local agriculture office before acting.
+          </p>
+        )}
+        {allGuidanceExpertReviewed && (
+          <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-900">
+            Every displayed record includes a named expert reviewer. This remains a source reference, not a personalized prescription.
           </p>
         )}
         {!content.fertilizer_references.length && !content.home_remedies.length && (
@@ -65,6 +72,9 @@ export default function FarmerContentPanel({ lang }: { lang: "en" | "ne" }) {
               <p className="text-xs text-slate-600">Second source: {content.sources[item.secondSourceKey].title} ({content.sources[item.secondSourceKey].authority})</p>
             )}
             <p className="text-sm text-slate-700">{item.timingSplit}</p>
+            <p className="text-xs font-semibold text-slate-600">
+              Review: {item.reviewStatus}{item.reviewer ? ` · ${item.reviewer}` : ""}
+            </p>
             <p className="text-xs text-slate-600">
               Follow the product label. Soil testing is recommended. Not a prescription.
             </p>
