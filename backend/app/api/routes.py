@@ -9,6 +9,9 @@ from app.services.soilgrids_client import SoilGridsClient, SoilTextureResponse
 from app.stats.trend_engine import TrendEngine, TrendAnalysisResult
 from app.decision.fertilizer_engine import FertilizerDecisionEngine, DecisionResult
 from app.content_packs.loader import validate_content
+from app.services.rainfall import RainfallObservation, RainfallProvenance
+from app.services.imerg.grid_cache import ImergGridCache
+from datetime import date, datetime, time, timedelta, timezone
 
 
 router = APIRouter(prefix="/api", tags=["SafeField API"])
@@ -23,6 +26,7 @@ class FieldAssessmentResponse(BaseModel):
     forecast: ForecastResponse
     decision: DecisionResult
     climate_trend: TrendAnalysisResult
+    rainfall_observation: RainfallObservation
 
 
 @router.get("/districts")
@@ -57,10 +61,31 @@ async def assess_field(
         forecast_client.get_5day_rain_forecast(lat, lon),
     )
 
+    # Prefer installed IMERG Late grid cells; POWER remains an explicit fallback.
+    rainfall_observation = ImergGridCache().get_recent_rain(lat, lon, 72)
+    if rainfall_observation.status != "AVAILABLE" and power_res.rain_last_72h_mm is not None:
+        records = power_res.recent_daily_records[-3:]
+        if len(records) == 3:
+            dates = [date.fromisoformat(record.date) for record in records]
+            if dates[1] - dates[0] == timedelta(days=1) and dates[2] - dates[1] == timedelta(days=1):
+                fetched_at = datetime.fromisoformat(power_res.freshness.fetched_at_utc.replace("Z", "+00:00"))
+                rainfall_observation = RainfallObservation(
+                    status="AVAILABLE", amount_mm=power_res.rain_last_72h_mm, window_hours=72,
+                    provenance=RainfallProvenance(
+                        source_name="NASA POWER PRECTOTCORR (IMERG fallback)", kind="fallback",
+                        observed_start_utc=datetime.combine(dates[0], time.min, tzinfo=timezone.utc),
+                        observed_end_utc=datetime.combine(dates[-1] + timedelta(days=1), time.min, tzinfo=timezone.utc),
+                        fetched_at_utc=fetched_at, spatial_resolution=power_res.freshness.spatial_resolution,
+                        latency_note="POWER daily reanalysis-based data, typically delayed 2–4 days; not an IMERG observation.",
+                        dataset="NASA POWER PRECTOTCORR", version="daily API",
+                        units="mm/day summed over three consecutive UTC days",
+                    ),
+                )
+
     # Evaluate decision engine
     decision_engine = FertilizerDecisionEngine()
     decision_res = decision_engine.evaluate_timing(
-        rain_last_72h_mm=power_res.rain_last_72h_mm,
+        rain_last_72h_mm=rainfall_observation.amount_mm if rainfall_observation.status == "AVAILABLE" else None,
         expected_rain_next_48h_mm=forecast_res.expected_rain_next_48h_mm if forecast_res.freshness.status != "UNAVAILABLE" else None,
         soil_wetness=power_res.latest_surface_wetness,
         sand_percent=sand_percent_override if sand_percent_override is not None else (soil_res.sand_percent if soil_res.freshness.status != "UNAVAILABLE" else None),
@@ -93,6 +118,7 @@ async def assess_field(
         forecast=forecast_res,
         decision=decision_res,
         climate_trend=trend_res,
+        rainfall_observation=rainfall_observation,
     )
 
 
