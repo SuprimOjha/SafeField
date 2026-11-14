@@ -41,6 +41,8 @@ def validate_content(content_dir: Path = CONTENT_DIR) -> dict[str, Any]:
         except ValidationError as exc:
             report["warnings"].append(f"sources.{key}: {exc.errors()[0]['msg']}")
     report["sources"] = len(sources)
+    if report["warnings"]:
+        report["status"] = "partial"
 
     def load_records(filename: str, model: type, kind: str):
         try:
@@ -67,6 +69,8 @@ def validate_content(content_dir: Path = CONTENT_DIR) -> dict[str, Any]:
                         raise ValueError("fertilizer references require an official source")
                     if record.valueMin is None and record.valueMax is None:
                         raise ValueError("at least one printed reference bound is required")
+                    if record.valueMin is not None and record.valueMax is not None and record.valueMin > record.valueMax:
+                        raise ValueError("valueMin cannot exceed valueMax")
                     if not record.unitAsPrinted.strip():
                         raise ValueError("unitAsPrinted is required exactly as printed")
                 elif kind == "conversion":

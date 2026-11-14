@@ -31,8 +31,8 @@ def _read_daily_granule(path: Path, observed_day: date) -> tuple[list[float], li
         counts = cropped["precipitation_cnt"].squeeze(drop=True)
         precipitation = precipitation.transpose("lat", "lon")
         counts = counts.transpose("lat", "lon")
-        values = np.asarray(precipitation.values, dtype=float)
-        sample_counts = np.asarray(counts.values, dtype=float)
+        values = np.array(precipitation.values, dtype=float, copy=True)
+        sample_counts = np.array(counts.values, dtype=float, copy=True)
         values[~np.isfinite(values)] = np.nan
         sample_counts[~np.isfinite(sample_counts)] = 0
         precip_rows = [[None if not np.isfinite(value) or value < 0 else float(value) for value in row] for row in values]
