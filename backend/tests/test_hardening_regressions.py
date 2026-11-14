@@ -105,3 +105,9 @@ def test_cache_does_not_store_negative_precipitation(tmp_path):
     cache = ImergGridCache(str(tmp_path / "negative.sqlite"))
     inserted = cache.store_daily_grid(date.today(), [27.0], [85.0], [[-0.1]], [[48]], "negative", datetime.now(timezone.utc))
     assert inserted == 0
+
+
+def test_cache_does_not_store_cells_without_valid_samples(tmp_path):
+    cache = ImergGridCache(str(tmp_path / "no-samples.sqlite"))
+    inserted = cache.store_daily_grid(date.today(), [27.0], [85.0], [[5.0]], [[0]], "empty-cell", datetime.now(timezone.utc))
+    assert inserted == 0
