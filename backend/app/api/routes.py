@@ -103,7 +103,7 @@ async def assess_field(
                 rainfall_observation = RainfallObservation(
                     status="AVAILABLE", amount_mm=power_res.rain_last_72h_mm, window_hours=72,
                     provenance=RainfallProvenance(
-                        source_name="NASA POWER PRECTOTCORR (IMERG fallback)", kind="fallback",
+                        source_name="NASA POWER PRECTOTCORR (fallback when IMERG is unavailable)", kind="fallback",
                         observed_start_utc=datetime.combine(dates[0], time.min, tzinfo=timezone.utc),
                         observed_end_utc=datetime.combine(dates[-1] + timedelta(days=1), time.min, tzinfo=timezone.utc),
                         fetched_at_utc=fetched_at, spatial_resolution=power_res.freshness.spatial_resolution,
