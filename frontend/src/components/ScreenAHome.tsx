@@ -87,8 +87,8 @@ export default function ScreenAHome({
 
   const copy = {
     title: lang === "ne" ? "आफ्नो खेतको स्थान छान्नुहोस्" : "Choose your farm location",
-    subtitle: lang === "ne" ? "जिल्ला छान्नुहोस् वा नक्सामा आफ्नो खेतको सिमाना आफैँ कोर्नुहोस्।" : "Choose a district, use GPS or tap once to place a pin. Drawing a boundary is optional.",
-    streets: lang === "ne" ? "सडक" : "Streets",
+    subtitle: lang === "ne" ? "जिल्ला छान्नुहोस्, GPS प्रयोग गर्नुहोस् वा नक्सामा एक पटक थिचेर पिन राख्नुहोस्। सीमा कोर्नु वैकल्पिक हो।" : "Choose a district, use GPS or tap once to place a pin. Drawing a boundary is optional.",
+    streets: lang === "ne" ? "सडक नक्सा" : "Street map",
     satellite: lang === "ne" ? "स्याटेलाइट" : "Satellite",
     district: lang === "ne" ? "जिल्ला छान्नुहोस्" : "Select district",
     tap: lang === "ne" ? "नक्सामा पिन राख्नुहोस्" : "Tap to drop a pin",
@@ -282,7 +282,7 @@ export default function ScreenAHome({
     const lon = (bounds.minLon + bounds.maxLon) / 2;
     const lat = (bounds.minLat + bounds.maxLat) / 2;
     setDistrictName(name);
-    setLocationName(`${name} District`);
+    setLocationName(`${name} District · approximate centre`);
     onLocationSelect(lat, lon, `${name} District`);
     markerRef.current?.setLngLat([lon, lat]);
     mapRef.current?.fitBounds([[bounds.minLon, bounds.minLat], [bounds.maxLon, bounds.maxLat]], { padding: 55, maxZoom: 9, essential: true });
