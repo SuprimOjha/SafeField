@@ -7,6 +7,7 @@ import { CloudRain, Droplets, Thermometer, Mountain, CheckCircle2, RefreshCw, Ar
 interface ScreenBFieldProps {
   data: FieldAssessmentResponse | null;
   loading: boolean;
+  error: string | null;
   fertilizerType: string;
   setFertilizerType: (val: string) => void;
   cropStage: string;
@@ -21,6 +22,7 @@ interface ScreenBFieldProps {
 export default function ScreenBField({
   data,
   loading,
+  error,
   fertilizerType,
   setFertilizerType,
   cropStage,
@@ -33,18 +35,42 @@ export default function ScreenBField({
 }: ScreenBFieldProps) {
 
 
-  if (loading || !data) {
+  if (loading) {
     return (
       <div role="status" aria-live="polite" className="bg-white p-12 rounded-2xl shadow-sm border border-emerald-100 text-center space-y-4">
         <RefreshCw className="w-10 h-10 text-emerald-700 animate-spin mx-auto" />
         <h3 className="text-xl font-bold text-emerald-900">
-          {lang === "ne" ? "नासा उपग्रह डेटा र माटोको विश्लेषण गर्दै..." : "Loading available field data and source-quality information..."}
+          {lang === "ne" ? "खेतको डाटा लोड हुँदैछ..." : "Loading field assessment..."}
         </h3>
         <p className="text-gray-600 text-sm">
           {lang === "ne"
-            ? "उपलब्ध मौसम, माटो र भू-आकृति स्रोतहरूको डाटा लोड हुँदैछ।"
-            : "Loading NASA POWER, Open-Meteo, SoilGrids and terrain context. Some sources may be delayed or unavailable."}
+            ? "मौसम, माटो र भू-आकृति स्रोतहरूको जवाफ पर्खँदै।"
+            : "Waiting for the backend assessment. This may take a little longer while the server wakes up."}
         </p>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div role="alert" aria-live="assertive" className="bg-white p-8 sm:p-12 rounded-2xl shadow-sm border border-amber-200 text-center space-y-4">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-amber-700">
+          <RefreshCw className="h-6 w-6" />
+        </div>
+        <h3 className="text-xl font-bold text-slate-900">
+          {lang === "ne" ? "खेतको मूल्याङ्कन लोड हुन सकेन" : "Field assessment could not be loaded"}
+        </h3>
+        <p className="mx-auto max-w-2xl text-sm leading-6 text-slate-600">
+          {error || (lang === "ne" ? "सर्भरबाट डाटा प्राप्त भएन।" : "The backend did not return an assessment.")}
+        </p>
+        <button
+          type="button"
+          onClick={onRunAssessment}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-6 py-3 font-semibold text-white transition hover:bg-emerald-800"
+        >
+          <RefreshCw className="h-4 w-4" />
+          {lang === "ne" ? "पुनः प्रयास गर्नुहोस्" : "Retry assessment"}
+        </button>
       </div>
     );
   }
