@@ -134,8 +134,12 @@ async def assess_field(
     for rec in power_res.historical_daily_records:
         if rec.precip_mm is not None and rec.date:
             yr = int(rec.date[:4])
+            # Retain years with valid precipitation but zero heavy-rain days.
+            # Omitting them would bias the trend toward years with at least one
+            # heavy-rain event and distort the slope and significance test.
+            yearly_heavy_days.setdefault(yr, 0)
             if rec.precip_mm >= 15.0:
-                yearly_heavy_days[yr] = yearly_heavy_days.get(yr, 0) + 1
+                yearly_heavy_days[yr] += 1
 
     sorted_yrs = sorted(yearly_heavy_days.keys())
     counts = [float(yearly_heavy_days[yr]) for yr in sorted_yrs]
