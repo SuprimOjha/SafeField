@@ -54,3 +54,10 @@ def test_zero_precipitation_is_a_valid_measurement(tmp_path):
     result = cache.get_recent_rain(27.0, 85.0, 72)
     assert result.status == "AVAILABLE"
     assert result.amount_mm == 0.0
+
+
+def test_cache_returns_latest_complete_day_for_24_hour_window(tmp_path):
+    cache = make_cache(tmp_path, values=(1.0, 2.0, 3.0))
+    result = cache.get_recent_rain(27.0, 85.0, 24)
+    assert result.status == "AVAILABLE"
+    assert result.amount_mm == 3.0
