@@ -55,7 +55,7 @@ export interface SoilTextureResponse {
 
 export interface DailyForecastItem {
   date: string;
-  precipitation_sum_mm: number;
+  precipitation_sum_mm: number | null;
   precipitation_probability_max: number | null;
 }
 

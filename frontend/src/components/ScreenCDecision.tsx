@@ -127,7 +127,7 @@ export default function ScreenCDecision({
                 >
                   <div className="text-xs font-semibold text-gray-600">{day.date}</div>
                   <div className={`text-xl font-bold mt-1 ${isWet ? "text-blue-900" : "text-gray-900"}`}>
-                    {day.precipitation_sum_mm} <span className="text-xs font-normal">mm</span>
+                    {day.precipitation_sum_mm ?? "N/A"} <span className="text-xs font-normal">{day.precipitation_sum_mm === null ? "" : "mm"}</span>
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
                     {day.precipitation_probability_max !== null

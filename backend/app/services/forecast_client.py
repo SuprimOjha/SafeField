@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 class DailyForecastItem(BaseModel):
     date: str
-    precipitation_sum_mm: float
+    precipitation_sum_mm: float | None
     precipitation_probability_max: int | None
 
 
@@ -66,19 +66,27 @@ class OpenMeteoForecastClient:
 
             items: list[DailyForecastItem] = []
             for i, d in enumerate(dates):
-                p_sum = float(sums[i]) if i < len(sums) and sums[i] is not None else 0.0
+                p_sum = float(sums[i]) if i < len(sums) and sums[i] is not None else None
                 p_prob = int(probs[i]) if i < len(probs) and probs[i] is not None else None
                 items.append(
                     DailyForecastItem(
                         date=str(d),
-                        precipitation_sum_mm=round(p_sum, 2),
+                        precipitation_sum_mm=round(p_sum, 2) if p_sum is not None else None,
                         precipitation_probability_max=p_prob,
                     )
                 )
 
-            next_48h = sum(item.precipitation_sum_mm for item in items[:2])
-            next_120h = sum(item.precipitation_sum_mm for item in items[:5])
-            rain_soon = next_48h > 5.0  # >5mm expected in next 2 days triggers WAIT warning
+            next_48h = (
+                round(sum(item.precipitation_sum_mm for item in items[:2] if item.precipitation_sum_mm is not None), 2)
+                if len(items) >= 2 and all(item.precipitation_sum_mm is not None for item in items[:2])
+                else None
+            )
+            next_120h = (
+                round(sum(item.precipitation_sum_mm for item in items[:5] if item.precipitation_sum_mm is not None), 2)
+                if len(items) >= 5 and all(item.precipitation_sum_mm is not None for item in items[:5])
+                else None
+            )
+            rain_soon = next_48h > 5.0 if next_48h is not None else None
 
             fetched_at = utc_now_iso()
             response = ForecastResponse(
@@ -100,8 +108,8 @@ class OpenMeteoForecastClient:
                     docs_url=OPEN_METEO_DOCS,
                 ),
                 forecast_days=items,
-                expected_rain_next_48h_mm=round(next_48h, 2),
-                expected_rain_next_120h_mm=round(next_120h, 2),
+                expected_rain_next_48h_mm=next_48h,
+                expected_rain_next_120h_mm=next_120h,
                 rain_expected_soon=rain_soon,
             )
             self.cache.set(cache_key, response.model_dump(), fetched_at, FORECAST_CACHE_TTL_SECONDS)
