@@ -98,7 +98,7 @@ export default function ScreenCDecision({
         <p className="mt-4 text-lg font-semibold text-white/95">{decision.primary_reason}</p>
         <p className="mt-2 text-sm text-white/85 leading-relaxed">{decision.detailed_explanation}</p>
         <p className="mt-4 rounded-xl border border-white/25 bg-white/10 p-3 text-xs leading-5 text-white">Check the fertilizer product label, crop-specific recommendation and a soil test. This prototype does not determine whether fertilizer is needed, set application rates, or certify that application is safe.</p>
-      </div>
+      </section>
 
       {/* 5-Day Non-NASA Rain Outlook Strip */}
       <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
