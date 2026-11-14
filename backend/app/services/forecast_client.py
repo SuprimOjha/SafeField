@@ -17,9 +17,9 @@ class ForecastResponse(BaseModel):
     longitude: float
     freshness: FreshnessBadge
     forecast_days: list[DailyForecastItem]
-    expected_rain_next_48h_mm: float
-    expected_rain_next_120h_mm: float
-    rain_expected_soon: bool  # True if > 5mm expected in next 48-72h
+    expected_rain_next_48h_mm: float | None
+    expected_rain_next_120h_mm: float | None
+    rain_expected_soon: bool | None  # True if > 5mm expected in next 48-72h
 
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
@@ -132,7 +132,7 @@ class OpenMeteoForecastClient:
                     docs_url=OPEN_METEO_DOCS,
                 ),
                 forecast_days=[],
-                expected_rain_next_48h_mm=0.0,
-                expected_rain_next_120h_mm=0.0,
-                rain_expected_soon=False,
+                expected_rain_next_48h_mm=None,
+                expected_rain_next_120h_mm=None,
+                rain_expected_soon=None,
             )
