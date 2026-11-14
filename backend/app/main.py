@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
+from app.api.routes import router as api_router
 
 
 @asynccontextmanager
@@ -16,7 +17,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Safe Field Nepal API",
         description="NASA Earth-observation proxy, statistical shift detector, and fertilizer timing decision support.",
-        version="0.1.0",
+        version="1.0.0",
         lifespan=lifespan,
     )
 
@@ -27,6 +28,8 @@ def create_app() -> FastAPI:
         allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["*"],
     )
+
+    app.include_router(api_router)
 
     @app.get("/api/health")
     async def health_check() -> dict[str, str]:
