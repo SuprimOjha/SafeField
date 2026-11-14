@@ -64,3 +64,24 @@ def test_provenance_observation_interval_must_be_ordered():
             observed_start_utc=datetime(2026, 11, 14, tzinfo=timezone.utc),
             observed_end_utc=datetime(2026, 11, 13, tzinfo=timezone.utc),
         )
+
+
+def test_non_finite_rainfall_amount_is_rejected():
+    with pytest.raises(ValidationError):
+        RainfallObservation(
+            status="AVAILABLE", amount_mm=float("nan"), window_hours=24,
+            provenance=provenance(),
+        )
+
+
+def test_negative_rainfall_amount_is_rejected():
+    with pytest.raises(ValidationError):
+        RainfallObservation(
+            status="AVAILABLE", amount_mm=-0.1, window_hours=24,
+            provenance=provenance(),
+        )
+
+
+def test_coverage_fraction_outside_unit_interval_is_rejected():
+    with pytest.raises(ValidationError):
+        provenance(coverage_fraction=1.1)
