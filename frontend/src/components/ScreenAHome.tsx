@@ -18,6 +18,7 @@ import { getDict, type Lang } from "@/i18n";
 import {
   Navigation, Compass, ArrowRight, Pencil, Undo2, Trash2,
   Check, Layers3, LocateFixed, MousePointer2, Search, Loader2, X, MapPin,
+  Footprints, Info,
 } from "lucide-react";
 
 interface ScreenAHomeProps {
@@ -31,6 +32,8 @@ interface ScreenAHomeProps {
 }
 
 type DrawMode = "select" | "draw";
+type WalkCorner = { lat: number; lon: number; accuracy: number };
+type WalkStatus = "idle" | "waiting" | "live" | "unavailable";
 type DistrictProperties = { DISTRICT?: string; PROVINCE?: number; HQ?: string };
 type DistrictFeature = Feature<Polygon | MultiPolygon, DistrictProperties>;
 
@@ -114,6 +117,17 @@ export default function ScreenAHome({
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
 
+  // Walk method state: the farmer stands on each field corner and marks it.
+  // Corners feed the same draw pipeline (drawPoints/user-field layer), plus a
+  // live GPS watch that shows the walking position and per-corner accuracy.
+  const [walkCorners, setWalkCorners] = useState<WalkCorner[]>([]);
+  const [walkRequesting, setWalkRequesting] = useState(false);
+  const [walkStatus, setWalkStatus] = useState<WalkStatus>("idle");
+  const [walkLiveAccuracy, setWalkLiveAccuracy] = useState<number | null>(null);
+  const walkCornersRef = useRef<WalkCorner[]>([]);
+  const walkWatchRef = useRef<number | null>(null);
+  const walkDotRef = useRef<MapLibreMarker | null>(null);
+
   // Place/city/road search (Nominatim, restricted to Nepal).
   type PlaceResult = { title: string; subtitle: string; lat: number; lon: number };
   const [searchQuery, setSearchQuery] = useState("");
@@ -136,6 +150,18 @@ export default function ScreenAHome({
     area: lang === "ne" ? "अनुमानित क्षेत्रफल" : "Estimated area",
     instruction: lang === "ne" ? "खेतको कुनाकाप्चामा ट्याप गरेर सीमा कोर्नुहोस्। कम्तीमा ३ बिन्दु चाहिन्छ।" : "Optional: tap at least 3 field corners to estimate the boundary and area.",
     gps: lang === "ne" ? "मेरो GPS स्थान" : "Use my GPS",
+    walkTitle: lang === "ne" ? "हिँडेर कुना मार्क्ने विधि" : "Walk method",
+    walkInfo: lang === "ne" ? "GPS केही मिटरसम्म गलत हुन सक्छ। प्रत्येक कुनाको सटीकता देखाइन्छ।" : "GPS can be off by several meters. Each corner shows its accuracy.",
+    walkPrivacy: lang === "ne" ? "यसका लागि तपाईंको स्थान अनुमति चाहिन्छ। तपाईंको खेतको डाटा तपाईंकै फोनमै बस्छ।" : "This needs your location permission. Your field stays on your phone.",
+    walkMark: lang === "ne" ? "यो कुना मार्क गर्नुहोस्" : "Mark this corner",
+    walkUndo: lang === "ne" ? "कुना हटाउनुहोस्" : "Undo corner",
+    walkFinish: lang === "ne" ? "खेत पूरा गर्नुहोस्" : "Finish field",
+    walkNeedCorners: lang === "ne" ? "कम्तीमा ३ कुना चाहिन्छ।" : "At least 3 corners are needed.",
+    walkWaiting: lang === "ne" ? "GPS पर्खिँदै…" : "Waiting for GPS…",
+    walkUnavailable: lang === "ne" ? "अनुपलब्ध" : "Unavailable",
+    walkCorner: lang === "ne" ? "कुना" : "Corner",
+    walkSaved: lang === "ne" ? "खेतको सीमा सुरक्षित भयो।" : "Field boundary saved.",
+    walkModePill: lang === "ne" ? "हिँड्ने क्रममा — प्रत्येक कुनामा उभिएर मार्क गर्नुहोस्" : "Walk mode — stand on each corner and mark it",
     searchLabel: t.searchLabel,
     searchPlaceholder: t.searchPlaceholder,
     searchNoResults: t.searchNoResults,
@@ -181,6 +207,46 @@ export default function ScreenAHome({
   useEffect(() => { onLocationSelectRef.current = onLocationSelect; }, [onLocationSelect]);
   useEffect(() => { drawPointsRef.current = drawPoints; }, [drawPoints]);
   useEffect(() => { districtsRef.current = districts; }, [districts]);
+
+  // Live GPS watch for the walk method: keeps a small dot on the map and the
+  // accuracy pill up to date while the farmer walks between corners.
+  const stopWalkWatch = useCallback(() => {
+    if (walkWatchRef.current !== null && typeof navigator !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.clearWatch(walkWatchRef.current);
+    }
+    walkWatchRef.current = null;
+    walkDotRef.current?.remove();
+    walkDotRef.current = null;
+  }, []);
+
+  const startWalkWatch = useCallback(() => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setWalkStatus("unavailable");
+      return;
+    }
+    if (walkWatchRef.current !== null) return;
+    walkWatchRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        setWalkStatus("live");
+        setWalkLiveAccuracy(position.coords.accuracy);
+        const map = mapRef.current;
+        if (!map) return;
+        if (!walkDotRef.current) {
+          const dot = document.createElement("div");
+          dot.className = "h-4 w-4 rounded-full border-[3px] border-white bg-sky-500 shadow-md";
+          walkDotRef.current = new MapLibreMarker({ element: dot })
+            .setLngLat([position.coords.longitude, position.coords.latitude])
+            .addTo(map);
+        } else {
+          walkDotRef.current.setLngLat([position.coords.longitude, position.coords.latitude]);
+        }
+      },
+      (error) => {
+        if (error.code === error.PERMISSION_DENIED) setWalkStatus("unavailable");
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 2000 }
+    );
+  }, []);
 
   // Debounced place search; results are limited to Nepal by the provider.
   useEffect(() => {
@@ -446,6 +512,7 @@ export default function ScreenAHome({
     });
 
     return () => {
+      stopWalkWatch();
       marker.remove();
       map.remove();
       mapRef.current = null;
@@ -453,7 +520,7 @@ export default function ScreenAHome({
       setMapReady(false);
     };
   // Keep one OpenFreeMap vector map; satellite imagery is toggled as a raster overlay.
-  }, [updateDrawLayer, onFieldPolygonSelect]);
+  }, [updateDrawLayer, onFieldPolygonSelect, stopWalkWatch]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -494,6 +561,13 @@ export default function ScreenAHome({
   };
 
   const beginDrawing = () => {
+    // Starting a tap-drawing retires any walk session so the two boundary
+    // methods never mix points.
+    stopWalkWatch();
+    walkCornersRef.current = [];
+    setWalkCorners([]);
+    setWalkStatus("idle");
+    setWalkLiveAccuracy(null);
     drawModeRef.current = "draw";
     drawPointsRef.current = [];
     setDrawMode("draw");
@@ -568,6 +642,114 @@ export default function ScreenAHome({
       { enableHighAccuracy: true, timeout: 25000, maximumAge: 0 }
     );
   };
+
+  // Walk method: one fresh high-accuracy fix per corner press so the recorded
+  // corner matches where the farmer is standing at that moment.
+  const markWalkCorner = () => {
+    if (!navigator.geolocation) {
+      setWalkStatus("unavailable");
+      setMapError(copyRef.current.errorGeolocationUnsupported);
+      return;
+    }
+    setWalkRequesting(true);
+    setWalkStatus("waiting");
+    setMapError(null);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setWalkRequesting(false);
+        const { latitude: lat, longitude: lon, accuracy } = position.coords;
+        if (lat < 26.3 || lat > 30.5 || lon < 80.0 || lon > 88.3) {
+          setWalkStatus("unavailable");
+          setMapError(copyRef.current.errorGpsOutside);
+          return;
+        }
+        // The first marked corner also retires any in-progress tap-drawing so
+        // the two boundary methods never mix points.
+        if (drawModeRef.current === "draw") {
+          drawModeRef.current = "select";
+          setDrawMode("select");
+          if (mapRef.current) mapRef.current.getCanvas().style.cursor = "";
+        }
+        if (walkCornersRef.current.length === 0) {
+          drawPointsRef.current = [];
+          setDrawPoints([]);
+          setFieldArea(null);
+          onFieldPolygonSelect(null);
+        }
+        const next = [...drawPointsRef.current, [lon, lat] as [number, number]];
+        drawPointsRef.current = next;
+        setDrawPoints(next);
+        if (mapRef.current) {
+          updateDrawLayer(mapRef.current, next);
+          const center = mapRef.current.getCenter();
+          if (Math.abs(center.lng - lon) > 0.002 || Math.abs(center.lat - lat) > 0.002) {
+            mapRef.current.easeTo({ center: [lon, lat], duration: 600 });
+          }
+        }
+        walkCornersRef.current = [...walkCornersRef.current, { lat, lon, accuracy }];
+        setWalkCorners(walkCornersRef.current);
+        setWalkStatus("live");
+        setWalkLiveAccuracy(accuracy);
+        startWalkWatch();
+      },
+      (error) => {
+        setWalkRequesting(false);
+        const denied = error.code === error.PERMISSION_DENIED;
+        setWalkStatus(denied ? "unavailable" : "idle");
+        const reason = denied
+          ? copyRef.current.errorGpsDenied
+          : error.code === error.POSITION_UNAVAILABLE
+            ? copyRef.current.errorGpsUnavailable
+            : copyRef.current.errorGpsTimeout;
+        setMapError(reason);
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+    );
+  };
+
+  const undoWalkCorner = () => {
+    if (!walkCornersRef.current.length) return;
+    walkCornersRef.current = walkCornersRef.current.slice(0, -1);
+    setWalkCorners(walkCornersRef.current);
+    const next = drawPointsRef.current.slice(0, -1);
+    drawPointsRef.current = next;
+    setDrawPoints(next);
+  };
+
+  const clearWalkCorners = () => {
+    stopWalkWatch();
+    walkCornersRef.current = [];
+    setWalkCorners([]);
+    setWalkStatus("idle");
+    setWalkLiveAccuracy(null);
+    drawPointsRef.current = [];
+    setDrawPoints([]);
+    setFieldArea(null);
+    onFieldPolygonSelect(null);
+    if (mapRef.current) updateDrawLayer(mapRef.current, []);
+  };
+
+  const finishWalkField = () => {
+    if (walkCornersRef.current.length < 3) return;
+    finishDrawing();
+    stopWalkWatch();
+    walkCornersRef.current = [];
+    setWalkCorners([]);
+    setWalkStatus("idle");
+    setWalkLiveAccuracy(null);
+  };
+
+  // Status line inside the walk box: progress until three corners exist, then
+  // a ready-to-finish confirmation. A boundary saved earlier (drawn, walked or
+  // restored from a previous visit) is acknowledged instead.
+  const boundarySaved = fieldArea !== null || (Array.isArray(fieldPolygon) && fieldPolygon.length >= 4);
+  const walkStatusBox = walkCorners.length === 0
+    ? (boundarySaved ? copy.walkSaved : copy.walkNeedCorners)
+    : walkCorners.length < 3
+      ? `${walkCorners.length} / 3 · ${copy.walkNeedCorners}`
+      : lang === "ne"
+        ? `${walkCorners.length} कुना मार्क भए — खेत पूरा गर्न सकिन्छ।`
+        : `${walkCorners.length} ${walkCorners.length === 1 ? "corner" : "corners"} marked — ready to finish the field.`;
 
   return (
     <div className="space-y-5">
@@ -658,6 +840,63 @@ export default function ScreenAHome({
           </div>
         </div>
 
+        {/* Walk method: mark field corners on foot with live GPS accuracy */}
+        <div className="border-b border-emerald-100 bg-white px-4 py-4 sm:px-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="flex items-center gap-2 text-sm font-extrabold uppercase tracking-wide text-[#123c2b]">
+              <Footprints className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+              {copy.walkTitle}
+            </h3>
+            {walkStatus !== "idle" && (
+              <span aria-live="polite" className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${walkStatus === "unavailable" ? "bg-rose-50 text-rose-700" : walkStatus === "waiting" ? "bg-amber-50 text-amber-800" : "bg-emerald-50 text-emerald-800"}`}>
+                {walkStatus === "unavailable"
+                  ? copy.walkUnavailable
+                  : walkStatus === "waiting"
+                    ? copy.walkWaiting
+                    : `GPS ±${Math.round(walkLiveAccuracy ?? 0)} m`}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-2.5 flex items-start gap-2 rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2.5 text-xs leading-5 text-emerald-950">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" aria-hidden="true" />
+            <span>{copy.walkInfo} {copy.walkPrivacy}</span>
+          </div>
+
+          <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs font-semibold text-slate-700">
+            {walkStatusBox}
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button onClick={markWalkCorner} disabled={walkRequesting} className="inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-800 px-4 text-xs font-bold text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60">
+              {walkRequesting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <MapPin className="h-4 w-4" aria-hidden="true" />}
+              {copy.walkMark}
+            </button>
+            <button onClick={undoWalkCorner} disabled={!walkCorners.length} className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3.5 text-xs font-bold text-emerald-900 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40">
+              <Undo2 className="h-4 w-4" aria-hidden="true" /> {copy.walkUndo}
+            </button>
+            <button onClick={clearWalkCorners} disabled={!walkCorners.length} className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3.5 text-xs font-bold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40">
+              <Trash2 className="h-4 w-4" aria-hidden="true" /> {copy.clear}
+            </button>
+            <button onClick={finishWalkField} disabled={walkCorners.length < 3} className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-emerald-700 px-3.5 text-xs font-bold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-40">
+              <Check className="h-4 w-4" aria-hidden="true" /> {copy.walkFinish}
+            </button>
+          </div>
+
+          {walkCorners.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {walkCorners.map((corner, index) => (
+                <span
+                  key={`${index}-${corner.lat}-${corner.lon}`}
+                  className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-bold ${corner.accuracy > 15 ? "border-amber-300 bg-amber-50 text-amber-900" : "border-emerald-200 bg-emerald-50 text-emerald-900"}`}
+                >
+                  {copy.walkCorner} {index + 1} · ±{Math.round(corner.accuracy)} m
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
         {drawMode === "draw" && (
           <div className="flex flex-col gap-3 border-b border-emerald-100 bg-emerald-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
             <div className="flex items-start gap-2 text-xs leading-5 text-emerald-950">
@@ -685,6 +924,7 @@ export default function ScreenAHome({
           {!mapReady && <div className="absolute inset-0 z-[2] flex items-center justify-center bg-[#edf4ec]/80 text-sm font-semibold text-emerald-900 backdrop-blur-[2px]">{copy.loadingMap}</div>}
           {mapError && <div role="alert" className="absolute left-3 right-3 top-3 z-10 rounded-xl border border-amber-300 bg-amber-50/95 px-4 py-3 text-xs font-medium leading-5 text-amber-950 shadow-lg">{mapError}</div>}
           {drawMode === "draw" && <div className="pointer-events-none absolute left-1/2 top-3 z-[5] -translate-x-1/2 rounded-full bg-emerald-950/90 px-4 py-2 text-xs font-bold text-white shadow-lg">{copy.drawingMode}</div>}
+          {walkCorners.length > 0 && <div className="pointer-events-none absolute left-1/2 top-3 z-[5] -translate-x-1/2 rounded-full bg-emerald-950/90 px-4 py-2 text-xs font-bold text-white shadow-lg">{copy.walkModePill}</div>}
           <div className="absolute bottom-3 left-3 z-[5] flex max-w-[calc(100%-24px)] items-center gap-2 rounded-xl border border-white/70 bg-white/95 px-3 py-2.5 text-xs text-slate-700 shadow-lg backdrop-blur">
             <Compass className="h-4 w-4 shrink-0 text-emerald-700" />
             <span className="truncate">{copy.selectedLocation} <strong className="text-emerald-900">{locationName}</strong> · {selectedLat.toFixed(5)}°N, {selectedLon.toFixed(5)}°E{gpsAccuracy !== null ? ` · GPS ±${Math.round(gpsAccuracy)} m` : ""} · {copy.dragPin}</span>
