@@ -65,7 +65,7 @@ def _hourly_total(hourly: dict, window_hours: int) -> float | None:
         return None
 
     now = datetime.now(NEPAL_TZ)
-    first_future_hour = now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+    current_hour = now.replace(minute=0, second=0, microsecond=0)\n    # Hourly precipitation is accumulated over the hour ending at its timestamp.\n    # If now is part-way through an hour, skip that partially elapsed interval.\n    first_future_hour = current_hour + timedelta(hours=1 if now.minute == 0 and now.second == 0 else 2)
     future_values: list[tuple[datetime, float | None]] = []
 
     for index, raw_time in enumerate(times):
