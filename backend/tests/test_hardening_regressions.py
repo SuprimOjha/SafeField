@@ -117,3 +117,10 @@ def test_cache_stores_zero_precipitation_with_valid_samples(tmp_path):
     cache = ImergGridCache(str(tmp_path / "zero.sqlite"))
     inserted = cache.store_daily_grid(date.today(), [27.0], [85.0], [[0.0]], [[48]], "zero", datetime.now(timezone.utc))
     assert inserted == 1
+
+
+def test_point_lookup_rejects_38_valid_half_hour_samples(tmp_path):
+    cache = make_cache(tmp_path, counts=(38, 48, 48))
+    result = cache.get_recent_rain(27.0, 85.0, 72)
+    assert result.status == "UNAVAILABLE"
+    assert "39" in (result.unavailable_reason or "")
