@@ -465,41 +465,6 @@ export default function SafeFieldNepalApp() {
 
             {activeTab === "methods" && <ScreenEMethods data={assessmentData} lang={lang} />}
           </section>
-
-          <footer className="mt-auto border-t border-emerald-950/10 bg-[#102f24] text-white">
-            <div className="mx-auto grid max-w-[1440px] gap-9 px-5 py-10 sm:px-8 md:grid-cols-2 lg:grid-cols-[1.25fr_0.8fr_1.2fr] lg:gap-12 lg:px-10 lg:py-12">
-              <div>
-                <Image src="/logo.png" alt="Safe Field logo" width={544} height={160} className="h-12 w-auto max-w-[210px] object-contain object-left" />
-                <p className="mt-3 max-w-sm text-sm leading-6 text-emerald-50/75">{t.footerAbout}</p>
-                <p className="mt-4 text-xs font-semibold text-emerald-200">{t.footerChallenge}</p>
-              </div>
-
-              <div>
-                <h2 className="text-xs font-extrabold uppercase tracking-[0.16em] text-white">{t.footerExplore}</h2>
-                <ul className="mt-4 space-y-3 text-sm text-emerald-50/75">
-                  {NAV_ITEMS.map((item) => (
-                    <li key={item.id}>
-                      <button type="button" onClick={() => selectTab(item.id)} className="transition hover:text-white focus-visible:outline-none focus-visible:underline">
-                        {lang === "ne" ? item.labelNe : item.labelEn}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div>
-                <h2 className="text-xs font-extrabold uppercase tracking-[0.16em] text-white">{t.footerDataTitle}</h2>
-                <p className="mt-4 text-sm leading-6 text-emerald-50/75">{t.footerDataBody}</p>
-                <p className="mt-3 text-xs leading-5 text-emerald-100/60">{t.footerDisclaimer}</p>
-              </div>
-            </div>
-            <div className="border-t border-white/10">
-              <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-5 py-4 text-[11px] text-emerald-100/55 sm:px-8 md:flex-row md:items-center md:justify-between lg:px-10">
-                <span>© {new Date().getFullYear()} {t.footerCopyright}</span>
-                <span>{t.footerTagline}</span>
-              </div>
-            </div>
-          </footer>
         </div>
       </div>
 

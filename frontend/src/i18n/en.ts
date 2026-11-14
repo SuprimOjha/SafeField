@@ -5,19 +5,6 @@ export const en = {
   brandTagline: "Earth intelligence for every field",
   offlineBanner: "You are offline. Showing the latest available cached data.",
 
-  // Footer
-  footerAbout:
-    "Earth intelligence for every field. Safe Field Nepal helps farmers explore satellite, weather and environmental evidence alongside their own field information.",
-  footerChallenge: "NASA International Space Apps Challenge 2026",
-  footerExplore: "Explore",
-  footerDataTitle: "Data & responsible use",
-  footerDataBody:
-    "The current assessment calls NASA POWER, Open-Meteo, ISRIC SoilGrids and Open-Meteo Elevation (Copernicus DEM). GPM IMERG, SMAP and NASADEM are not connected to this assessment endpoint. Availability, resolution and update frequency vary by source.",
-  footerDisclaimer:
-    "This tool provides research-informed estimates, not a substitute for field measurements, official land surveys or advice from local agricultural experts. Verify important decisions on the ground.",
-  footerCopyright: "Safe Field Nepal. Built for Nepal's farming communities.",
-  footerTagline: "Earth intelligence for every field.",
-
   // Screen A — Home / map
   fieldMappingBadge: "Nepal field mapping",
   subtitleExtra: "You can start with one tap; drawing is optional.",
