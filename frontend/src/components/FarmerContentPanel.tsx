@@ -36,12 +36,12 @@ export default function FarmerContentPanel({ lang }: { lang: "en" | "ne" }) {
         </h3>
         {hasUnreviewedGuidance && (
           <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
-            Some records have not been marked as expert-reviewed. Check with a local agriculture office before acting.
+            {lang === "ne" ? "केही अभिलेख विज्ञद्वारा समीक्षा गरिएको भनेर चिनाइएको छैन। कुनै कदम चाल्नुअघि स्थानीय कृषि कार्यालयसँग सल्लाह लिनुहोस्।" : "Some records have not been marked as expert-reviewed. Check with a local agriculture office before acting."}
           </p>
         )}
         {allGuidanceExpertReviewed && (
           <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-900">
-            Every displayed record includes a named expert reviewer. This remains a source reference, not a personalized prescription.
+            {lang === "ne" ? "देखाइएका सबै अभिलेखमा नामसहितका विज्ञ समीक्षक उल्लेख छन्। यो स्रोत सन्दर्भ मात्र हो, व्यक्तिगत मल सिफारिस होइन।" : "Every displayed record includes a named expert reviewer. This remains a source reference, not a personalized prescription."}
           </p>
         )}
         {!content.fertilizer_references.length && !content.home_remedies.length && (
