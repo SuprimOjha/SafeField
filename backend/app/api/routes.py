@@ -8,6 +8,7 @@ from app.services.forecast_client import OpenMeteoForecastClient, ForecastRespon
 from app.services.soilgrids_client import SoilGridsClient, SoilTextureResponse
 from app.stats.trend_engine import TrendEngine, TrendAnalysisResult
 from app.decision.fertilizer_engine import FertilizerDecisionEngine, DecisionResult
+from app.content_packs.loader import validate_content
 
 
 router = APIRouter(prefix="/api", tags=["SafeField API"])
@@ -93,24 +94,6 @@ async def assess_field(
         decision=decision_res,
         climate_trend=trend_res,
     )
-
-
-@router.get("/integrations/imerg/status")
-async def get_imerg_integration_status() -> dict[str, object]:
-    """Report the integration state without implying that IMERG is active."""
-    return {
-        "integration": "GPM IMERG",
-        "status": "NOT_CONNECTED",
-        "used_by_field_assessment": False,
-        "supported_streams_in_contract": ["LATE", "FINAL"],
-        "message": "IMERG is not currently queried by the field-assessment endpoint.",
-        "next_steps": [
-            "Configure Earthdata authentication where required.",
-            "Implement granule discovery and download.",
-            "Intersect quality-controlled cells with field geometry.",
-            "Validate against local rain gauges before decision use.",
-        ],
-    }
 
 
 async def asyncio_gather_safe(*coros):

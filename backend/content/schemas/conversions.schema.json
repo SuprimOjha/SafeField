@@ -1,7 +1,0 @@
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Verified area conversions",
-  "type": "object",
-  "required": ["records"],
-  "properties": {"records":{"type":"array","items":{"type":"object","required":["unit","toHectare","sourceKey","verified"],"properties":{"unit":{"enum":["ropani","bigha","kattha","hectare"]},"toHectare":{"type":["number","null"],"exclusiveMinimum":0},"sourceKey":{"type":"string"},"verified":{"type":"boolean"}}}},"_example":{"type":"object"}}
-}
