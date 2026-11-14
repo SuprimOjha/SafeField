@@ -30,8 +30,8 @@ def parse_field_polygon(raw: str | None) -> list[tuple[float, float]] | None:
         raise HTTPException(status_code=422, detail="field_polygon must contain between 3 and 200 vertices.")
     points: list[tuple[float, float]] = []
     for point in coordinates:
-        if not isinstance(point, list) or len(point) < 2:
-            raise HTTPException(status_code=422, detail="Each field_polygon vertex must contain longitude and latitude.")
+        if not isinstance(point, list) or len(point) != 2:
+            raise HTTPException(status_code=422, detail="Each field_polygon vertex must contain exactly longitude and latitude.")
         try:
             lon_value, lat_value = float(point[0]), float(point[1])
         except (TypeError, ValueError) as exc:
