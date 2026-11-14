@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     cache_db_path: str = str(BASE_DIR / "app" / "cache" / "safefield_cache.db")
     http_timeout_seconds: float = 12.0
     earthdata_token: str = ""
+    earthdata_username: str = ""
+    earthdata_password: str = ""
 
     # Nepal bounding box validation (26.3 to 30.5 N, 80.0 to 88.3 E)
     nepal_min_lat: float = 26.3

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { FieldAssessmentResponse } from "@/types/safefield";
-import { CloudRain, Droplets, Thermometer, Mountain, Layers, CheckCircle2, RefreshCw, ArrowRight } from "lucide-react";
+import { CloudRain, Droplets, Thermometer, Mountain, CheckCircle2, RefreshCw, ArrowRight } from "lucide-react";
 
 interface ScreenBFieldProps {
   data: FieldAssessmentResponse | null;
@@ -35,22 +35,22 @@ export default function ScreenBField({
 
   if (loading || !data) {
     return (
-      <div className="bg-white p-12 rounded-2xl shadow-sm border border-emerald-100 text-center space-y-4">
+      <div role="status" aria-live="polite" className="bg-white p-12 rounded-2xl shadow-sm border border-emerald-100 text-center space-y-4">
         <RefreshCw className="w-10 h-10 text-emerald-700 animate-spin mx-auto" />
         <h3 className="text-xl font-bold text-emerald-900">
           {lang === "ne" ? "नासा उपग्रह डेटा र माटोको विश्लेषण गर्दै..." : "Loading available field data and source-quality information..."}
         </h3>
         <p className="text-gray-600 text-sm">
           {lang === "ne"
-            ? "GPM IMERG, SMAP, NASA POWER र ISRIC SoilGrids बाट डाटा लोड हुँदैछ।"
+            ? "उपलब्ध मौसम, माटो र भू-आकृति स्रोतहरूको डाटा लोड हुँदैछ।"
             : "Loading NASA POWER, Open-Meteo, SoilGrids and terrain context. Some sources may be delayed or unavailable."}
         </p>
       </div>
     );
   }
 
-  const { power_summary, elevation, soil_texture, forecast } = data;
-  const sandVal = sandPercentOverride !== null ? sandPercentOverride : (soil_texture.sand_percent ?? 40);
+  const { power_summary, elevation, soil_texture } = data;
+  const sandVal = sandPercentOverride ?? soil_texture.sand_percent ?? "";
   const sandLabel = sandPercentOverride !== null ? `${sandPercentOverride}% (farmer override)` : soil_texture.sand_percent !== null ? `${soil_texture.sand_percent}% (SoilGrids estimate)` : "Not available — enter a local estimate";
 
   return (
@@ -71,15 +71,15 @@ export default function ScreenBField({
         <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-semibold text-gray-600">
-              {lang === "ne" ? "उपलब्ध पछिल्ला ३ दैनिक वर्षा मान" : "Latest 3 Available Daily Rainfall Values"}
+              {lang === "ne" ? "उपलब्ध पछिल्ला ३ दैनिक वर्षा मान" : "Rainfall over latest 3 available UTC days"}
             </span>
             <CloudRain className="w-6 h-6 text-blue-600" />
           </div>
           <div>
-            <span className="text-3xl font-bold text-gray-900">{power_summary.rain_last_72h_mm ?? "N/A"}</span>
+            <span className="text-3xl font-bold text-gray-900">{data.rainfall_observation.amount_mm ?? "N/A"}</span>
             <span className="text-gray-500 ml-1">mm</span>
           </div>
-          <span className="text-xs text-gray-400 mt-2">NASA POWER PRECTOTCORR · coarse reanalysis-based grid; latest records may be delayed 2–4 days</span>
+          <span className="text-xs text-gray-400 mt-2">{data.rainfall_observation.provenance ? data.rainfall_observation.provenance.source_name + " · " + data.rainfall_observation.provenance.kind + " · observed through " + data.rainfall_observation.provenance.observed_end_utc.slice(0, 10) + " · " + data.rainfall_observation.provenance.spatial_method + (data.rainfall_observation.provenance.coverage_fraction === null ? "" : " · " + Math.round(data.rainfall_observation.provenance.coverage_fraction * 100) + "% coverage") : data.rainfall_observation.unavailable_reason}</span>
         </div>
 
         {/* Soil Wetness */}
@@ -177,12 +177,13 @@ export default function ScreenBField({
               {lang === "ne" ? `माटोको बनावट: ${sandLabel}` : `Soil Texture: ${sandLabel}`}
             </label>
             <input
-              type="range"
-              min="10"
-              max="80"
+              type="number"
+              min="0"
+              max="100"
+              step="1"
               value={sandVal}
-              onChange={(e) => { const value = Number(e.target.value); onSandOverrideChange(value); }}
-              className="w-full accent-emerald-700 h-2 bg-gray-200 rounded-lg cursor-pointer mt-3"
+              onChange={(e) => { const raw = e.target.value; if (raw === "") { onSandOverrideChange(null); return; } const value = Number(raw); if (Number.isFinite(value) && value >= 0 && value <= 100) onSandOverrideChange(value); }}
+              className="w-full rounded-xl border border-gray-300 bg-gray-50 px-4 py-3 font-medium text-gray-900 focus:ring-2 focus:ring-emerald-600"
             />
             <span className="text-xs text-gray-500 mt-1 block">
               ISRIC SoilGrids predicted 250 m topsoil (0–5 cm): {soil_texture.sand_percent === null ? "Unavailable" : `${soil_texture.texture_class} (${soil_texture.sand_percent}% sand)`}. Estimated, not a field test; verify locally.

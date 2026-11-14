@@ -9,3 +9,10 @@ pymannkendall>=1.4.3
 statsmodels>=0.14.2
 pytest>=8.3.0
 pytest-asyncio>=0.24.0
+# IMERG ingestion: NASA Earthdata discovery/download and NetCDF reading.
+earthaccess>=0.17.0,<0.18.0
+xarray>=2024.3.0
+netCDF4>=1.6.5
+# Equal-area field polygon intersections for IMERG grid-cell coverage.
+shapely>=2.0.0
+pyproj>=3.6.0

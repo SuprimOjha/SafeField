@@ -23,6 +23,7 @@ interface ScreenAHomeProps {
   selectedLat: number;
   selectedLon: number;
   onLocationSelect: (lat: number, lon: number, name: string) => void;
+  onFieldPolygonSelect: (polygon: [number, number][] | null) => void;
   onProceedToField: () => void;
   lang: "en" | "ne";
 }
@@ -46,6 +47,25 @@ function getCoordinates(geometry: DistrictFeature["geometry"]): number[][] {
   return points;
 }
 
+function polygonCentroid(points: [number, number][]): [number, number] {
+  let twiceArea = 0;
+  let centroidLon = 0;
+  let centroidLat = 0;
+  for (let index = 0; index < points.length; index++) {
+    const [lon1, lat1] = points[index];
+    const [lon2, lat2] = points[(index + 1) % points.length];
+    const cross = lon1 * lat2 - lon2 * lat1;
+    twiceArea += cross;
+    centroidLon += (lon1 + lon2) * cross;
+    centroidLat += (lat1 + lat2) * cross;
+  }
+  if (Math.abs(twiceArea) < 1e-12) {
+    const sum = points.reduce((acc, point) => [acc[0] + point[0], acc[1] + point[1]], [0, 0]);
+    return [sum[0] / points.length, sum[1] / points.length];
+  }
+  return [centroidLon / (3 * twiceArea), centroidLat / (3 * twiceArea)];
+}
+
 function polygonAreaHectares(points: [number, number][]) {
   if (points.length < 3) return 0;
   const radius = 6378137;
@@ -63,6 +83,7 @@ export default function ScreenAHome({
   selectedLat,
   selectedLon,
   onLocationSelect,
+  onFieldPolygonSelect,
   onProceedToField,
   lang,
 }: ScreenAHomeProps) {
@@ -222,7 +243,15 @@ export default function ScreenAHome({
     map.on("style.load", installLayers);
     map.on("click", (event: MapMouseEvent) => {
       const { lng, lat } = event.lngLat;
+      if (lng < 80.0 || lng > 88.3 || lat < 26.3 || lat > 30.5) {
+        setMapError("Choose a point or draw the field boundary inside the Nepal pilot area.");
+        return;
+      }
       if (drawModeRef.current === "draw") {
+        if (drawPointsRef.current.length >= 200) {
+          setMapError("A field boundary can contain at most 200 vertices.");
+          return;
+        }
         const next = [...drawPointsRef.current, [lng, lat] as [number, number]];
         drawPointsRef.current = next;
         setDrawPoints(next);
@@ -231,6 +260,7 @@ export default function ScreenAHome({
       }
       // A normal map tap always drops a pin; district selection is handled by the picker.
       onLocationSelectRef.current(lat, lng, `Selected field (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
+      onFieldPolygonSelect(null);
       setDistrictName("");
       setLocationName(`Selected field · ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
       marker.setLngLat([lng, lat]);
@@ -269,7 +299,7 @@ export default function ScreenAHome({
     if (markerRef.current && mapRef.current && drawMode === "select") {
       markerRef.current.setLngLat([selectedLon, selectedLat]);
     }
-  }, [selectedLat, selectedLon, drawMode]);
+  }, [selectedLat, selectedLon, drawMode, onFieldPolygonSelect]);
 
   useEffect(() => {
     if (mapRef.current) updateDrawLayer(mapRef.current, drawPoints);
@@ -291,6 +321,7 @@ export default function ScreenAHome({
     setDistrictName(name);
     setLocationName(`${name} District · approximate centre`);
     onLocationSelect(lat, lon, `${name} District`);
+    onFieldPolygonSelect(null);
     markerRef.current?.setLngLat([lon, lat]);
     mapRef.current?.fitBounds([[bounds.minLon, bounds.minLat], [bounds.maxLon, bounds.maxLat]], { padding: 55, maxZoom: 9, essential: true });
   };
@@ -301,6 +332,7 @@ export default function ScreenAHome({
     setDrawMode("draw");
     setDrawPoints([]);
     setFieldArea(null);
+    onFieldPolygonSelect(null);
     setDistrictName("");
     if (mapRef.current) mapRef.current.getCanvas().style.cursor = "crosshair";
   };
@@ -314,6 +346,7 @@ export default function ScreenAHome({
     drawPointsRef.current = [];
     setDrawPoints([]);
     setFieldArea(null);
+    onFieldPolygonSelect(null);
     if (mapRef.current) updateDrawLayer(mapRef.current, []);
   };
 
@@ -324,11 +357,10 @@ export default function ScreenAHome({
     drawModeRef.current = "select";
     setDrawMode("select");
     if (mapRef.current) mapRef.current.getCanvas().style.cursor = "";
-    const center = drawPoints.reduce((acc, point) => [acc[0] + point[0], acc[1] + point[1]], [0, 0]);
-    const lon = center[0] / drawPoints.length;
-    const lat = center[1] / drawPoints.length;
+    const [lon, lat] = polygonCentroid(drawPoints);
     setLocationName("My drawn field");
     onLocationSelect(lat, lon, "My drawn field");
+    onFieldPolygonSelect([...drawPoints, drawPoints[0]]);
     markerRef.current?.setLngLat([lon, lat]);
     mapRef.current?.fitBounds(drawPoints.reduce((bounds, point) => bounds.extend(point), new LngLatBounds(drawPoints[0], drawPoints[0])), { padding: 60, maxZoom: 16 });
   };
@@ -342,12 +374,13 @@ export default function ScreenAHome({
       (position) => {
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
-        if (lat < 26.2 || lat > 30.6 || lon < 79.8 || lon > 88.5) {
+        if (lat < 26.3 || lat > 30.5 || lon < 80.0 || lon > 88.3) {
           setMapError("Your GPS location appears to be outside Nepal.");
           return;
         }
         setDistrictName("");
         onLocationSelect(lat, lon, "My GPS field");
+        onFieldPolygonSelect(null);
         setLocationName("My GPS field");
         markerRef.current?.setLngLat([lon, lat]);
         mapRef.current?.flyTo({ center: [lon, lat], zoom: 14 });
@@ -387,9 +420,6 @@ export default function ScreenAHome({
               <h2 className="text-2xl font-extrabold tracking-tight text-[#123c2b] sm:text-3xl">{copy.title}</h2>
               <p className="mt-2 text-sm leading-6 text-slate-600">{copy.subtitle} You can start with one tap; drawing is optional.</p>
             </div>
-            <button onClick={handleUseGps} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-800 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-900/15 transition hover:bg-emerald-900">
-              <Navigation className="h-4 w-4" /> {copy.gps}
-            </button>
           </div>
         </div>
 
@@ -405,6 +435,9 @@ export default function ScreenAHome({
             </select>
           </label>
           <div className="flex flex-wrap gap-2">
+            <button onClick={handleUseGps} className="inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-800 px-4 text-sm font-bold text-white transition hover:bg-emerald-900">
+              <Navigation className="h-4 w-4" /> {copy.gps}
+            </button>
             <button onClick={() => { drawModeRef.current = "select"; setDrawMode("select"); if (mapRef.current) mapRef.current.getCanvas().style.cursor = ""; }} className={`inline-flex h-11 items-center gap-2 rounded-xl border px-4 text-sm font-bold transition ${drawMode === "select" ? "border-emerald-700 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white text-slate-600"}`}>
               <MousePointer2 className="h-4 w-4" /> {copy.tap}
             </button>
@@ -461,7 +494,7 @@ export default function ScreenAHome({
           </button>
         </div>
       </section>
-      <p className="px-1 text-[11px] leading-5 text-slate-500">District boundaries are administrative reference data. A hand-drawn field boundary is an approximate outline from map clicks; verify it on the ground before using it for official land measurement. The current assessment uses a selected point/field centre with coarse NASA POWER grid data (about 55 km); drawing a boundary does not make rainfall or soil data field-resolution. GPM IMERG is not yet connected to this assessment.</p>
+      <p className="px-1 text-[11px] leading-5 text-slate-500">District boundaries are administrative reference data. A hand-drawn field boundary is an approximate outline from map clicks; verify it on the ground before using it for official land measurement. When a fresh GPM IMERG Late cache is installed, a drawn field uses equal-area cell intersections if at least 80% sample-weighted coverage is available. Point selection uses the nearest ~10 km cell. If IMERG coverage is unavailable, NASA POWER (~55 km) is used as a clearly labelled point fallback; it is not a polygon average.</p>
     </div>
   );
 }

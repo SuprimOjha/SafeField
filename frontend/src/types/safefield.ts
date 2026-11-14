@@ -105,7 +105,89 @@ export interface TrendAnalysisResult {
   plain_language_summary: string;
 }
 
+export interface RainfallProvenance {
+  source_name: string;
+  kind: "observation" | "model" | "forecast" | "fallback" | "farmer_input" | "assumption";
+  observed_start_utc: string;
+  observed_end_utc: string;
+  fetched_at_utc: string;
+  spatial_resolution: string | null;
+  latency_note: string;
+  dataset: string;
+  version: string;
+  stream?: string | null;
+  granule_ids: string[];
+  units: string;
+  spatial_method: "nearest_grid_cell" | "area_weighted_polygon" | "point_grid";
+  coverage_fraction: number | null;
+}
+
+export interface RainfallObservation {
+  status: "AVAILABLE" | "UNAVAILABLE";
+  amount_mm: number | null;
+  window_hours: number;
+  provenance: RainfallProvenance | null;
+  unavailable_reason: string | null;
+}
+
+export interface ContentSource {
+  title: string;
+  authority: string;
+  year: number;
+  url: string;
+  accessed: string;
+  official: boolean;
+  language: string;
+}
+
+export interface FertilizerReference {
+  id: string;
+  crop: string;
+  varietyType: string;
+  region: string;
+  nutrientOrProduct: string;
+  basis: "nutrient" | "product";
+  valueMin: number | null;
+  valueMax: number | null;
+  unitAsPrinted: string;
+  timingSplit: string;
+  sourceKey: string;
+  year: number;
+  page: string;
+  shortQuote: string;
+  confidence: "single-source" | "two-sources";
+  verified: boolean;
+  reviewStatus: "not-expert-reviewed" | "expert-reviewed";
+  reviewer: string | null;
+}
+
+export interface HomeRemedy {
+  id: string;
+  crop: string;
+  problem: string;
+  remedyText: string;
+  quantitiesAsPrinted: string | null;
+  preparationNotesAsPrinted: string | null;
+  sourceKey: string;
+  evidence: "official" | "research" | "extension";
+  verified: boolean;
+  safetyNotes: string;
+  reviewStatus: "not-expert-reviewed" | "expert-reviewed";
+  reviewer: string | null;
+}
+
+export interface FarmerContentResponse {
+  status: "ok" | "partial" | "error";
+  sources: Record<string, ContentSource>;
+  fertilizer_references: FertilizerReference[];
+  home_remedies: HomeRemedy[];
+  conversions: { unit: "ropani" | "bigha" | "kattha" | "hectare"; toHectare: number | null; sourceKey: string; verified: boolean }[];
+  skipped: Record<string, number>;
+  warnings: string[];
+}
+
 export interface FieldAssessmentResponse {
+  rainfall_observation: RainfallObservation;
   latitude: number;
   longitude: number;
   power_summary: PowerSummaryResponse;

@@ -11,17 +11,38 @@ class SoilTextureResponse(BaseModel):
     clay_percent: float | None
     silt_percent: float | None
     sand_percent: float | None
-    texture_class: str  # "Sandy", "Loamy", "Clayey"
+    texture_class: str
     freshness: FreshnessBadge
 
 
 SOILGRIDS_URL = "https://rest.isric.org/soilgrids/v2.0/properties/query"
 SOILGRIDS_DOCS = "https://rest.isric.org/soilgrids/v2.0/docs"
-SOILGRIDS_CACHE_TTL = 30 * 86400  # 30 days
+SOILGRIDS_CACHE_TTL = 30 * 86400
+
+
+def _extract_layer_mean_percent(layer: dict[str, Any]) -> float | None:
+    """Convert a SoilGrids texture mean (g/kg, scaled by 10) to percent.
+
+    Missing means stay missing. In particular, they are never replaced by a
+    plausible-looking default such as 300 (30%).
+    """
+    depths = layer.get("depths") or []
+    if not depths:
+        return None
+    raw_value = (depths[0].get("values") or {}).get("mean")
+    if raw_value is None:
+        return None
+    try:
+        value = float(raw_value)
+    except (TypeError, ValueError):
+        return None
+    if not 0 <= value <= 1000:
+        return None
+    return round(value / 10.0, 1)
 
 
 class SoilGridsClient:
-    """Queries ISRIC SoilGrids 250m REST API for topsoil (0-5cm) sand/silt/clay fractions."""
+    """Queries ISRIC SoilGrids 250m REST API for 0-5cm texture estimates."""
 
     def __init__(self, cache: SQLiteCache | None = None) -> None:
         self.cache = cache or SQLiteCache()
@@ -47,29 +68,24 @@ class SoilGridsClient:
         try:
             raw = await fetch_json_with_retry(SOILGRIDS_URL, params=params, timeout_seconds=12.0)
             layers = raw.get("properties", {}).get("layers", [])
-
-            props: dict[str, float] = {}
-            for layer in layers:
-                name = layer.get("name")
-                depths = layer.get("depths", [])
-                if depths and name in ["clay", "silt", "sand"]:
-                    # SoilGrids returns values scaled by 10 (e.g. g/kg or dg/kg -> divide by 10 for %)
-                    val_mean = depths[0].get("values", {}).get("mean", 300)
-                    props[name] = round(float(val_mean) / 10.0, 1)
+            props = {
+                layer.get("name"): _extract_layer_mean_percent(layer)
+                for layer in layers
+                if layer.get("name") in {"clay", "silt", "sand"}
+            }
 
             clay = props.get("clay")
             silt = props.get("silt")
             sand = props.get("sand")
+            if clay is None or silt is None or sand is None:
+                raise ValueError("SoilGrids omitted one or more valid texture means")
 
-            # Classify only when all modelled fractions are present.
-            if sand is None or clay is None or silt is None:
-                raise ValueError("SoilGrids omitted one or more texture layers")
             if sand > 55.0:
-                t_class = "Sandy"
+                texture_class = "Sandy"
             elif clay > 35.0:
-                t_class = "Clayey"
+                texture_class = "Clayey"
             else:
-                t_class = "Loamy"
+                texture_class = "Loamy"
 
             fetched_at = utc_now_iso()
             response = SoilTextureResponse(
@@ -78,7 +94,7 @@ class SoilGridsClient:
                 clay_percent=clay,
                 silt_percent=silt,
                 sand_percent=sand,
-                texture_class=t_class,
+                texture_class=texture_class,
                 freshness=FreshnessBadge(
                     dataset_name="ISRIC SoilGrids 250m Topsoil Properties (0-5cm)",
                     source_org="ISRIC World Soil Information (CC BY 4.0)",
@@ -89,8 +105,8 @@ class SoilGridsClient:
                     typical_latency="Static global model",
                     spatial_resolution="250 meter",
                     caveat=(
-                        "NON-NASA SOIL DATA: ISRIC SoilGrids 250m predicted soil properties. "
-                        "Farmer can override texture on Screen B if local soil differs."
+                        "Non-NASA SoilGrids predicted topsoil properties at 250 m. "
+                        "These are model estimates, not a field soil test."
                     ),
                     docs_url=SOILGRIDS_DOCS,
                 ),
@@ -99,8 +115,7 @@ class SoilGridsClient:
             return response
 
         except Exception:
-            # Never replace unavailable point data with a regional guess.
-            response = SoilTextureResponse(
+            return SoilTextureResponse(
                 latitude=lat_r,
                 longitude=lon_r,
                 clay_percent=None,
@@ -109,15 +124,17 @@ class SoilGridsClient:
                 texture_class="Unavailable",
                 freshness=FreshnessBadge(
                     dataset_name="ISRIC SoilGrids 250m Topsoil Properties",
-                    source_org="ISRIC (CC BY 4.0)",
+                    source_org="ISRIC World Soil Information (CC BY 4.0)",
                     is_nasa=False,
                     status="UNAVAILABLE",
-                    latest_observation_date="Static Model",
+                    latest_observation_date=None,
                     fetched_at_utc=utc_now_iso(),
-                    typical_latency="Static dataset",
+                    typical_latency="Static global model",
                     spatial_resolution="250 meter",
-                    caveat="SoilGrids unavailable; no regional default is substituted. Confirm texture with a soil test or local technician.",
+                    caveat=(
+                        "SoilGrids returned no complete usable texture estimate. "
+                        "No regional or default value is substituted. Confirm locally."
+                    ),
                     docs_url=SOILGRIDS_DOCS,
                 ),
             )
-            return response

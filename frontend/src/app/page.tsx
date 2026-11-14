@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState, useSyncExternalStore, useTransition } from "react";
+import React, { useCallback, useEffect, useState, useSyncExternalStore, useTransition, useRef } from "react";
 import { FieldAssessmentResponse } from "@/types/safefield";
 import { fetchFieldAssessment } from "@/lib/api";
 import ScreenAHome from "@/components/ScreenAHome";
@@ -20,6 +20,39 @@ import {
 } from "lucide-react";
 
 type TabId = "home" | "field" | "decision" | "trends" | "methods";
+
+function subscribeToLanguage(onChange: () => void) {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener("storage", onChange);
+  window.addEventListener("safefield-language-change", onChange);
+  return () => {
+    window.removeEventListener("storage", onChange);
+    window.removeEventListener("safefield-language-change", onChange);
+  };
+}
+
+function getLanguageSnapshot(): "en" | "ne" {
+  if (typeof window === "undefined") return "ne";
+  try {
+    const saved = window.localStorage.getItem("safefield_language");
+    return saved === "en" || saved === "ne" ? saved : "ne";
+  } catch {
+    return "ne";
+  }
+}
+
+function getServerLanguageSnapshot(): "en" | "ne" {
+  return "ne";
+}
+
+function updateStoredLanguage(next: "en" | "ne") {
+  try {
+    window.localStorage.setItem("safefield_language", next);
+  } catch {
+    // Keep the in-memory/server default when storage is unavailable.
+  }
+  window.dispatchEvent(new Event("safefield-language-change"));
+}
 
 function subscribeToOnlineStatus(onChange: () => void) {
   window.addEventListener("online", onChange);
@@ -48,7 +81,10 @@ const NAV_ITEMS = [
 
 export default function SafeFieldNepalApp() {
   const [activeTab, setActiveTab] = useState<TabId>("home");
-  const [lang, setLang] = useState<"en" | "ne">("en");
+  const lang = useSyncExternalStore(subscribeToLanguage, getLanguageSnapshot, getServerLanguageSnapshot);
+  const setLang = useCallback((next: "en" | "ne") => updateStoredLanguage(next), []);
+  const requestSequence = useRef(0);
+
   const isOnline = useSyncExternalStore(subscribeToOnlineStatus, getOnlineStatus, getServerOnlineStatus);
   const [partnerLogoVisible, setPartnerLogoVisible] = useState(true);
 
@@ -57,6 +93,7 @@ export default function SafeFieldNepalApp() {
   const [fertilizerType, setFertilizerType] = useState<string>("Urea");
   const [cropStage, setCropStage] = useState<string>("Vegetative / Tillering");
   const [sandPercentOverride, setSandPercentOverride] = useState<number | null>(null);
+  const [selectedFieldPolygon, setSelectedFieldPolygon] = useState<[number, number][] | null>(null);
 
   const [assessmentData, setAssessmentData] = useState<FieldAssessmentResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -65,6 +102,7 @@ export default function SafeFieldNepalApp() {
   // Fetching starts after the effect runs; state updates happen only after the
   // asynchronous request settles, avoiding synchronous state updates in effects.
   const refreshAssessment = useCallback(async () => {
+    const requestId = ++requestSequence.current;
     try {
       const data = await fetchFieldAssessment(
         selectedLat,
@@ -73,14 +111,15 @@ export default function SafeFieldNepalApp() {
         cropStage,
         true,
         sandPercentOverride,
+        selectedFieldPolygon,
       );
-      startTransition(() => setAssessmentData(data));
+      if (requestId === requestSequence.current) startTransition(() => setAssessmentData(data));
     } catch (err) {
-      console.error("Failed to fetch field assessment:", err);
+      if (requestId === requestSequence.current) console.error("Failed to fetch field assessment:", err);
     } finally {
-      setLoading(false);
+      if (requestId === requestSequence.current) setLoading(false);
     }
-  }, [selectedLat, selectedLon, fertilizerType, cropStage, sandPercentOverride, startTransition]);
+  }, [selectedLat, selectedLon, fertilizerType, cropStage, sandPercentOverride, selectedFieldPolygon, startTransition]);
 
   const handleRunAssessment = useCallback(() => {
     setLoading(true);
@@ -98,7 +137,8 @@ export default function SafeFieldNepalApp() {
   const currentTab = NAV_ITEMS.find((item) => item.id === activeTab);
 
   return (
-    <main id="main-content" className="min-h-screen bg-[#f5f8f4] text-[#183326] flex flex-col">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-[#f5f8f4] text-[#183326] flex flex-col">
+      <a href="#main-content" className="sr-only z-[100] rounded-lg bg-white px-4 py-3 font-bold text-emerald-900 focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:ring-2 focus:ring-emerald-700">Skip to main content</a>
       {!isOnline && (
         <div className="bg-rose-800 text-white px-4 py-2.5 text-center text-xs font-semibold flex items-center justify-center gap-2">
           <WifiOff className="w-4 h-4 shrink-0" />
@@ -221,7 +261,9 @@ export default function SafeFieldNepalApp() {
             onLocationSelect={(lat, lon) => {
               setSelectedLat(lat);
               setSelectedLon(lon);
+              setSelectedFieldPolygon(null);
             }}
+            onFieldPolygonSelect={setSelectedFieldPolygon}
             onProceedToField={() => selectTab("field")}
             lang={lang}
           />

@@ -4,18 +4,19 @@ Safe Field Nepal is a NASA Space Apps Challenge research prototype for exploring
 
 ## Farmer map and location selection
 
-The map uses MapLibre GL JS with OpenFreeMap Bright as the default street basemap and an optional Esri World Imagery overlay. Farmers can select one of Nepal's 77 districts, use GPS, or tap once on the map to place a pin. Drawing a field polygon is optional and estimates area; it is not required to receive a location-based assessment. A polygon does not increase the resolution of the underlying gridded data. The current NASA POWER rainfall grid is coarse (about 55 km); GPM IMERG is not connected to the assessment yet. See [basemap terms and limitations](docs/ESRI_AND_BASEMAP_NOTES.md).
+The map uses MapLibre GL JS with OpenFreeMap Bright as the default street basemap and an optional Esri World Imagery overlay. Farmers can select one of Nepal's 77 districts, use GPS, or tap once on the map to place a pin. Drawing a field polygon is optional and estimates area; it is not required to receive a location-based assessment. A polygon does not increase the resolution of the underlying gridded data. When a fresh GPM IMERG Late daily cache is installed, the assessment uses the nearest 0.1° (~10 km) grid cell; otherwise it falls back to the coarse NASA POWER rainfall grid (~55 km). A selected polygon is area-weighted using equal-area cell intersections when sample-weighted effective coverage is at least 80%; point selection uses the nearest cell. See [basemap terms and limitations](docs/ESRI_AND_BASEMAP_NOTES.md).
 
 ## Current assessment inputs
 
 | Input | Provider | Role and limitation |
 |---|---|---|
-| Daily rainfall, air temperature, modelled wetness proxies | NASA POWER | Coarse gridded reanalysis-based data (~55 km); newest daily values may be delayed |
+| Rainfall | GPM IMERG Late daily cache when fresh; NASA POWER fallback | IMERG ~10 km; POWER ~55 km and may be delayed; point lookup only, not a field-polygon average |
+| Air temperature and modelled wetness proxies | NASA POWER | Coarse gridded reanalysis-based data (~55 km); not an on-farm sensor |
 | Rain forecast | Open-Meteo | Non-NASA forecast; used for a short-term outlook |
 | Predicted soil texture | ISRIC SoilGrids | 250 m prediction for 0–5 cm topsoil; not a field soil test |
 | Elevation and slope estimate | Open-Elevation API | Underlying DEM lineage/resolution are not verified by this integration |
 
-GPM IMERG, SMAP and NASADEM are **not connected** to the current field-assessment endpoint. Do not present them as active decision inputs.
+GPM IMERG Late is an optional cached rainfall input. GPM IMERG Final, SMAP and NASADEM are **not connected** to the current field-assessment endpoint.
 
 ## Decision engine status
 
@@ -74,3 +75,38 @@ This is an educational research prototype, not formal agronomic advice. Check th
 ## Validation still required
 
 The repository does not claim completed farmer trials, expert sign-off, Nepal-specific farmer-health study validation, real-device acceptance testing, or production readiness. See the validation plan before making those claims.
+
+
+## Safe Field data setup and manual tasks
+
+### 1. Install IMERG Late rainfall data
+
+Create a root `.env` from `.env.example` and enter your NASA Earthdata Login credentials as `EARTHDATA_USERNAME` and `EARTHDATA_PASSWORD`. Never commit `.env`. From the `backend` directory, install requirements and run the one fetch command:
+
+```bash
+python -m pip install -r requirements.txt
+python -m app.cli fetch-imerg --days 7
+```
+
+The command downloads only outside API request handling and writes Nepal-cropped daily GPM_3IMERGDL grid cells to the local SQLite cache. See [IMERG fetch instructions](backend/docs/IMERG_FETCH.md). Live Earthdata authentication and upstream availability must be checked locally.
+
+### 2. Add researched farmer guidance
+
+Drop source records into `backend/content/sources.json`, and researched fertilizer references, verified conversions and home remedies into the corresponding JSON files. Keep the `_example` keys as templates; the loader ignores them. Run:
+
+```bash
+cd backend
+python -m app.cli validate-content
+```
+
+Only records with verified provenance are eligible. Fertilizer reference ranges require an official source and are displayed as source references, not personalized prescriptions. Non-official remedy quantities are hidden. Free-text remedy fields reject dose-like expressions. The API exposes validation counts at `GET /api/content-status`.
+
+### Data use and limitations
+
+- NASA POWER is a coarse gridded reanalysis-based data source; it is not an on-farm sensor.
+- GPM IMERG Late is a separate ~0.1° daily precipitation product. The local grid cache is not a field-boundary average.
+- Open-Meteo is a non-NASA forecast; SoilGrids is a non-NASA modeled soil estimate; elevation lineage remains unverified.
+- The decision engine is a prototype screening aid, not an agronomist-approved recommendation or safety certification.
+- **Independent project, not endorsed by NASA.**
+
+AI-use disclosure: generative AI assistance was used during software implementation and documentation; scientific source records and local agronomic content must be independently researched and reviewed before publication.

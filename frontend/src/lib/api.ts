@@ -9,7 +9,8 @@ export async function fetchFieldAssessment(
   fertilizerType: string = "Urea",
   cropStage: string = "Vegetative / Tillering",
   saveMoney: boolean = true,
-  sandPercentOverride: number | null = null
+  sandPercentOverride: number | null = null,
+  fieldPolygon: [number, number][] | null = null
 ): Promise<FieldAssessmentResponse> {
   const url = new URL(`${API_BASE_URL}/api/field-assessment`);
   url.searchParams.set("lat", lat.toString());
@@ -18,8 +19,9 @@ export async function fetchFieldAssessment(
   url.searchParams.set("crop_stage", cropStage);
   url.searchParams.set("save_money", saveMoney ? "true" : "false");
   if (sandPercentOverride !== null) url.searchParams.set("sand_percent_override", String(sandPercentOverride));
+  if (fieldPolygon && fieldPolygon.length >= 4) url.searchParams.set("field_polygon", JSON.stringify(fieldPolygon));
 
-  const cacheKey = `${STORAGE_PREFIX}${lat.toFixed(2)}:${lon.toFixed(2)}:${fertilizerType}:${cropStage}:${sandPercentOverride ?? "soilgrids"}`;
+  const cacheKey = `${STORAGE_PREFIX}${lat.toFixed(2)}:${lon.toFixed(2)}:${fertilizerType}:${cropStage}:${sandPercentOverride ?? "soilgrids"}:${fieldPolygon ? JSON.stringify(fieldPolygon) : "point"}`;
 
   try {
     const response = await fetch(url.toString(), {
@@ -44,13 +46,17 @@ export async function fetchFieldAssessment(
     }
 
     return data;
-  } catch (err) {
+  } catch {
     // Fallback to browser localStorage cache if offline or backend unreachable
     if (typeof window !== "undefined") {
       const cached = window.localStorage.getItem(cacheKey);
       if (cached) {
         const parsed: FieldAssessmentResponse = JSON.parse(cached);
         parsed.power_summary.freshness.status = "CACHED_FALLBACK";
+        if (parsed.rainfall_observation.provenance) {
+          parsed.rainfall_observation.provenance.kind = "fallback";
+          parsed.rainfall_observation.provenance.latency_note += " Browser local cache fallback; original observation timestamps are unchanged.";
+        }
         return parsed;
       }
     }
