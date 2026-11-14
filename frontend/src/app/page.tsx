@@ -16,7 +16,6 @@ import {
   Database,
   Globe2,
   WifiOff,
-  Sprout,
   Leaf,
 } from "lucide-react";
 
@@ -102,8 +101,8 @@ export default function SafeFieldNepalApp() {
             className="group flex min-w-0 items-center gap-3 rounded-2xl text-left outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-4"
             aria-label="Safe Field Nepal home"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-700 to-green-950 text-white shadow-lg shadow-emerald-900/20 ring-1 ring-emerald-900/10">
-              <Sprout className="h-6 w-6" strokeWidth={2.1} />
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-md shadow-emerald-900/10 ring-1 ring-emerald-900/10 sm:h-12 sm:w-12">
+              <img src="/safe-field-logo.svg" alt="Safe Field Nepal logo" className="h-full w-full object-contain" />
             </span>
             <span className="min-w-0">
               <span className="block truncate text-[15px] font-extrabold leading-tight tracking-[-0.035em] text-[#123c2b] sm:text-lg">
