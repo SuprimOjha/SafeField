@@ -8,21 +8,42 @@ import ScreenBField from "@/components/ScreenBField";
 import ScreenCDecision from "@/components/ScreenCDecision";
 import ScreenDTrends from "@/components/ScreenDTrends";
 import ScreenEMethods from "@/components/ScreenEMethods";
-import { MapPin, Sliders, CheckCircle, TrendingUp, Database, Globe, WifiOff, Sprout } from "lucide-react";
+import {
+  MapPin,
+  SlidersHorizontal,
+  CheckCircle2,
+  TrendingUp,
+  Database,
+  Globe2,
+  WifiOff,
+  Sprout,
+  Menu,
+  X,
+  Leaf,
+} from "lucide-react";
+
+type TabId = "home" | "field" | "decision" | "trends" | "methods";
+
+const NAV_ITEMS = [
+  { id: "home", labelEn: "Choose location", shortEn: "Location", labelNe: "स्थान छान्नुहोस्", icon: MapPin },
+  { id: "field", labelEn: "My field", shortEn: "My field", labelNe: "मेरो खेत", icon: SlidersHorizontal },
+  { id: "decision", labelEn: "Recommendations", shortEn: "Advice", labelNe: "सुझाव", icon: CheckCircle2 },
+  { id: "trends", labelEn: "Climate trends", shortEn: "Trends", labelNe: "जलवायु प्रवृत्ति", icon: TrendingUp },
+  { id: "methods", labelEn: "Data & methods", shortEn: "Data", labelNe: "डाटा र विधि", icon: Database },
+] as const;
 
 export default function SafeFieldNepalApp() {
-  const [activeTab, setActiveTab] = useState<"home" | "field" | "decision" | "trends" | "methods">("home");
+  const [activeTab, setActiveTab] = useState<TabId>("home");
   const [lang, setLang] = useState<"en" | "ne">("en");
   const [isOnline, setIsOnline] = useState(true);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [partnerLogoVisible, setPartnerLogoVisible] = useState(true);
 
-  // Field parameters
   const [selectedLat, setSelectedLat] = useState<number>(26.45);
   const [selectedLon, setSelectedLon] = useState<number>(87.28);
-  const [locationLabel, setLocationLabel] = useState<string>("Biratnagar (Morang - Terai Hub)");
   const [fertilizerType, setFertilizerType] = useState<string>("Urea");
   const [cropStage, setCropStage] = useState<string>("Vegetative / Tillering");
 
-  // Assessment Data & Loading State
   const [assessmentData, setAssessmentData] = useState<FieldAssessmentResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [, startTransition] = useTransition();
@@ -53,86 +74,178 @@ export default function SafeFieldNepalApp() {
     }
   };
 
-  // Auto-fetch when location changes
   useEffect(() => {
     handleRunAssessment();
   }, [selectedLat, selectedLon, fertilizerType, cropStage]);
 
+  const selectTab = (tab: TabId) => {
+    setActiveTab(tab);
+    setMobileNavOpen(false);
+  };
+
+  const currentTab = NAV_ITEMS.find((item) => item.id === activeTab);
+
   return (
-    <main className="min-h-screen bg-[#f4f7f2] text-[#1c2821] flex flex-col">
-      {/* Offline Banner */}
+    <main id="main-content" className="min-h-screen bg-[#f5f8f4] text-[#183326] flex flex-col">
       {!isOnline && (
-        <div className="bg-rose-800 text-white px-4 py-2.5 text-center text-xs font-bold flex items-center justify-center gap-2 shadow-inner">
-          <WifiOff className="w-4 h-4" />
+        <div className="bg-rose-800 text-white px-4 py-2.5 text-center text-xs font-semibold flex items-center justify-center gap-2">
+          <WifiOff className="w-4 h-4 shrink-0" />
           <span>
             {lang === "ne"
-              ? "तपाईं अफलाइन हुनुहुन्छ। स्थानीय SQLite क्यासबाट पछिल्लो सुरक्षित डाटा देखाइएको छ।"
-              : "You are offline. Showing last cached NASA observation state from SQLite."}
+              ? "तपाईं अफलाइन हुनुहुन्छ। स्थानीय क्यासबाट पछिल्लो सुरक्षित डाटा देखाइएको छ।"
+              : "You are offline. Showing the latest available cached data."}
           </span>
         </div>
       )}
 
-      {/* Top Header */}
-      <header className="bg-emerald-900 text-white shadow-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-emerald-800 p-2 rounded-xl border border-emerald-700">
-              <Sprout className="w-6 h-6 text-emerald-200" />
-            </div>
-            <div>
-              <h1 className="text-lg sm:text-xl font-bold tracking-tight">
+      <header className="sticky top-0 z-50 border-b border-emerald-950/10 bg-white/95 shadow-[0_8px_30px_rgba(15,55,35,0.07)] backdrop-blur-xl">
+        <div className="mx-auto flex min-h-[78px] max-w-[1440px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+          <button
+            type="button"
+            onClick={() => selectTab("home")}
+            className="group flex min-w-0 items-center gap-3 rounded-2xl text-left outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-4"
+            aria-label="Safe Field Nepal home"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-700 to-green-950 text-white shadow-lg shadow-emerald-900/20 ring-1 ring-emerald-900/10">
+              <Sprout className="h-6 w-6" strokeWidth={2.1} />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-[15px] font-extrabold leading-tight tracking-[-0.035em] text-[#123c2b] sm:text-lg">
                 {lang === "ne" ? "सेफ फिल्ड नेपाल" : "Safe Field Nepal"}
-              </h1>
-              <p className="text-xs text-emerald-300 hidden sm:block">
-                {lang === "ne" ? "NASA उपग्रह डेटा र जलवायु प्रमाण" : "NASA Earth Data & Climate Evidence for Fertilizer Timing"}
-              </p>
-            </div>
+              </span>
+              <span className="mt-1 hidden text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700 sm:block">
+                Earth intelligence for every field
+              </span>
+            </span>
+          </button>
+
+          <div className="hidden h-9 w-px bg-emerald-900/10 lg:block" />
+
+          <div className="hidden min-w-0 flex-1 items-center justify-center gap-2 lg:flex">
+            <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-800 ring-1 ring-emerald-700/10">
+              NASA Earth data
+            </span>
+            <span className="text-xs font-medium text-slate-500">Field decisions, backed by evidence</span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2">
+            {partnerLogoVisible && (
+              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 sm:h-11 sm:w-11" title="Partner logo — replace the image in frontend/public">
+                <img
+                  src="/partner-logo.png"
+                  alt="Partner organization logo"
+                  className="h-full w-full object-contain"
+                  onError={() => setPartnerLogoVisible(false)}
+                />
+              </div>
+            )}
+            <span className="hidden rounded-full border border-emerald-100 bg-emerald-50 px-3 py-2 text-[11px] font-semibold text-emerald-800 sm:inline-flex sm:items-center sm:gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              {isOnline ? "System online" : "Offline"}
+            </span>
             <button
+              type="button"
               onClick={() => setLang(lang === "en" ? "ne" : "en")}
-              className="flex items-center gap-1.5 bg-emerald-800 hover:bg-emerald-700 text-emerald-100 text-xs font-semibold px-3.5 py-2 rounded-xl border border-emerald-700 transition"
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+              aria-label={lang === "en" ? "Switch to Nepali" : "Switch to English"}
             >
-              <Globe className="w-4 h-4" />
+              <Globe2 className="h-4 w-4 text-emerald-700" />
               <span>{lang === "en" ? "नेपाली" : "English"}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen((open) => !open)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-emerald-50 lg:hidden"
+              aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"}
+              aria-expanded={mobileNavOpen}
+              aria-controls="mobile-navigation"
+            >
+              {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="bg-emerald-950/40 border-t border-emerald-800/60 overflow-x-auto">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-1 sm:space-x-4">
-            {[
-              { id: "home", labelEn: "1. Location", labelNe: "१. स्थान", icon: MapPin },
-              { id: "field", labelEn: "2. My Field", labelNe: "२. मेरो खेत", icon: Sliders },
-              { id: "decision", labelEn: "3. Decision", labelNe: "३. निर्णय", icon: CheckCircle },
-              { id: "trends", labelEn: "4. Changing Conditions", labelNe: "४. जलवायु परिवर्तन", icon: TrendingUp },
-              { id: "methods", labelEn: "5. Methods & Data", labelNe: "५. विधि र स्रोतहरू", icon: Database },
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
+        <nav aria-label="Main navigation" className="hidden border-t border-slate-100 bg-[#fbfdfb] lg:block">
+          <div className="mx-auto flex max-w-[1440px] items-center gap-1 px-6 lg:px-8">
+            {NAV_ITEMS.map((item, index) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
               return (
                 <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-2 py-3 px-3 sm:px-4 text-xs sm:text-sm font-semibold whitespace-nowrap border-b-2 transition ${
+                  key={item.id}
+                  type="button"
+                  onClick={() => selectTab(item.id)}
+                  aria-current={isActive ? "page" : undefined}
+                  className={`relative flex min-h-[58px] items-center gap-2.5 px-5 text-[13px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600 ${
                     isActive
-                      ? "border-emerald-400 text-white bg-emerald-900/60"
-                      : "border-transparent text-emerald-200/70 hover:text-white hover:bg-emerald-900/30"
+                      ? "text-emerald-900"
+                      : "text-slate-500 hover:bg-emerald-50/80 hover:text-emerald-800"
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
-                  <span>{lang === "ne" ? tab.labelNe : tab.labelEn}</span>
+                  <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${isActive ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-500"}`}>
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <span>{lang === "ne" ? item.labelNe : item.labelEn}</span>
+                  {isActive && <span className="absolute inset-x-4 bottom-0 h-[3px] rounded-t-full bg-emerald-600" />}
+                  {index < NAV_ITEMS.length - 1 && !isActive && <span className="sr-only">Navigation item</span>}
                 </button>
               );
             })}
+            <div className="ml-auto flex items-center gap-2 py-2 text-[11px] font-medium text-slate-400">
+              <Leaf className="h-3.5 w-3.5 text-emerald-600" />
+              Built for Nepal's farming communities
+            </div>
           </div>
-        </div>
+        </nav>
+
+        {mobileNavOpen && (
+          <nav id="mobile-navigation" aria-label="Mobile navigation" className="border-t border-slate-100 bg-white px-3 py-3 shadow-lg lg:hidden">
+            <div className="mx-auto grid max-w-xl grid-cols-1 gap-1.5 sm:grid-cols-2">
+              {NAV_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => selectTab(item.id)}
+                    aria-current={isActive ? "page" : undefined}
+                    className={`flex min-h-12 items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm font-semibold transition ${
+                      isActive ? "bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200" : "text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isActive ? "bg-emerald-700 text-white" : "bg-slate-100 text-slate-500"}`}>
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="flex-1">{lang === "ne" ? item.labelNe : item.labelEn}</span>
+                    {isActive && <span className="h-2 w-2 rounded-full bg-emerald-600" />}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mx-auto mt-3 flex max-w-xl items-center gap-2 border-t border-slate-100 px-2 pt-3 text-xs text-slate-500">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              {isOnline ? "All systems reachable" : "Offline mode"}
+              <span className="ml-auto">NASA Earth data</span>
+            </div>
+          </nav>
+        )}
       </header>
 
-      {/* Main Content Area */}
-      <div className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+      <section className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-3 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-9">
+        <div className="mb-5 flex items-center justify-between gap-3 px-1">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700 sm:text-[11px]">SAFE FIELD NEPAL / 2026</p>
+            <h1 className="mt-1 truncate text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">
+              {lang === "ne" ? currentTab?.labelNe : currentTab?.labelEn}
+            </h1>
+          </div>
+          <div className="hidden items-center gap-2 rounded-full border border-emerald-100 bg-white px-3 py-2 text-[11px] font-semibold text-slate-500 shadow-sm sm:flex">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            Nepal pilot region
+          </div>
+        </div>
+
         {activeTab === "home" && (
           <ScreenAHome
             selectedLat={selectedLat}
@@ -141,7 +254,7 @@ export default function SafeFieldNepalApp() {
               setSelectedLat(lat);
               setSelectedLon(lon);
             }}
-            onProceedToField={() => setActiveTab("field")}
+            onProceedToField={() => selectTab("field")}
             lang={lang}
           />
         )}
@@ -155,7 +268,7 @@ export default function SafeFieldNepalApp() {
             cropStage={cropStage}
             setCropStage={setCropStage}
             onRunAssessment={handleRunAssessment}
-            onProceedToDecision={() => setActiveTab("decision")}
+            onProceedToDecision={() => selectTab("decision")}
             lang={lang}
           />
         )}
@@ -163,7 +276,7 @@ export default function SafeFieldNepalApp() {
         {activeTab === "decision" && (
           <ScreenCDecision
             data={assessmentData}
-            onProceedToTrends={() => setActiveTab("trends")}
+            onProceedToTrends={() => selectTab("trends")}
             lang={lang}
           />
         )}
@@ -171,24 +284,22 @@ export default function SafeFieldNepalApp() {
         {activeTab === "trends" && (
           <ScreenDTrends
             data={assessmentData}
-            onProceedToMethods={() => setActiveTab("methods")}
+            onProceedToMethods={() => selectTab("methods")}
             lang={lang}
           />
         )}
 
-        {activeTab === "methods" && (
-          <ScreenEMethods data={assessmentData} lang={lang} />
-        )}
-      </div>
+        {activeTab === "methods" && <ScreenEMethods data={assessmentData} lang={lang} />}
+      </section>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 py-6 mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-gray-500 space-y-1">
-          <p>
-            Safe Field Nepal • Built for NASA International Space Apps Challenge 2026.
-          </p>
-          <p>
-            Powered by NASA POWER, GPM IMERG, SMAP, NASADEM, Open-Meteo, and ISRIC SoilGrids.
+      <footer className="mt-auto border-t border-emerald-950/10 bg-white">
+        <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-4 py-6 text-center sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8 lg:text-left">
+          <div>
+            <p className="text-xs font-bold text-slate-700">Safe Field Nepal <span className="font-normal text-slate-400">· NASA International Space Apps Challenge 2026</span></p>
+            <p className="mt-1 text-[11px] text-slate-400">Evidence-led field decisions for Nepal's farming communities.</p>
+          </div>
+          <p className="text-[10px] leading-relaxed text-slate-400 lg:max-w-md lg:text-right">
+            Data sources: NASA POWER, GPM IMERG, SMAP, NASADEM, Open-Meteo and ISRIC SoilGrids.
           </p>
         </div>
       </footer>
