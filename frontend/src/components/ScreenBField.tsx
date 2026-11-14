@@ -76,6 +76,16 @@ export default function ScreenBField({
   }
 
   const { power_summary, elevation, soil_texture } = data;
+  const rainfall = data.rainfall_observation;
+  const hasLocalRainfall = rainfall.status === "AVAILABLE" && rainfall.amount_mm !== null;
+  const regionalPowerRainDays = power_summary.recent_daily_records
+    .filter((record) => record.precip_mm !== null)
+    .slice(-3);
+  const hasRegionalPowerEstimate =
+    !hasLocalRainfall &&
+    power_summary.rain_last_72h_mm !== null &&
+    regionalPowerRainDays.length === 3;
+  const regionalPowerDates = regionalPowerRainDays.map((record) => record.date).join(", ");
   const sandVal = sandPercentOverride ?? soil_texture.sand_percent ?? "";
   const sandLabel = sandPercentOverride !== null ? `${sandPercentOverride}% (farmer override)` : soil_texture.sand_percent !== null ? `${soil_texture.sand_percent}% (SoilGrids estimate)` : "Not available — enter a local estimate";
 
@@ -93,19 +103,50 @@ export default function ScreenBField({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* 72h Rain */}
+        {/* Local rainfall observation */}
         <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-semibold text-gray-600">
-              {lang === "ne" ? "उपलब्ध पछिल्ला ३ दैनिक वर्षा मान" : "Rainfall over latest 3 available UTC days"}
+              {lang === "ne" ? "स्थानीय वर्षा (पछिल्लो ७२ घण्टा)" : "Local rainfall · past 72 hours"}
             </span>
             <CloudRain className="w-6 h-6 text-blue-600" />
           </div>
-          <div>
-            <span className="text-3xl font-bold text-gray-900">{data.rainfall_observation.amount_mm ?? "N/A"}</span>
-            <span className="text-gray-500 ml-1">mm</span>
-          </div>
-          <span className="text-xs text-gray-400 mt-2">{data.rainfall_observation.provenance ? data.rainfall_observation.provenance.source_name + " · " + data.rainfall_observation.provenance.kind + " · observed through " + data.rainfall_observation.provenance.observed_end_utc.slice(0, 10) + " · " + data.rainfall_observation.provenance.spatial_method + (data.rainfall_observation.provenance.coverage_fraction === null ? "" : " · " + Math.round(data.rainfall_observation.provenance.coverage_fraction * 100) + "% coverage") : data.rainfall_observation.unavailable_reason}</span>
+          {hasLocalRainfall ? (
+            <div>
+              <span className="text-3xl font-bold text-gray-900">{rainfall.amount_mm}</span>
+              <span className="text-gray-500 ml-1">mm</span>
+            </div>
+          ) : (
+            <div>
+              <span className="text-xl font-bold text-amber-800">
+                {lang === "ne" ? "प्रमाणित छैन" : "Not verified"}
+              </span>
+            </div>
+          )}
+          <p className="text-xs text-gray-500 mt-2">
+            {hasLocalRainfall && rainfall.provenance
+              ? rainfall.provenance.source_name +
+                " · " +
+                rainfall.provenance.observed_start_utc.slice(0, 10) +
+                " to " +
+                rainfall.provenance.observed_end_utc.slice(0, 10) +
+                " · " +
+                rainfall.provenance.spatial_method
+              : lang === "ne"
+                ? "यस अवधिका लागि खेत-स्तरको GPM IMERG वर्षा अवलोकन उपलब्ध छैन।"
+                : "No usable field-scale GPM IMERG rainfall observation is available for this period."}
+          </p>
+          {hasRegionalPowerEstimate && (
+            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs font-semibold text-slate-700">
+                {lang === "ne" ? "क्षेत्रीय अनुमान मात्र · NASA POWER" : "Regional estimate only · NASA POWER"}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-slate-600">
+                {power_summary.rain_last_72h_mm} mm across {regionalPowerDates}.{" "}
+                {power_summary.freshness.spatial_resolution} grid; modelled regional data, not rainfall measured at this field.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Soil Wetness */}
