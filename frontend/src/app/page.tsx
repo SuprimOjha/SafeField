@@ -96,6 +96,7 @@ export default function SafeFieldNepalApp() {
   const [selectedFieldPolygon, setSelectedFieldPolygon] = useState<[number, number][] | null>(null);
 
   const [assessmentData, setAssessmentData] = useState<FieldAssessmentResponse | null>(null);
+  const [assessmentError, setAssessmentError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [, startTransition] = useTransition();
 
@@ -103,6 +104,9 @@ export default function SafeFieldNepalApp() {
   // asynchronous request settles, avoiding synchronous state updates in effects.
   const refreshAssessment = useCallback(async () => {
     const requestId = ++requestSequence.current;
+    setLoading(true);
+    setAssessmentError(null);
+    setAssessmentData(null);
     try {
       const data = await fetchFieldAssessment(
         selectedLat,
@@ -115,14 +119,17 @@ export default function SafeFieldNepalApp() {
       );
       if (requestId === requestSequence.current) startTransition(() => setAssessmentData(data));
     } catch (err) {
-      if (requestId === requestSequence.current) console.error("Failed to fetch field assessment:", err);
+      if (requestId === requestSequence.current) {
+        const message = err instanceof Error ? err.message : "Unknown error while loading the field assessment.";
+        setAssessmentError(message);
+        console.error("Failed to fetch field assessment:", err);
+      }
     } finally {
       if (requestId === requestSequence.current) setLoading(false);
     }
   }, [selectedLat, selectedLon, fertilizerType, cropStage, sandPercentOverride, selectedFieldPolygon, startTransition]);
 
   const handleRunAssessment = useCallback(() => {
-    setLoading(true);
     void refreshAssessment();
   }, [refreshAssessment]);
 
@@ -273,6 +280,7 @@ export default function SafeFieldNepalApp() {
           <ScreenBField
             data={assessmentData}
             loading={loading}
+            error={assessmentError}
             fertilizerType={fertilizerType}
             setFertilizerType={setFertilizerType}
             cropStage={cropStage}
