@@ -69,3 +69,24 @@ def test_intersection_area_cannot_exceed_expected_field_area():
     ]
     with pytest.raises(ValueError, match="exceed"):
         summarize_intersecting_cells(granule(), cells, expected_field_area_km2=3)
+
+
+def test_non_positive_expected_field_area_is_rejected():
+    with pytest.raises(ValueError, match="positive"):
+        summarize_intersecting_cells(granule(), [], expected_field_area_km2=0)
+
+
+def test_minimum_coverage_threshold_must_be_in_unit_interval():
+    with pytest.raises(ValueError, match="minimum_coverage_fraction"):
+        summarize_intersecting_cells(granule(), [], expected_field_area_km2=1, minimum_coverage_fraction=0)
+
+
+def test_quality_rejected_cells_are_counted_but_not_averaged():
+    result = summarize_intersecting_cells(granule(), [
+        IMERGIntersectingCell(cell_id="good", intersection_area_km2=4, precipitation_mm=8, quality="GOOD"),
+        IMERGIntersectingCell(cell_id="suspect", intersection_area_km2=1, precipitation_mm=100, quality="SUSPECT"),
+    ], expected_field_area_km2=5, minimum_coverage_fraction=0.8)
+    assert result.area_weighted_precipitation_mm == 8
+    assert result.valid_cell_count == 1
+    assert result.rejected_cell_count == 1
+    assert result.quality_status == "PARTIAL"
