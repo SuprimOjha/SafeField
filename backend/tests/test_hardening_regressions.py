@@ -156,3 +156,15 @@ def test_point_lookup_requires_same_nearest_cell_on_every_day(tmp_path):
     cache.store_daily_grid(day, [27.0], [27.1], [[2.0], [3.0]], [[48], [48]], f"latest-{day}", fetched)
     result = cache.get_recent_rain(27.0, 85.0, 72)
     assert result.status == "UNAVAILABLE"
+
+
+def test_point_lookup_uses_the_nearest_grid_cell(tmp_path):
+    cache = ImergGridCache(str(tmp_path / "nearest.sqlite"))
+    today = datetime.now(timezone.utc).date()
+    fetched = datetime.now(timezone.utc)
+    for offset in (3, 2, 1):
+        day = today - timedelta(days=offset)
+        cache.store_daily_grid(day, [27.0, 27.1], [85.0, 85.1], [[1.0, 2.0], [3.0, 4.0]], [[48, 48], [48, 48]], f"grid-{day}", fetched)
+    result = cache.get_recent_rain(27.09, 85.09, 72)
+    assert result.status == "AVAILABLE"
+    assert result.amount_mm == 12.0
