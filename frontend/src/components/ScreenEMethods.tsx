@@ -42,8 +42,7 @@ export default function ScreenEMethods({ data, lang }: ScreenEMethodsProps) {
           <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-200">
             <h3 className="font-bold text-emerald-950 text-sm mb-1">1. Satellite & Gridded Proxies</h3>
             <p className="text-xs text-gray-700 leading-relaxed">
-              Daily rainfall, surface/root-zone soil wetness, and 30m DEM terrain slope are retrieved via NASA POWER,
-              GPM IMERG, SMAP, and NASADEM APIs with SQLite offline caching.
+              Daily rainfall, air temperature, and surface/root-zone wetness proxies are retrieved from NASA POWER; terrain elevation/slope comes from NASADEM. The current assessment also queries SoilGrids texture and Open-Meteo forecasts. GPM IMERG and SMAP are not yet connected to this assessment endpoint. NASA POWER responses use SQLite caching.
             </p>
           </div>
           <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-200">
