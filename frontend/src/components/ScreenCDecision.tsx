@@ -60,20 +60,21 @@ export default function ScreenCDecision({
       };
     }
     return {
-      bg: "bg-amber-700",
-      border: "border-amber-900",
-      badgeBg: "bg-amber-950/50 text-amber-100",
-      icon: <AlertTriangle className="w-12 h-12 text-amber-200 shrink-0" />,
+      bg: "bg-amber-50",
+      border: "border-amber-300",
+      badgeBg: "bg-amber-100 text-amber-950",
+      icon: <AlertTriangle className="w-10 h-10 text-amber-700 shrink-0" />,
       labelNe: "स्थानीय कृषि प्राविधिकसँग समीक्षा गर्नुहोस्",
     };
   };
 
+  const isLocalReview = decision.signal === "LOCAL REVIEW NEEDED";
   const theme = getSignalTheme(decision.signal);
 
   return (
     <div className="space-y-6">
       {/* Primary Outdoor Decision Banner */}
-      <section aria-label={lang === "ne" ? "खेतको अवस्था मूल्याङ्कन" : "Field assessment result"} aria-live="polite" className={`${theme.bg} ${theme.border} border-2 text-white p-6 md:p-8 rounded-2xl shadow-md`}>
+      <section aria-label={lang === "ne" ? "खेतको अवस्था मूल्याङ्कन" : "Field assessment result"} aria-live="polite" className={`${theme.bg} ${theme.border} border-2 ${isLocalReview ? "text-amber-950 p-5 md:p-6 shadow-sm" : "text-white p-6 md:p-8 shadow-md"} rounded-2xl` }>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-start md:items-center gap-4">
             {theme.icon}
@@ -95,9 +96,9 @@ export default function ScreenCDecision({
           </div>
         </div>
 
-        <p className="mt-4 text-lg font-semibold text-white/95">{decision.primary_reason}</p>
-        <p className="mt-2 text-sm text-white/85 leading-relaxed">{decision.detailed_explanation}</p>
-        <p className="mt-4 rounded-xl border border-white/25 bg-white/10 p-3 text-xs leading-5 text-white">Check the fertilizer product label, crop-specific recommendation and a soil test. This prototype does not determine whether fertilizer is needed, set application rates, or certify that application is safe.</p>
+        <p className={`mt-3 text-base font-semibold ${isLocalReview ? "text-amber-950" : "text-white/95"}`}>{decision.primary_reason}</p>
+        <p className={`mt-2 text-sm leading-relaxed ${isLocalReview ? "text-amber-900" : "text-white/85"}`}>{decision.detailed_explanation}</p>
+        <p className={`mt-3 rounded-xl border p-3 text-xs leading-5 ${isLocalReview ? "border-amber-200 bg-white/70 text-amber-950" : "border-white/25 bg-white/10 text-white"}`}>Check the fertilizer product label, crop-specific recommendation and a soil test. This prototype does not determine whether fertilizer is needed, set application rates, or certify that application is safe.</p>
       </section>
 
       {/* 5-Day Non-NASA Rain Outlook Strip */}
@@ -140,9 +141,25 @@ export default function ScreenCDecision({
             })}
           </div>
         ) : (
-          <p className="text-sm text-amber-800 bg-amber-50 p-3 rounded-lg border border-amber-200">
-            {forecast.freshness.caveat}
-          </p>
+          <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <p className="text-sm font-semibold text-amber-950">
+              {lang === "ne" ? "पूर्वानुमान अहिले उपलब्ध छैन" : "Forecast temporarily unavailable"}
+            </p>
+            <p className="mt-1 text-sm leading-6 text-amber-900">
+              {forecast.freshness.caveat.toLowerCase().includes("429") ||
+              forecast.freshness.caveat.toLowerCase().includes("too many requests")
+                ? (lang === "ne"
+                    ? "मौसम सेवा धेरै अनुरोधका कारण अस्थायी रूपमा सीमित छ (HTTP 429)।"
+                    : "Open-Meteo is temporarily rate limiting requests (HTTP 429).")
+                : (lang === "ne"
+                    ? "मौसम सेवाबाट प्रयोगयोग्य पूर्वानुमान प्राप्त भएन।"
+                    : "The weather provider did not return a usable forecast.")}
+              {" "}
+              {lang === "ne"
+                ? "यसको अर्थ वर्षा शून्य हो भन्ने होइन। स्थानीय मौसम जाँच्नुहोस् र पछि पुनः प्रयास गर्नुहोस्।"
+                : "This does not mean zero rainfall. Check local weather and try again later."}
+            </p>
+          </div>
         )}
       </div>
 
