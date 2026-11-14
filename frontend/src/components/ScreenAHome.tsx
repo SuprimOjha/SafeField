@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import * as maplibregl from "maplibre-gl";
+import maplibregl, { type Map as MapLibreMap, type Marker as MapLibreMarker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MapPin, Navigation, Compass, ArrowRight } from "lucide-react";
 
@@ -20,6 +20,8 @@ const PILOT_LOCATIONS = [
   { nameEn: "Ilam Bazaar (Hills Pilot)", nameNe: "इलाम बजार (पहाडी क्षेत्र)", lat: 26.91, lon: 87.92 },
 ];
 
+const NEPAL_BOUNDS = { south: 26.3, north: 30.5, west: 80.0, east: 88.3 };
+
 export default function ScreenAHome({
   selectedLat,
   selectedLon,
@@ -28,138 +30,106 @@ export default function ScreenAHome({
   lang,
 }: ScreenAHomeProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  type GoogleLatLng = { lat(): number; lng(): number };
-  type GoogleMapInstance = {
-    setCenter(position: { lat: number; lng: number }): void;
-    setZoom(zoom: number): void;
-    addListener(eventName: string, handler: (event: { latLng?: GoogleLatLng }) => void): void;
-  };
-  type GoogleMarkerInstance = {
-    setPosition(position: { lat: number; lng: number }): void;
-  };
-  type GoogleMapsNamespace = {
-    maps: {
-      Map: new (element: HTMLElement, options: Record<string, unknown>) => GoogleMapInstance;
-      Marker: new (options: Record<string, unknown>) => GoogleMarkerInstance;
-      MapTypeId: { ROADMAP: string; SATELLITE: string; TERRAIN: string };
-    };
-  };
-  const mapRef = useRef<GoogleMapInstance | null>(null);
-  const markerRef = useRef<GoogleMarkerInstance | null>(null);
-  const googleRef = useRef<GoogleMapsNamespace | null>(null);
-
+  const mapRef = useRef<MapLibreMap | null>(null);
+  const markerRef = useRef<MapLibreMarker | null>(null);
+  const onLocationSelectRef = useRef(onLocationSelect);
   const [locationName, setLocationName] = useState("Biratnagar, Morang");
   const [mapError, setMapError] = useState<string | null>(null);
+  const [mapStyle, setMapStyle] = useState<"streets-v2" | "satellite">("streets-v2");
 
   useEffect(() => {
-    if (!mapContainerRef.current) return;
+    onLocationSelectRef.current = onLocationSelect;
+  }, [onLocationSelect]);
 
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  useEffect(() => {
+    const container = mapContainerRef.current;
+    if (!container) return;
+
+    const apiKey = process.env.NEXT_PUBLIC_MAPTILER_KEY;
     if (!apiKey) {
-      setMapError("Google Maps API key is missing. Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to frontend/.env.local and restart the dev server.");
+      setMapError("MapTiler API key is missing. Add NEXT_PUBLIC_MAPTILER_KEY to frontend/.env.local and restart the dev server.");
       return;
     }
 
-    const initializeMap = () => {
-      const googleMaps = (window as Window & { google?: GoogleMapsNamespace }).google;
-      if (!googleMaps || !mapContainerRef.current) {
-        setMapError("Google Maps could not initialize. Check that Maps JavaScript API is enabled for this key.");
-        return;
+    const map = new maplibregl.Map({
+      container,
+      style: `https://api.maptiler.com/maps/${mapStyle}/style.json?key=${encodeURIComponent(apiKey)}`,
+      center: [selectedLon, selectedLat],
+      zoom: 8,
+      minZoom: 5,
+      maxZoom: 18,
+      attributionControl: true,
+    });
+    mapRef.current = map;
+
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
+    map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-right");
+
+    const marker = new maplibregl.Marker({ color: "#047857", draggable: false })
+      .setLngLat([selectedLon, selectedLat])
+      .addTo(map);
+    markerRef.current = marker;
+
+    map.on("click", (event) => {
+      const { lat, lng } = event.lngLat;
+      if (
+        lat >= NEPAL_BOUNDS.south &&
+        lat <= NEPAL_BOUNDS.north &&
+        lng >= NEPAL_BOUNDS.west &&
+        lng <= NEPAL_BOUNDS.east
+      ) {
+        const name = `Custom Point (${lat.toFixed(2)}°N, ${lng.toFixed(2)}°E)`;
+        onLocationSelectRef.current(lat, lng, name);
+        setLocationName(name);
+        marker.setLngLat([lng, lat]);
       }
+    });
 
-      googleRef.current = googleMaps;
-      const map = new googleMaps.maps.Map(mapContainerRef.current, {
-        center: { lat: selectedLat, lng: selectedLon },
-        zoom: 9,
-        mapTypeId: googleMaps.maps.MapTypeId.ROADMAP,
-        mapTypeControl: true,
-        mapTypeControlOptions: {
-          mapTypeIds: [
-            googleMaps.maps.MapTypeId.ROADMAP,
-            googleMaps.maps.MapTypeId.SATELLITE,
-            googleMaps.maps.MapTypeId.TERRAIN,
-          ],
-        },
-        streetViewControl: false,
-        fullscreenControl: true,
-        clickableIcons: false,
-      });
-      mapRef.current = map;
-
-      markerRef.current = new googleMaps.maps.Marker({
-        map,
-        position: { lat: selectedLat, lng: selectedLon },
-        title: "Selected farm location",
-        animation: null,
-      });
-
-      map.addListener("click", (event) => {
-        if (!event.latLng) return;
-        const lat = event.latLng.lat();
-        const lon = event.latLng.lng();
-        if (lat >= 26.3 && lat <= 30.5 && lon >= 80.0 && lon <= 88.3) {
-          onLocationSelect(lat, lon, `Custom Point (${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E)`);
-          setLocationName(`Custom Point (${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E)`);
-          markerRef.current?.setPosition({ lat, lng: lon });
-        }
-      });
-      setMapError(null);
-    };
-
-    const existingScript = document.getElementById("google-maps-javascript-api") as HTMLScriptElement | null;
-    if ((window as Window & { google?: GoogleMapsNamespace }).google) {
-      initializeMap();
-    } else if (existingScript) {
-      existingScript.addEventListener("load", initializeMap, { once: true });
-      existingScript.addEventListener("error", () => setMapError("Google Maps failed to load. Check your network and API key."), { once: true });
-    } else {
-      const script = document.createElement("script");
-      script.id = "google-maps-javascript-api";
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly`;
-      script.async = true;
-      script.defer = true;
-      script.onload = initializeMap;
-      script.onerror = () => setMapError("Google Maps failed to load. Check your API key, billing, enabled API and network.");
-      document.head.appendChild(script);
-    }
+    map.on("error", () => {
+      setMapError("MapTiler map could not load. Check your API key, allowed origins, and internet connection.");
+    });
+    map.on("load", () => setMapError(null));
 
     return () => {
+      marker.remove();
+      map.remove();
       mapRef.current = null;
       markerRef.current = null;
     };
-  }, []);
+  }, [mapStyle, selectedLat, selectedLon]);
 
   useEffect(() => {
     if (markerRef.current && mapRef.current) {
-      markerRef.current.setPosition({ lat: selectedLat, lng: selectedLon });
-      mapRef.current.setCenter({ lat: selectedLat, lng: selectedLon });
-      mapRef.current.setZoom(10);
+      markerRef.current.setLngLat([selectedLon, selectedLat]);
+      mapRef.current.setCenter([selectedLon, selectedLat]);
     }
   }, [selectedLat, selectedLon]);
 
-  const handleSelectPreset = (loc: typeof PILOT_LOCATIONS[0]) => {
+  const handleSelectPreset = (loc: typeof PILOT_LOCATIONS[number]) => {
     onLocationSelect(loc.lat, loc.lon, lang === "ne" ? loc.nameNe : loc.nameEn);
     setLocationName(lang === "ne" ? loc.nameNe : loc.nameEn);
   };
 
   const handleUseGps = () => {
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = position.coords.latitude;
-          const lon = position.coords.longitude;
-          if (lat >= 26.3 && lat <= 30.5 && lon >= 80.0 && lon <= 88.3) {
-            onLocationSelect(lat, lon, "My Current GPS Field");
-            setLocationName("My Current GPS Field");
-          } else {
-            alert(lang === "ne" ? "तपाईंको GPS स्थान नेपाल बाहिर छ।" : "Your GPS location is outside Nepal pilot bounds.");
-          }
-        },
-        () => {
-          alert(lang === "ne" ? "GPS लिन सकिएन।" : "Unable to retrieve your GPS location.");
+    if (!("geolocation" in navigator)) return;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        if (
+          lat >= NEPAL_BOUNDS.south &&
+          lat <= NEPAL_BOUNDS.north &&
+          lon >= NEPAL_BOUNDS.west &&
+          lon <= NEPAL_BOUNDS.east
+        ) {
+          onLocationSelect(lat, lon, "My Current GPS Field");
+          setLocationName("My Current GPS Field");
+        } else {
+          alert(lang === "ne" ? "तपाईंको GPS स्थान नेपाल बाहिर छ।" : "Your GPS location is outside Nepal pilot bounds.");
         }
-      );
-    }
+      },
+      () => alert(lang === "ne" ? "GPS लिन सकिएन।" : "Unable to retrieve your GPS location.")
+    );
   };
 
   return (
@@ -185,7 +155,7 @@ export default function ScreenAHome({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           {PILOT_LOCATIONS.map((loc) => {
             const isSelected = Math.abs(selectedLat - loc.lat) < 0.05 && Math.abs(selectedLon - loc.lon) < 0.05;
             return (
@@ -202,12 +172,32 @@ export default function ScreenAHome({
                   <MapPin className="w-4 h-4 shrink-0" />
                   <span className="text-sm">{lang === "ne" ? loc.nameNe : loc.nameEn}</span>
                 </div>
-                <span className="text-xs text-gray-500 font-mono">
-                  {loc.lat}°N, {loc.lon}°E
-                </span>
+                <span className="text-xs text-gray-500 font-mono">{loc.lat}°N, {loc.lon}°E</span>
               </button>
             );
           })}
+        </div>
+
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <p className="text-sm font-semibold text-gray-700">Map view</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setMapStyle("streets-v2")}
+              aria-pressed={mapStyle === "streets-v2"}
+              className={`rounded-lg px-3 py-2 text-sm font-medium border ${mapStyle === "streets-v2" ? "bg-emerald-800 text-white border-emerald-800" : "bg-white text-gray-700 border-gray-200"}`}
+            >
+              Streets
+            </button>
+            <button
+              type="button"
+              onClick={() => setMapStyle("satellite")}
+              aria-pressed={mapStyle === "satellite"}
+              className={`rounded-lg px-3 py-2 text-sm font-medium border ${mapStyle === "satellite" ? "bg-emerald-800 text-white border-emerald-800" : "bg-white text-gray-700 border-gray-200"}`}
+            >
+              Satellite
+            </button>
+          </div>
         </div>
 
         <div className="relative w-full h-[400px] rounded-xl overflow-hidden border border-gray-200 shadow-inner">
@@ -215,11 +205,10 @@ export default function ScreenAHome({
           {mapError && (
             <div role="alert" className="absolute top-3 left-3 right-3 z-10 rounded-lg border border-amber-300 bg-amber-50/95 px-3 py-2 text-xs font-medium text-amber-950 shadow-sm">
               {mapError}
-     </button>
             </div>
           )}
           <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-lg shadow border border-gray-200 text-xs text-gray-700 font-medium flex items-center gap-2">
-            <Compass className="w-4 h-4 text-emerald-700 animate-spin" />
+            <Compass className="w-4 h-4 text-emerald-700" />
             <span>Selected: <strong className="text-emerald-900">{locationName}</strong> ({selectedLat.toFixed(2)}°N, {selectedLon.toFixed(2)}°E)</span>
           </div>
         </div>
