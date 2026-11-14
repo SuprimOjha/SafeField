@@ -220,3 +220,16 @@ def test_polygon_rejects_fewer_than_three_vertices(tmp_path):
     cache = make_cache(tmp_path)
     result = cache.get_recent_rain(27.0, 85.0, 72, [(85.0, 27.0), (85.1, 27.0), (85.0, 27.0)])
     assert result.status == "UNAVAILABLE"
+
+
+def test_polygon_aggregation_weights_all_intersected_cells(tmp_path):
+    cache = ImergGridCache(str(tmp_path / "weighted.sqlite"))
+    today = datetime.now(timezone.utc).date()
+    fetched = datetime.now(timezone.utc)
+    for offset in (3, 2, 1):
+        day = today - timedelta(days=offset)
+        cache.store_daily_grid(day, [27.0, 27.1], [85.0, 85.1], [[10.0, 20.0], [30.0, 40.0]], [[48, 48], [48, 48]], f"grid-{day}", fetched)
+    polygon = field_box(84.95, 26.95, 85.15, 27.15)
+    result = cache.get_recent_rain(27.05, 85.05, 72, polygon)
+    assert result.status == "AVAILABLE"
+    assert 74.0 <= result.amount_mm <= 76.0
