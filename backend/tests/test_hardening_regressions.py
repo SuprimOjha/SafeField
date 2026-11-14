@@ -253,3 +253,10 @@ def test_polygon_provenance_preserves_observed_utc_interval(tmp_path):
     result = cache.get_recent_rain(27.0, 85.0, 72, field_box())
     assert result.provenance.observed_start_utc < result.provenance.observed_end_utc
     assert result.provenance.observed_start_utc.tzinfo is not None
+
+
+def test_polygon_accepts_an_open_ring_and_closes_it_geometrically(tmp_path):
+    cache = make_cache(tmp_path)
+    open_ring = [(84.95, 26.95), (85.05, 26.95), (85.05, 27.05), (84.95, 27.05)]
+    result = cache.get_recent_rain(27.0, 85.0, 72, open_ring)
+    assert result.status == "AVAILABLE"
