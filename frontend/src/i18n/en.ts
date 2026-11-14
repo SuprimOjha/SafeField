@@ -1,0 +1,15 @@
+export const en = {
+  appName: "Safe Field Nepal",
+  tagline: "Earth observation context for informed field decisions",
+  navHome: "1. Location",
+  navField: "2. My Field",
+  navDecision: "3. Decision",
+  navTrends: "4. Changing Conditions",
+  navMethods: "5. Methods & Data",
+  applyNow: "CONDITIONS LOOK SUITABLE",
+  wait: "WAIT AND RECHECK",
+  applySplits: "LOCAL REVIEW NEEDED",
+  whyDrawer: "Why this decision? (View Rules & Evidence)",
+  offlineBanner: "You are offline. Showing last cached NASA observation state with timestamp.",
+  disclaimer: "Research prototype only. Numeric screening thresholds are design assumptions pending Nepalese agronomist review. Check the product label, soil test and local extension advice.",
+};

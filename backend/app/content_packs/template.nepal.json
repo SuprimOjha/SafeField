@@ -1,0 +1,9 @@
+{
+  "pack_id": "nepal-farmer-guidance",
+  "version": "0.1.0",
+  "language": "en-ne",
+  "region": "Nepal",
+  "status": "DRAFT",
+  "description": "Empty starter pack. Add source-backed guidance only after local agronomist review; this template intentionally contains no fertilizer rates or prescriptions.",
+  "items": []
+}
