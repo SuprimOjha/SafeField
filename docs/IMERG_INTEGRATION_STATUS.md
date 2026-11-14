@@ -9,7 +9,7 @@
 - Persistent SQLite grid-cell cache with observed UTC date, fetch time, granule ID, stream and version.
 - Read-only ImergLateProvider with a five-day cache freshness limit and three consecutive UTC daily totals.
 - Point selection uses the nearest cached grid cell.
-- Drawn field polygons use EPSG:6933 equal-area cell intersections and area-weighted daily precipitation, only when at least 80% of the field area has valid coverage on every day.
+- Drawn field polygons use EPSG:6933 equal-area cell intersections and area-weighted daily precipitation, only when at least 80% effective coverage is achieved on every day after weighting cell intersections by precipitation_cnt / 48. Point lookup requires at least 39 of 48 half-hour samples. These are conservative software quality gates, not NASA-issued quality flags.
 - Invalid geometry, date gaps, stale cache, unexpected grid spacing and insufficient coverage return UNAVAILABLE rather than zero or a fabricated estimate.
 - NASA POWER is an explicitly labelled point fallback when IMERG is unavailable or stale.
 - GET /api/integrations/imerg/status reports whether a fresh local cache is installed.

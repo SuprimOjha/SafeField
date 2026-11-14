@@ -194,7 +194,7 @@ class ImergGridCache:
                 observed_start_utc=datetime.combine(dates[-1], time.min, tzinfo=timezone.utc),
                 observed_end_utc=datetime.combine(dates[0] + timedelta(days=1), time.min, tzinfo=timezone.utc),
                 fetched_at_utc=fetched_at, spatial_resolution=spatial_resolution,
-                latency_note="Daily Late Run. The observed UTC interval and fetch timestamp are authoritative; publication delay varies.",
+                latency_note="Daily Late Run; NASA describes processing about 14 hours after observation. Expected daily-data lag is roughly 14–38 hours, but the actual observed UTC interval and fetch timestamp are authoritative.",
                 dataset="GPM_3IMERGDL", version="07B", stream="LATE",
                 granule_ids=granule_ids or sorted({row["granule_id"] for row in selected}),
                 units="mm/day summed over complete UTC days",

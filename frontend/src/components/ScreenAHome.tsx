@@ -494,7 +494,7 @@ export default function ScreenAHome({
           </button>
         </div>
       </section>
-      <p className="px-1 text-[11px] leading-5 text-slate-500">District boundaries are administrative reference data. A hand-drawn field boundary is an approximate outline from map clicks; verify it on the ground before using it for official land measurement. When a fresh GPM IMERG Late cache is installed, a drawn field uses equal-area cell intersections if at least 80% of the polygon has valid coverage. Point selection uses the nearest ~10 km cell. If IMERG coverage is unavailable, NASA POWER (~55 km) is used as a clearly labelled point fallback; it is not a polygon average.</p>
+      <p className="px-1 text-[11px] leading-5 text-slate-500">District boundaries are administrative reference data. A hand-drawn field boundary is an approximate outline from map clicks; verify it on the ground before using it for official land measurement. When a fresh GPM IMERG Late cache is installed, a drawn field uses equal-area cell intersections if at least 80% sample-weighted coverage is available. Point selection uses the nearest ~10 km cell. If IMERG coverage is unavailable, NASA POWER (~55 km) is used as a clearly labelled point fallback; it is not a polygon average.</p>
     </div>
   );
 }

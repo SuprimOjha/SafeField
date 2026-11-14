@@ -9,7 +9,7 @@ The field assessment uses a fresh local GPM IMERG Late daily cache when installe
 - The fetch module authenticates through Earthdata, discovers GPM_3IMERGDL daily Late granules, checks required variables/units, and crops to Nepal.
 - The grid cache persists daily grid cells and excludes cells with no valid sample count.
 - The provider reads the latest three consecutive daily cells and rejects stale cache data.
-- Point selection uses the nearest grid cell. Drawn polygons use EPSG:6933 equal-area intersections and area-weighted daily values, with a minimum 80% valid area coverage on every day.
+- Point selection uses the nearest grid cell. Drawn polygons use EPSG:6933 equal-area intersections and area-weighted daily values, with at least 80% effective spatial/temporal coverage on every day; each cell's intersection area is weighted by precipitation_cnt / 48. Point lookup requires at least 39 of 48 half-hour samples. These are software quality gates, not NASA-issued quality flags.
 - The decision engine receives one typed RainfallObservation with source kind, spatial method, coverage and provenance, and records that provenance in its rule contributions.
 - Missing, stale or insufficiently covered data are never converted to zero.
 

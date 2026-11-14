@@ -148,7 +148,8 @@ export default function ScreenEMethods({ data, lang }: ScreenEMethodsProps) {
           <p className="text-xs text-slate-600">Observed: {data.rainfall_observation.provenance.observed_start_utc} to {data.rainfall_observation.provenance.observed_end_utc}</p>
           <p className="text-xs text-slate-600">Fetched: {data.rainfall_observation.provenance.fetched_at_utc} · {data.rainfall_observation.provenance.spatial_resolution ?? "Resolution not supplied"}</p>
           <p className="text-xs text-slate-600">{data.rainfall_observation.provenance.latency_note}</p>
-          <p className="text-xs text-slate-600">Spatial method: {data.rainfall_observation.provenance.spatial_method}; valid coverage: {data.rainfall_observation.provenance.coverage_fraction === null ? "not applicable to point lookup" : Math.round(data.rainfall_observation.provenance.coverage_fraction * 100) + "%"}</p>
+          <p className="text-xs text-slate-600">Coverage weights intersected cell area by valid half-hour samples out of 48; 80% is a software gate, not a NASA quality flag.</p>
+          <p className="text-xs text-slate-600">Spatial method: {data.rainfall_observation.provenance.spatial_method}; effective spatial/sample coverage: {data.rainfall_observation.provenance.coverage_fraction === null ? "not applicable to point lookup" : Math.round(data.rainfall_observation.provenance.coverage_fraction * 100) + "%"}</p>
           <p className="text-xs text-slate-600">Dataset {data.rainfall_observation.provenance.dataset}, version {data.rainfall_observation.provenance.version}, stream {data.rainfall_observation.provenance.stream ?? "not applicable"}</p>
         </div>
       )}
