@@ -36,12 +36,12 @@ export default function ScreenBField({
       <div className="bg-white p-12 rounded-2xl shadow-sm border border-emerald-100 text-center space-y-4">
         <RefreshCw className="w-10 h-10 text-emerald-700 animate-spin mx-auto" />
         <h3 className="text-xl font-bold text-emerald-900">
-          {lang === "ne" ? "नासा उपग्रह डेटा र माटोको विश्लेषण गर्दै..." : "Fetching Live NASA Earth Observations & Soil Data..."}
+          {lang === "ne" ? "नासा उपग्रह डेटा र माटोको विश्लेषण गर्दै..." : "Loading available field data and source-quality information..."}
         </h3>
         <p className="text-gray-600 text-sm">
           {lang === "ne"
             ? "GPM IMERG, SMAP, NASA POWER र ISRIC SoilGrids बाट डाटा लोड हुँदैछ।"
-            : "Querying GPM IMERG, SMAP, NASA POWER, and ISRIC SoilGrids over your field..."}
+            : "Loading NASA POWER, Open-Meteo, SoilGrids and terrain context. Some sources may be delayed or unavailable."}
         </p>
       </div>
     );
@@ -49,6 +49,7 @@ export default function ScreenBField({
 
   const { power_summary, elevation, soil_texture, forecast } = data;
   const sandVal = customSand !== null ? customSand : (soil_texture.sand_percent ?? 40);
+  const sandLabel = customSand !== null ? `${customSand}% (farmer override)` : soil_texture.sand_percent !== null ? `${soil_texture.sand_percent}% (SoilGrids estimate)` : "Not available — enter a local estimate";
 
   return (
     <div className="space-y-6">
@@ -73,7 +74,7 @@ export default function ScreenBField({
             <CloudRain className="w-6 h-6 text-blue-600" />
           </div>
           <div>
-            <span className="text-3xl font-bold text-gray-900">{power_summary.rain_last_72h_mm ?? 0}</span>
+            <span className="text-3xl font-bold text-gray-900">{power_summary.rain_last_72h_mm ?? "N/A"}</span>
             <span className="text-gray-500 ml-1">mm</span>
           </div>
           <span className="text-xs text-gray-400 mt-2">NASA POWER PRECTOTCORR · coarse reanalysis-based grid; latest records may be delayed 2–4 days</span>
@@ -171,7 +172,7 @@ export default function ScreenBField({
           {/* Soil Texture / Sand Slider */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              {lang === "ne" ? `माटोको बनावट (Sand %: ${sandVal}%)` : `Soil Texture (Sand %: ${sandVal}%)`}
+              {lang === "ne" ? `माटोको बनावट: ${sandLabel}` : `Soil Texture: ${sandLabel}`}
             </label>
             <input
               type="range"
