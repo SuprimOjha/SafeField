@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
   --bg-outdoor: #f4f7f2;
@@ -15,7 +13,6 @@ body {
   font-family: var(--font-noto-sans), sans-serif;
 }
 
-/* High contrast and large touch targets for outdoor mobile use */
 button, select, input {
   min-height: 48px;
 }

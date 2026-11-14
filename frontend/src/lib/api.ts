@@ -7,7 +7,7 @@ export async function fetchFieldAssessment(
   lon: number,
   fertilizerType: string = "Urea",
   cropStage: string = "Vegetative / Tillering",
-  saveMoney: bool = true
+  saveMoney: boolean = true
 ): Promise<FieldAssessmentResponse> {
   const url = new URL(`${API_BASE_URL}/api/field-assessment`);
   url.searchParams.set("lat", lat.toString());
