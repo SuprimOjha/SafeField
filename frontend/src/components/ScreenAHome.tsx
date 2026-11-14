@@ -154,9 +154,10 @@ export default function ScreenAHome({
     if (!container) return;
 
     const apiKey = process.env.NEXT_PUBLIC_MAPTILER_KEY;
+    // Streets use OpenStreetMap directly so field selection does not depend on a MapTiler key.
     const styleUrl = mapStyle === "satellite"
       ? (apiKey ? `https://api.maptiler.com/maps/satellite-v2/style.json?key=${encodeURIComponent(apiKey)}` : null)
-      : (apiKey ? `https://api.maptiler.com/maps/streets-v2/style.json?key=${encodeURIComponent(apiKey)}` : null);
+      : null;
 
     setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
     const map = new MapLibreMap({
@@ -245,10 +246,11 @@ export default function ScreenAHome({
 
     map.on("error", (event) => {
       console.error("MapLibre map error:", event.error);
+      setMapReady(true);
       if (mapStyle === "satellite") {
-        setMapError("Satellite tiles failed to load. Check your MapTiler key and allowed website origins. Switch to Streets to continue.");
+        setMapError("Satellite imagery failed to load. Check your MapTiler key and allowed website origins, or switch to Streets.");
       } else {
-        setMapError("Map tiles could not load. Check your internet connection. District outlines may still be available after the map loads.");
+        setMapError("OpenStreetMap tiles could not load. Check your internet connection.");
       }
     });
 
