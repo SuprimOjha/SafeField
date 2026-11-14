@@ -50,7 +50,7 @@ export default function ScreenBField({
   }
 
   const { power_summary, elevation, soil_texture, forecast } = data;
-  const sandVal = sandPercentOverride !== null ? sandPercentOverride : (soil_texture.sand_percent ?? 40);
+  const sandVal = sandPercentOverride ?? soil_texture.sand_percent ?? "";
   const sandLabel = sandPercentOverride !== null ? `${sandPercentOverride}% (farmer override)` : soil_texture.sand_percent !== null ? `${soil_texture.sand_percent}% (SoilGrids estimate)` : "Not available — enter a local estimate";
 
   return (
@@ -177,12 +177,13 @@ export default function ScreenBField({
               {lang === "ne" ? `माटोको बनावट: ${sandLabel}` : `Soil Texture: ${sandLabel}`}
             </label>
             <input
-              type="range"
-              min="10"
-              max="80"
+              type="number"
+              min="0"
+              max="100"
+              step="1"
               value={sandVal}
-              onChange={(e) => { const value = Number(e.target.value); onSandOverrideChange(value); }}
-              className="w-full accent-emerald-700 h-2 bg-gray-200 rounded-lg cursor-pointer mt-3"
+              onChange={(e) => { const raw = e.target.value; if (raw === "") { onSandOverrideChange(null); return; } const value = Number(raw); if (Number.isFinite(value) && value >= 0 && value <= 100) onSandOverrideChange(value); }}
+              className="w-full rounded-xl border border-gray-300 bg-gray-50 px-4 py-3 font-medium text-gray-900 focus:ring-2 focus:ring-emerald-600"
             />
             <span className="text-xs text-gray-500 mt-1 block">
               ISRIC SoilGrids predicted 250 m topsoil (0–5 cm): {soil_texture.sand_percent === null ? "Unavailable" : `${soil_texture.texture_class} (${soil_texture.sand_percent}% sand)`}. Estimated, not a field test; verify locally.
