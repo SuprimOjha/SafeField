@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState, useSyncExternalStore, useTransition, useRef } from "react";
+import React, { useCallback, useState, useSyncExternalStore, useTransition, useRef } from "react";
 import { FieldAssessmentResponse } from "@/types/safefield";
 import { fetchFieldAssessment } from "@/lib/api";
 import ScreenAHome from "@/components/ScreenAHome";
@@ -16,7 +16,6 @@ import {
   Database,
   Globe2,
   WifiOff,
-  Leaf,
 } from "lucide-react";
 import { getDict, type Lang } from "@/i18n";
 
@@ -88,7 +87,6 @@ export default function SafeFieldNepalApp() {
   const requestSequence = useRef(0);
 
   const isOnline = useSyncExternalStore(subscribeToOnlineStatus, getOnlineStatus, getServerOnlineStatus);
-  const [partnerLogoVisible, setPartnerLogoVisible] = useState(true);
 
   const [selectedLat, setSelectedLat] = useState<number>(26.45);
   const [selectedLon, setSelectedLon] = useState<number>(87.28);
@@ -147,8 +145,6 @@ export default function SafeFieldNepalApp() {
     setActiveTab(tab);
   };
 
-  const currentTab = NAV_ITEMS.find((item) => item.id === activeTab);
-
   return (
     <main id="main-content" tabIndex={-1} className="min-h-screen bg-[#f5f8f4] text-[#183326] flex flex-col">
       <a href="#main-content" className="sr-only z-[100] rounded-lg bg-white px-4 py-3 font-bold text-emerald-900 focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:ring-2 focus:ring-emerald-700">Skip to main content</a>
@@ -179,30 +175,7 @@ export default function SafeFieldNepalApp() {
             </span>
           </button>
 
-          <div className="hidden h-9 w-px bg-emerald-900/10 lg:block" />
-
-          <div className="hidden min-w-0 flex-1 items-center justify-center gap-2 lg:flex">
-            <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-800 ring-1 ring-emerald-700/10">
-              {t.nasaEarthData}
-            </span>
-            <span className="text-xs font-medium text-slate-500">{t.evidenceLine}</span>
-          </div>
-
-            <div className="flex shrink-0 items-center gap-2">
-            {partnerLogoVisible && (
-              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 sm:h-11 sm:w-11" title={t.partnerLogoTitle}>
-                <img
-                  src="/partner-logo.png"
-                  alt="Partner organization logo"
-                  className="h-full w-full object-contain"
-                  onError={() => setPartnerLogoVisible(false)}
-                />
-              </div>
-            )}
-            <span className="hidden rounded-full border border-emerald-100 bg-emerald-50 px-3 py-2 text-[11px] font-semibold text-emerald-800 sm:inline-flex sm:items-center sm:gap-1.5">
-              <span className={`h-1.5 w-1.5 rounded-full ${isOnline ? "bg-emerald-500" : "bg-rose-500"}`} />
-              {isOnline ? t.systemOnline : t.systemOffline}
-            </span>
+          <div className="flex shrink-0 items-center gap-2">
             <div
               role="group"
               aria-label={lang === "en" ? "Language selection" : "भाषा छनोट"}
@@ -259,28 +232,11 @@ export default function SafeFieldNepalApp() {
                 </button>
               );
             })}
-            <div className="ml-auto flex items-center gap-2 py-2 text-[11px] font-medium text-slate-400">
-              <Leaf className="h-3.5 w-3.5 text-emerald-600" />
-              Built for Nepal&apos;s farming communities
-            </div>
           </div>
         </nav>
       </header>
 
       <section className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-3 py-5 pb-28 sm:px-6 sm:py-7 sm:pb-28 lg:px-8 lg:py-9 lg:pb-9">
-        <div className="mb-5 flex items-center justify-between gap-3 px-1">
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700 sm:text-[11px]">{t.safeField2026}</p>
-            <h1 className="mt-1 truncate text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">
-              {lang === "ne" ? currentTab?.labelNe : currentTab?.labelEn}
-            </h1>
-          </div>
-          <div className="hidden items-center gap-2 rounded-full border border-emerald-100 bg-white px-3 py-2 text-[11px] font-semibold text-slate-500 shadow-sm sm:flex">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            {t.nepalPilotRegion}
-          </div>
-        </div>
-
         {activeTab === "home" && (
           <ScreenAHome
             selectedLat={selectedLat}

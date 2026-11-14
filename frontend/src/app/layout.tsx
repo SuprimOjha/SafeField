@@ -18,9 +18,12 @@ export const metadata: Metadata = {
   title: "Safe Field Nepal - NASA Space Apps 2026",
   description: "Decision support for fertilizer timing using NASA Earth observations and climate evidence.",
   icons: {
-    icon: "/partner-logo.png",
-    shortcut: "/partner-logo.png",
-    apple: "/partner-logo.png",
+    icon: [
+      { url: "/satellite-icon.png", sizes: "128x128", type: "image/png" },
+      { url: "/satellite-icon-64.png", sizes: "64x64", type: "image/png" },
+    ],
+    shortcut: "/satellite-icon.png",
+    apple: "/satellite-icon.png",
   },
 };
 

@@ -3,14 +3,7 @@
 export const en = {
   // Header / shell
   brandTagline: "Earth intelligence for every field",
-  nasaEarthData: "NASA Earth data",
-  evidenceLine: "Field decisions, backed by evidence",
-  systemOnline: "System online",
-  systemOffline: "Offline",
-  partnerLogoTitle: "Partner logo",
   offlineBanner: "You are offline. Showing the latest available cached data.",
-  safeField2026: "SAFE FIELD NEPAL / 2026",
-  nepalPilotRegion: "Nepal pilot region",
 
   // Footer
   footerAbout:
@@ -26,11 +19,6 @@ export const en = {
   footerTagline: "Earth intelligence for every field.",
 
   // Screen A — Home / map
-  heroBadge: "NASA-powered agricultural intelligence",
-  heroTitle: "Understand your land. Make more informed farming decisions.",
-  heroBody:
-    "Safe Field Nepal brings together satellite observations, weather and environmental datasets with the details you provide about your field. Select a district, use GPS or tap the map for a first location-based result. Drawing a field boundary is optional and can refine the location and estimate area.",
-  heroScroll: "Scroll down to start your analysis",
   fieldMappingBadge: "Nepal field mapping",
   subtitleExtra: "You can start with one tap; drawing is optional.",
   loadingDistricts: "Loading Nepal districts…",
