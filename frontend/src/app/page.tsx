@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState, useSyncExternalStore, useTransition, useRef } from "react";
+import Image from "next/image";
 import { FieldAssessmentResponse } from "@/types/safefield";
 import { fetchFieldAssessment } from "@/lib/api";
 import ScreenAHome from "@/components/ScreenAHome";
@@ -16,7 +17,6 @@ import {
   Database,
   Globe2,
   WifiOff,
-  Satellite,
 } from "lucide-react";
 import { getDict, type Lang } from "@/i18n";
 
@@ -349,14 +349,17 @@ export default function SafeFieldNepalApp() {
           <button
             type="button"
             onClick={() => selectTab("home")}
-            className="group flex items-center gap-2.5 px-5 pb-4 pt-6 text-left outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+            className="group flex px-5 pb-4 pt-6 text-left outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
             aria-label="Safe Field Nepal home"
           >
-            <Satellite className="h-9 w-9 shrink-0 text-emerald-700" aria-hidden="true" />
-            <span className="flex min-w-0 flex-col">
-              <span className="text-lg font-extrabold tracking-tight text-emerald-900">Safe Field</span>
-              <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-emerald-600">{t.brandTagline}</span>
-            </span>
+            <Image
+              src="/logo.png"
+              alt="Safe Field"
+              className="h-11 w-auto max-w-full object-contain object-left"
+              width={544}
+              height={160}
+              priority
+            />
           </button>
 
           <nav aria-label="Main navigation" className="flex flex-1 flex-col gap-1 px-3 py-2">
@@ -397,14 +400,16 @@ export default function SafeFieldNepalApp() {
               <button
                 type="button"
                 onClick={() => selectTab("home")}
-                className="group flex min-w-0 items-center gap-2.5 rounded-2xl text-left outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+                className="group flex min-w-0 items-center rounded-2xl text-left outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
                 aria-label="Safe Field Nepal home"
               >
-                <Satellite className="h-8 w-8 shrink-0 text-emerald-700" aria-hidden="true" />
-                <span className="flex min-w-0 flex-col">
-                  <span className="text-base font-extrabold tracking-tight text-emerald-900">Safe Field</span>
-                  <span className="truncate text-[8px] font-bold uppercase tracking-[0.12em] text-emerald-600">{t.brandTagline}</span>
-                </span>
+                <Image
+                  src="/logo.png"
+                  alt="Safe Field"
+                  className="h-9 w-auto max-w-full object-contain object-left"
+                  width={544}
+                  height={160}
+                />
               </button>
               <div className="shrink-0">
                 <LanguageToggle lang={lang} setLang={setLang} />
@@ -464,7 +469,7 @@ export default function SafeFieldNepalApp() {
           <footer className="mt-auto border-t border-emerald-950/10 bg-[#102f24] text-white">
             <div className="mx-auto grid max-w-[1440px] gap-9 px-5 py-10 sm:px-8 md:grid-cols-2 lg:grid-cols-[1.25fr_0.8fr_1.2fr] lg:gap-12 lg:px-10 lg:py-12">
               <div>
-                <img src="/logo.png" alt="Safe Field logo" className="h-12 w-auto max-w-[210px] object-contain object-left" />
+                <Image src="/logo.png" alt="Safe Field logo" width={544} height={160} className="h-12 w-auto max-w-[210px] object-contain object-left" />
                 <p className="mt-3 max-w-sm text-sm leading-6 text-emerald-50/75">{t.footerAbout}</p>
                 <p className="mt-4 text-xs font-semibold text-emerald-200">{t.footerChallenge}</p>
               </div>
