@@ -56,3 +56,13 @@ def test_polygon_parser_rejects_more_than_two_hundred_vertices():
     with pytest.raises(HTTPException) as error:
         parse_field_polygon(__import__("json").dumps(vertices))
     assert error.value.status_code == 422
+
+
+def test_polygon_parser_rejects_third_coordinate_dimension():
+    with pytest.raises(HTTPException):
+        parse_field_polygon('[[85,27,100],[85.1,27,100],[85.1,27.1,100]]')
+
+
+def test_polygon_parser_rejects_boolean_coordinates():
+    with pytest.raises(HTTPException):
+        parse_field_polygon('[[true,27],[85.1,27],[85.1,27.1]]')
