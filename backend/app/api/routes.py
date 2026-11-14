@@ -10,7 +10,7 @@ from app.stats.trend_engine import TrendEngine, TrendAnalysisResult
 from app.decision.fertilizer_engine import FertilizerDecisionEngine, DecisionResult
 from app.content_packs.loader import validate_content
 from app.services.rainfall import RainfallObservation, RainfallProvenance
-from app.services.imerg.grid_cache import ImergGridCache
+from app.services.imerg.provider import ImergLateProvider
 from datetime import date, datetime, time, timedelta, timezone
 
 
@@ -62,7 +62,7 @@ async def assess_field(
     )
 
     # Prefer installed IMERG Late grid cells; POWER remains an explicit fallback.
-    rainfall_observation = ImergGridCache().get_recent_rain(lat, lon, 72)
+    rainfall_observation = ImergLateProvider().get_recent_rain(lat, lon, 72)
     if rainfall_observation.status != "AVAILABLE" and power_res.rain_last_72h_mm is not None:
         records = [record for record in power_res.recent_daily_records if record.precip_mm is not None][-3:]
         if len(records) == 3:
