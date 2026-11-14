@@ -239,3 +239,10 @@ def test_polygon_coverage_fraction_never_exceeds_one(tmp_path):
     cache = make_cache(tmp_path, counts=(48, 48, 48))
     result = cache.get_recent_rain(27.0, 85.0, 72, field_box())
     assert result.provenance.coverage_fraction == 1.0
+
+
+def test_polygon_provenance_lists_the_granules_used(tmp_path):
+    cache = make_cache(tmp_path)
+    result = cache.get_recent_rain(27.0, 85.0, 72, field_box())
+    assert result.provenance.granule_ids
+    assert len(result.provenance.granule_ids) == 3
