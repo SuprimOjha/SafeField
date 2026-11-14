@@ -134,7 +134,13 @@ export default function SafeFieldNepalApp() {
   }, [refreshAssessment]);
 
   useEffect(() => {
-    void refreshAssessment();
+    // Defer the request to the next task so the effect itself does not
+    // synchronously trigger React state updates before the fetch begins.
+    const timer = window.setTimeout(() => {
+      void refreshAssessment();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [refreshAssessment]);
 
   const selectTab = (tab: TabId) => {
