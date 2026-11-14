@@ -47,6 +47,25 @@ function getCoordinates(geometry: DistrictFeature["geometry"]): number[][] {
   return points;
 }
 
+function polygonCentroid(points: [number, number][]): [number, number] {
+  let twiceArea = 0;
+  let centroidLon = 0;
+  let centroidLat = 0;
+  for (let index = 0; index < points.length; index++) {
+    const [lon1, lat1] = points[index];
+    const [lon2, lat2] = points[(index + 1) % points.length];
+    const cross = lon1 * lat2 - lon2 * lat1;
+    twiceArea += cross;
+    centroidLon += (lon1 + lon2) * cross;
+    centroidLat += (lat1 + lat2) * cross;
+  }
+  if (Math.abs(twiceArea) < 1e-12) {
+    const sum = points.reduce((acc, point) => [acc[0] + point[0], acc[1] + point[1]], [0, 0]);
+    return [sum[0] / points.length, sum[1] / points.length];
+  }
+  return [centroidLon / (3 * twiceArea), centroidLat / (3 * twiceArea)];
+}
+
 function polygonAreaHectares(points: [number, number][]) {
   if (points.length < 3) return 0;
   const radius = 6378137;
@@ -224,7 +243,15 @@ export default function ScreenAHome({
     map.on("style.load", installLayers);
     map.on("click", (event: MapMouseEvent) => {
       const { lng, lat } = event.lngLat;
+      if (lng < 80.0 || lng > 88.3 || lat < 26.3 || lat > 30.5) {
+        setMapError("Choose a point or draw the field boundary inside the Nepal pilot area.");
+        return;
+      }
       if (drawModeRef.current === "draw") {
+        if (drawPointsRef.current.length >= 200) {
+          setMapError("A field boundary can contain at most 200 vertices.");
+          return;
+        }
         const next = [...drawPointsRef.current, [lng, lat] as [number, number]];
         drawPointsRef.current = next;
         setDrawPoints(next);
@@ -330,9 +357,7 @@ export default function ScreenAHome({
     drawModeRef.current = "select";
     setDrawMode("select");
     if (mapRef.current) mapRef.current.getCanvas().style.cursor = "";
-    const center = drawPoints.reduce((acc, point) => [acc[0] + point[0], acc[1] + point[1]], [0, 0]);
-    const lon = center[0] / drawPoints.length;
-    const lat = center[1] / drawPoints.length;
+    const [lon, lat] = polygonCentroid(drawPoints);
     setLocationName("My drawn field");
     onLocationSelect(lat, lon, "My drawn field");
     onFieldPolygonSelect([...drawPoints, drawPoints[0]]);
@@ -349,7 +374,7 @@ export default function ScreenAHome({
       (position) => {
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
-        if (lat < 26.2 || lat > 30.6 || lon < 79.8 || lon > 88.5) {
+        if (lat < 26.3 || lat > 30.5 || lon < 80.0 || lon > 88.3) {
           setMapError("Your GPS location appears to be outside Nepal.");
           return;
         }
