@@ -4,7 +4,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-FRONTEND_PRODUCTION_ORIGIN = "https://safefieldnp.vercel.app"
+FRONTEND_PRODUCTION_ORIGINS = (
+    "https://safefieldnp.netlify.app",
+    "https://safefieldnp.vercel.app",  # Keep the previous deployment working during migration.
+)
 
 
 class Settings(BaseSettings):
@@ -40,7 +43,7 @@ class Settings(BaseSettings):
             for origin in self.cors_origins.split(",")
             if origin.strip()
         ]
-        origins = [FRONTEND_PRODUCTION_ORIGIN, *configured_origins]
+        origins = [*FRONTEND_PRODUCTION_ORIGINS, *configured_origins]
         return list(dict.fromkeys(origins))
 
 
