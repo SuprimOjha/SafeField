@@ -7,11 +7,11 @@ import {
   Marker as MapLibreMarker,
   NavigationControl,
   ScaleControl,
+  LngLatBounds,
   type MapMouseEvent,
-  type Feature,
-  type FeatureCollection,
-  type Polygon,
+  type GeoJSONSource,
 } from "maplibre-gl";
+import type { Feature, FeatureCollection, Polygon, MultiPolygon } from "geojson";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
   MapPin, Navigation, Compass, ArrowRight, Pencil, Undo2, Trash2,
@@ -28,7 +28,7 @@ interface ScreenAHomeProps {
 
 type DrawMode = "select" | "draw";
 type DistrictProperties = { DISTRICT?: string; PROVINCE?: number; HQ?: string };
-type DistrictFeature = Feature<Polygon | import("geojson").MultiPolygon, DistrictProperties>;
+type DistrictFeature = Feature<Polygon | MultiPolygon, DistrictProperties>;
 
 const NEPAL_BOUNDS: [[number, number], [number, number]] = [[79.8, 26.2], [88.5, 30.6]];
 const EMPTY_FEATURES: FeatureCollection<Polygon> = { type: "FeatureCollection", features: [] };
@@ -84,6 +84,8 @@ export default function ScreenAHome({
   const markerRef = useRef<MapLibreMarker | null>(null);
   const onLocationSelectRef = useRef(onLocationSelect);
   const drawPointsRef = useRef<[number, number][]>([]);
+  const districtsRef = useRef<DistrictFeature[]>([]);
+  const drawModeRef = useRef<DrawMode>("select");
   const [locationName, setLocationName] = useState("Biratnagar, Morang");
   const [mapError, setMapError] = useState<string | null>(null);
   const [mapStyle, setMapStyle] = useState<"streets" | "satellite">("streets");
@@ -113,6 +115,8 @@ export default function ScreenAHome({
 
   useEffect(() => { onLocationSelectRef.current = onLocationSelect; }, [onLocationSelect]);
   useEffect(() => { drawPointsRef.current = drawPoints; }, [drawPoints]);
+  useEffect(() => { districtsRef.current = districts; }, [districts]);
+  useEffect(() => { drawModeRef.current = drawMode; }, [drawMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -141,7 +145,7 @@ export default function ScreenAHome({
         geometry: { type: "Polygon", coordinates: [[...points, points[0]]] },
       });
     }
-    const source = map.getSource("user-field") as import("maplibre-gl").GeoJSONSource | undefined;
+    const source = map.getSource("user-field") as GeoJSONSource | undefined;
     source?.setData({ type: "FeatureCollection", features });
   }, []);
 
@@ -174,10 +178,10 @@ export default function ScreenAHome({
     markerRef.current = marker;
 
     const installLayers = () => {
-      if (!map.getSource("nepal-districts") && districts.length) {
+      if (!map.getSource("nepal-districts") && districtsRef.current.length) {
         map.addSource("nepal-districts", {
           type: "geojson",
-          data: { type: "FeatureCollection", features: districts },
+          data: { type: "FeatureCollection", features: districtsRef.current },
         });
         map.addLayer({
           id: "district-fill", type: "fill", source: "nepal-districts",
@@ -212,7 +216,7 @@ export default function ScreenAHome({
     map.on("style.load", installLayers);
     map.on("click", (event: MapMouseEvent) => {
       const { lng, lat } = event.lngLat;
-      if (drawMode === "draw") {
+      if (drawModeRef.current === "draw") {
         const next = [...drawPointsRef.current, [lng, lat] as [number, number]];
         drawPointsRef.current = next;
         setDrawPoints(next);
@@ -256,7 +260,7 @@ export default function ScreenAHome({
       setMapReady(false);
     };
   // Recreate only when basemap changes. District data is added after map load below.
-  }, [mapStyle, selectedLat, selectedLon, districts, drawMode, updateDrawLayer]);
+  }, [mapStyle, updateDrawLayer]);
 
   useEffect(() => {
     if (markerRef.current && mapRef.current && drawMode === "select") {
@@ -304,7 +308,7 @@ export default function ScreenAHome({
     setLocationName("My drawn field");
     onLocationSelect(lat, lon, "My drawn field");
     markerRef.current?.setLngLat([lon, lat]);
-    mapRef.current?.fitBounds(drawPoints.reduce((bounds, point) => bounds.extend(point), new (require("maplibre-gl").LngLatBounds)(drawPoints[0], drawPoints[0])), { padding: 60, maxZoom: 16 });
+    mapRef.current?.fitBounds(drawPoints.reduce((bounds, point) => bounds.extend(point), new LngLatBounds(drawPoints[0], drawPoints[0])), { padding: 60, maxZoom: 16 });
   };
 
   const handleUseGps = () => {
