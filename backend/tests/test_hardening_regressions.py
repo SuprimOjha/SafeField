@@ -19,7 +19,7 @@ def make_cache(tmp_path, values=(1.0, 2.0, 3.0), counts=(48, 48, 48), latitudes=
     for day, value, count in zip(days, values, counts):
         grid = [[float(value) for _ in longitudes] for _ in latitudes]
         sample_grid = [[int(count) for _ in longitudes] for _ in latitudes]
-        cache.store_daily_grid(day, list(latitudes), list(longitudes), grid, sample_grid, f"granule-{day}", fetched)
+        cache.store_daily_grid(day, list(latitudes), list(longitudes), grid, sample_grid, f"granule-{day}.V07C", fetched)
     return cache
 
 
@@ -90,32 +90,32 @@ def test_empty_cache_is_not_reported_as_ready(tmp_path):
 def test_cache_rejects_data_older_than_five_days(tmp_path):
     cache = ImergGridCache(str(tmp_path / "stale.sqlite"))
     old_day = datetime.now(timezone.utc).date() - timedelta(days=6)
-    cache.store_daily_grid(old_day, [27.0], [85.0], [[1.0]], [[48]], "stale", datetime.now(timezone.utc))
+    cache.store_daily_grid(old_day, [27.0], [85.0], [[1.0]], [[48]], "stale.V07C", datetime.now(timezone.utc))
     assert cache.has_fresh_data() is False
 
 
 def test_cache_rejects_future_observation_dates(tmp_path):
     cache = ImergGridCache(str(tmp_path / "future.sqlite"))
     future_day = datetime.now(timezone.utc).date() + timedelta(days=1)
-    cache.store_daily_grid(future_day, [27.0], [85.0], [[1.0]], [[48]], "future", datetime.now(timezone.utc))
+    cache.store_daily_grid(future_day, [27.0], [85.0], [[1.0]], [[48]], "future.V07C", datetime.now(timezone.utc))
     assert cache.has_fresh_data() is False
 
 
 def test_cache_does_not_store_negative_precipitation(tmp_path):
     cache = ImergGridCache(str(tmp_path / "negative.sqlite"))
-    inserted = cache.store_daily_grid(date.today(), [27.0], [85.0], [[-0.1]], [[48]], "negative", datetime.now(timezone.utc))
+    inserted = cache.store_daily_grid(date.today(), [27.0], [85.0], [[-0.1]], [[48]], "negative.V07C", datetime.now(timezone.utc))
     assert inserted == 0
 
 
 def test_cache_does_not_store_cells_without_valid_samples(tmp_path):
     cache = ImergGridCache(str(tmp_path / "no-samples.sqlite"))
-    inserted = cache.store_daily_grid(date.today(), [27.0], [85.0], [[5.0]], [[0]], "empty-cell", datetime.now(timezone.utc))
+    inserted = cache.store_daily_grid(date.today(), [27.0], [85.0], [[5.0]], [[0]], "empty-cell.V07C", datetime.now(timezone.utc))
     assert inserted == 0
 
 
 def test_cache_stores_zero_precipitation_with_valid_samples(tmp_path):
     cache = ImergGridCache(str(tmp_path / "zero.sqlite"))
-    inserted = cache.store_daily_grid(date.today(), [27.0], [85.0], [[0.0]], [[48]], "zero", datetime.now(timezone.utc))
+    inserted = cache.store_daily_grid(date.today(), [27.0], [85.0], [[0.0]], [[48]], "zero.V07C", datetime.now(timezone.utc))
     assert inserted == 1
 
 
@@ -139,7 +139,7 @@ def test_point_lookup_rejects_a_gap_between_daily_granules(tmp_path):
     fetched = datetime.now(timezone.utc)
     for offset in (1, 2, 4):
         day = today - timedelta(days=offset)
-        cache.store_daily_grid(day, [27.0], [85.0], [[1.0]], [[48]], f"granule-{day}", fetched)
+        cache.store_daily_grid(day, [27.0], [85.0], [[1.0]], [[48]], f"granule-{day}.V07C", fetched)
     result = cache.get_recent_rain(27.0, 85.0, 72)
     assert result.status == "UNAVAILABLE"
     assert "gap" in (result.unavailable_reason or "")
@@ -151,9 +151,9 @@ def test_point_lookup_requires_same_nearest_cell_on_every_day(tmp_path):
     fetched = datetime.now(timezone.utc)
     for offset in (3, 2):
         day = today - timedelta(days=offset)
-        cache.store_daily_grid(day, [27.1], [85.1], [[1.0]], [[48]], f"other-{day}", fetched)
+        cache.store_daily_grid(day, [27.1], [85.1], [[1.0]], [[48]], f"other-{day}.V07C", fetched)
     day = today - timedelta(days=1)
-    cache.store_daily_grid(day, [27.0], [27.1], [[2.0], [3.0]], [[48], [48]], f"latest-{day}", fetched)
+    cache.store_daily_grid(day, [27.0], [27.1], [[2.0], [3.0]], [[48], [48]], f"latest-{day}.V07C", fetched)
     result = cache.get_recent_rain(27.0, 85.0, 72)
     assert result.status == "UNAVAILABLE"
 
@@ -164,7 +164,7 @@ def test_point_lookup_uses_the_nearest_grid_cell(tmp_path):
     fetched = datetime.now(timezone.utc)
     for offset in (3, 2, 1):
         day = today - timedelta(days=offset)
-        cache.store_daily_grid(day, [27.0, 27.1], [85.0, 85.1], [[1.0, 2.0], [3.0, 4.0]], [[48, 48], [48, 48]], f"grid-{day}", fetched)
+        cache.store_daily_grid(day, [27.0, 27.1], [85.0, 85.1], [[1.0, 2.0], [3.0, 4.0]], [[48, 48], [48, 48]], f"grid-{day}.V07C", fetched)
     result = cache.get_recent_rain(27.09, 85.09, 72)
     assert result.status == "AVAILABLE"
     assert result.amount_mm == 12.0
@@ -228,7 +228,7 @@ def test_polygon_aggregation_weights_all_intersected_cells(tmp_path):
     fetched = datetime.now(timezone.utc)
     for offset in (3, 2, 1):
         day = today - timedelta(days=offset)
-        cache.store_daily_grid(day, [27.0, 27.1], [85.0, 85.1], [[10.0, 20.0], [30.0, 40.0]], [[48, 48], [48, 48]], f"grid-{day}", fetched)
+        cache.store_daily_grid(day, [27.0, 27.1], [85.0, 85.1], [[10.0, 20.0], [30.0, 40.0]], [[48, 48], [48, 48]], f"grid-{day}.V07C", fetched)
     polygon = field_box(84.95, 26.95, 85.15, 27.15)
     result = cache.get_recent_rain(27.05, 85.05, 72, polygon)
     assert result.status == "AVAILABLE"
