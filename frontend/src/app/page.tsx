@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState, useSyncExternalStore, useTransition, useRef } from "react";
+import Image from "next/image";
 import { FieldAssessmentResponse } from "@/types/safefield";
 import { fetchFieldAssessment } from "@/lib/api";
 import ScreenAHome from "@/components/ScreenAHome";
@@ -8,6 +9,7 @@ import ScreenBField from "@/components/ScreenBField";
 import ScreenCDecision from "@/components/ScreenCDecision";
 import ScreenDTrends from "@/components/ScreenDTrends";
 import ScreenEMethods from "@/components/ScreenEMethods";
+import AskAssistant from "@/components/AskAssistant";
 import {
   MapPin,
   SlidersHorizontal,
@@ -16,8 +18,8 @@ import {
   Database,
   Globe2,
   WifiOff,
-  Leaf,
 } from "lucide-react";
+import { getDict, type Lang } from "@/i18n";
 
 type TabId = "home" | "field" | "decision" | "trends" | "methods";
 
@@ -31,7 +33,7 @@ function subscribeToLanguage(onChange: () => void) {
   };
 }
 
-function getLanguageSnapshot(): "en" | "ne" {
+function getLanguageSnapshot(): Lang {
   if (typeof window === "undefined") return "ne";
   try {
     const saved = window.localStorage.getItem("safefield_language");
@@ -41,11 +43,11 @@ function getLanguageSnapshot(): "en" | "ne" {
   }
 }
 
-function getServerLanguageSnapshot(): "en" | "ne" {
+function getServerLanguageSnapshot(): Lang {
   return "ne";
 }
 
-function updateStoredLanguage(next: "en" | "ne") {
+function updateStoredLanguage(next: Lang) {
   try {
     window.localStorage.setItem("safefield_language", next);
   } catch {
@@ -79,30 +81,222 @@ const NAV_ITEMS = [
   { id: "methods", labelEn: "Data & methods", shortEn: "Data", labelNe: "डाटा र विधि", icon: Database },
 ] as const;
 
+const SESSION_KEY = "safefield_session";
+
+type PersistedSession = {
+  lat: number;
+  lon: number;
+  fertilizerType: string;
+  cropStage: string;
+  sandPercentOverride: number | null;
+  polygon: [number, number][] | null;
+  assessment: FieldAssessmentResponse | null;
+};
+
+function subscribeToSession(onChange: () => void) {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+// Cached snapshot reader: useSyncExternalStore requires a stable reference
+// between renders, so the parsed session is memoized by the raw string.
+let sessionRawCache: string | null | undefined;
+let sessionValueCache: PersistedSession | null;
+
+function getSessionSnapshot(): PersistedSession | null {
+  if (typeof window === "undefined") return null;
+  let raw: string | null = null;
+  try {
+    raw = window.localStorage.getItem(SESSION_KEY);
+  } catch {
+    raw = null;
+  }
+  if (sessionRawCache !== undefined && raw === sessionRawCache) return sessionValueCache ?? null;
+  sessionRawCache = raw;
+  sessionValueCache = null;
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as Partial<PersistedSession>;
+      if (
+        typeof parsed.lat === "number" &&
+        typeof parsed.lon === "number" &&
+        typeof parsed.fertilizerType === "string" &&
+        typeof parsed.cropStage === "string"
+      ) {
+        sessionValueCache = {
+          lat: parsed.lat,
+          lon: parsed.lon,
+          fertilizerType: parsed.fertilizerType,
+          cropStage: parsed.cropStage,
+          sandPercentOverride: typeof parsed.sandPercentOverride === "number" ? parsed.sandPercentOverride : null,
+          polygon: Array.isArray(parsed.polygon) ? parsed.polygon : null,
+          assessment: parsed.assessment && typeof parsed.assessment === "object" ? parsed.assessment : null,
+        };
+      }
+    } catch {
+      sessionValueCache = null;
+    }
+  }
+  return sessionValueCache;
+}
+
+function getServerSessionSnapshot(): PersistedSession | null {
+  return null;
+}
+
+function LanguageToggle({ lang, setLang }: { lang: Lang; setLang: (next: Lang) => void }) {
+  return (
+    <div
+      role="group"
+      aria-label={lang === "en" ? "Language selection" : "भाषा छनोट"}
+      className="inline-flex min-h-10 items-center rounded-full border border-line bg-white p-1"
+    >
+      <Globe2 className="mx-1.5 h-4 w-4 text-ink-soft" aria-hidden="true" />
+      <button
+        type="button"
+        onClick={() => setLang("en")}
+        aria-pressed={lang === "en"}
+        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+          lang === "en" ? "bg-forest text-white" : "text-ink-soft hover:text-ink"
+        }`}
+      >
+        EN
+      </button>
+      <button
+        type="button"
+        onClick={() => setLang("ne")}
+        aria-pressed={lang === "ne"}
+        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+          lang === "ne" ? "bg-forest text-white" : "text-ink-soft hover:text-ink"
+        }`}
+      >
+        ने
+      </button>
+    </div>
+  );
+}
+
 export default function SafeFieldNepalApp() {
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const lang = useSyncExternalStore(subscribeToLanguage, getLanguageSnapshot, getServerLanguageSnapshot);
-  const setLang = useCallback((next: "en" | "ne") => updateStoredLanguage(next), []);
+  const t = getDict(lang);
+  const setLang = useCallback((next: Lang) => updateStoredLanguage(next), []);
   const requestSequence = useRef(0);
 
   const isOnline = useSyncExternalStore(subscribeToOnlineStatus, getOnlineStatus, getServerOnlineStatus);
-  const [partnerLogoVisible, setPartnerLogoVisible] = useState(true);
 
-  const [selectedLat, setSelectedLat] = useState<number>(26.45);
-  const [selectedLon, setSelectedLon] = useState<number>(87.28);
-  const [fertilizerType, setFertilizerType] = useState<string>("Urea");
-  const [cropStage, setCropStage] = useState<string>("Vegetative / Tillering");
-  const [sandPercentOverride, setSandPercentOverride] = useState<number | null>(null);
-  const [selectedFieldPolygon, setSelectedFieldPolygon] = useState<[number, number][] | null>(null);
+  // Persisted session (restored via useSyncExternalStore, following the same
+  // hydration-safe pattern as the language setting). Each `*State` holds the
+  // value chosen during this visit; when untouched the persisted value wins.
+  const persisted = useSyncExternalStore(subscribeToSession, getSessionSnapshot, getServerSessionSnapshot);
 
-  const [assessmentData, setAssessmentData] = useState<FieldAssessmentResponse | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [latState, setLatState] = useState<number | null>(null);
+  const [lonState, setLonState] = useState<number | null>(null);
+  const [fertilizerState, setFertilizerState] = useState<string | null>(null);
+  const [cropState, setCropState] = useState<string | null>(null);
+  const [sandState, setSandState] = useState<number | null | undefined>(undefined);
+  const [polygonState, setPolygonState] = useState<[number, number][] | null | undefined>(undefined);
+  const [assessmentState, setAssessmentState] = useState<FieldAssessmentResponse | null | undefined>(undefined);
+  // Previous assessment for the Ask assistant what_changed intent. It only
+  // changes when a NEW assessment successfully replaces the old one, so a
+  // failed refresh never corrupts the comparison (honest answer, rule 1).
+  const [previousAssessmentState, setPreviousAssessmentState] = useState<FieldAssessmentResponse | null>(null);
+
+  const selectedLat = latState ?? persisted?.lat ?? 26.45;
+  const selectedLon = lonState ?? persisted?.lon ?? 87.28;
+  const fertilizerType = fertilizerState ?? persisted?.fertilizerType ?? "Urea";
+  const cropStage = cropState ?? persisted?.cropStage ?? "Vegetative / Tillering";
+  const sandPercentOverride = sandState === undefined ? (persisted?.sandPercentOverride ?? null) : sandState;
+  const selectedFieldPolygon = polygonState === undefined ? (persisted?.polygon ?? null) : polygonState;
+  const assessmentData = assessmentState === undefined ? (persisted?.assessment ?? null) : assessmentState;
+
+  const [assessmentError, setAssessmentError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
   const [, startTransition] = useTransition();
+
+  // Session persistence is interaction-driven: localStorage is only written
+  // when the user actually changes something, so the stored session is never
+  // clobbered by default values during hydration.
+  const effectiveRef = useRef<PersistedSession>({
+    lat: 26.45,
+    lon: 87.28,
+    fertilizerType: "Urea",
+    cropStage: "Vegetative / Tillering",
+    sandPercentOverride: null,
+    polygon: null,
+    assessment: null,
+  });
+
+  // Keep the mirror in sync with the latest effective values after each render.
+  useEffect(() => {
+    effectiveRef.current = {
+      lat: selectedLat,
+      lon: selectedLon,
+      fertilizerType,
+      cropStage,
+      sandPercentOverride,
+      polygon: selectedFieldPolygon,
+      assessment: assessmentData ?? effectiveRef.current.assessment,
+    };
+  });
+
+  const updateSession = useCallback((patch: Partial<PersistedSession>) => {
+    effectiveRef.current = { ...effectiveRef.current, ...patch };
+    try {
+      window.localStorage.setItem(SESSION_KEY, JSON.stringify(effectiveRef.current));
+    } catch {
+      // Storage may be unavailable or full; the app still works in memory.
+    }
+  }, []);
+
+  const handleFertilizerChange = useCallback((value: string) => {
+    setFertilizerState(value);
+    updateSession({ fertilizerType: value });
+  }, [updateSession]);
+
+  const handleCropStageChange = useCallback((value: string) => {
+    setCropState(value);
+    updateSession({ cropStage: value });
+  }, [updateSession]);
+
+  const handleSandOverrideChange = useCallback((value: number | null) => {
+    setSandState(value);
+    updateSession({ sandPercentOverride: value });
+  }, [updateSession]);
+
+  const handleLocationChange = useCallback((lat: number, lon: number) => {
+    setLatState(lat);
+    setLonState(lon);
+    setPolygonState(null);
+    updateSession({ lat, lon, polygon: null });
+  }, [updateSession]);
+
+  const handlePolygonChange = useCallback((polygon: [number, number][] | null) => {
+    setPolygonState(polygon);
+    updateSession({ polygon });
+  }, [updateSession]);
+
+  // Browser-tab title follows the active screen; the home tab shows the
+  // plain app name ("Safe Field Nepal").
+  useEffect(() => {
+    const item = NAV_ITEMS.find((entry) => entry.id === activeTab);
+    const label = lang === "ne" ? item?.labelNe : item?.labelEn;
+    document.title = activeTab === "home" || !label
+      ? "Safe Field Nepal"
+      : `${label} - Safe Field Nepal`;
+  }, [activeTab, lang]);
 
   // Fetching starts after the effect runs; state updates happen only after the
   // asynchronous request settles, avoiding synchronous state updates in effects.
   const refreshAssessment = useCallback(async () => {
     const requestId = ++requestSequence.current;
+    const outgoing = assessmentData;
+    setLoading(true);
+    setAssessmentError(null);
+    setAssessmentState(null);
     try {
       const data = await fetchFieldAssessment(
         selectedLat,
@@ -113,102 +307,72 @@ export default function SafeFieldNepalApp() {
         sandPercentOverride,
         selectedFieldPolygon,
       );
-      if (requestId === requestSequence.current) startTransition(() => setAssessmentData(data));
+      if (requestId === requestSequence.current) {
+        startTransition(() => {
+          setPreviousAssessmentState(outgoing);
+          setAssessmentState(data);
+        });
+        updateSession({ assessment: data });
+      }
     } catch (err) {
-      if (requestId === requestSequence.current) console.error("Failed to fetch field assessment:", err);
+      if (requestId === requestSequence.current) {
+        const message = err instanceof Error ? err.message : "Unknown error while loading the field assessment.";
+        setAssessmentError(message);
+        console.error("Failed to fetch field assessment:", err);
+      }
     } finally {
       if (requestId === requestSequence.current) setLoading(false);
     }
-  }, [selectedLat, selectedLon, fertilizerType, cropStage, sandPercentOverride, selectedFieldPolygon, startTransition]);
+  }, [selectedLat, selectedLon, fertilizerType, cropStage, sandPercentOverride, selectedFieldPolygon, assessmentData, startTransition, updateSession]);
 
   const handleRunAssessment = useCallback(() => {
-    setLoading(true);
     void refreshAssessment();
   }, [refreshAssessment]);
 
-  useEffect(() => {
+  // Assessment is intentionally started by the explicit Next action, after
+  // the user has selected the final point or drawn boundary. This prevents
+  // an early/default-location request from racing the selected field request.
+  const handleProceedToField = useCallback(() => {
+    setActiveTab("field");
     void refreshAssessment();
   }, [refreshAssessment]);
 
   const selectTab = (tab: TabId) => {
     setActiveTab(tab);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const currentTab = NAV_ITEMS.find((item) => item.id === activeTab);
-
   return (
-    <main id="main-content" tabIndex={-1} className="min-h-screen bg-[#f5f8f4] text-[#183326] flex flex-col">
-      <a href="#main-content" className="sr-only z-[100] rounded-lg bg-white px-4 py-3 font-bold text-emerald-900 focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:ring-2 focus:ring-emerald-700">Skip to main content</a>
+    <main id="main-content" tabIndex={-1} className="flex min-h-screen flex-col bg-warm text-ink">
+      <a href="#main-content" className="sr-only z-[100] rounded-full bg-white px-4 py-3 font-semibold text-forest focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:shadow-float focus:ring-2 focus:ring-action">Skip to main content</a>
       {!isOnline && (
-        <div className="bg-rose-800 text-white px-4 py-2.5 text-center text-xs font-semibold flex items-center justify-center gap-2">
-          <WifiOff className="w-4 h-4 shrink-0" />
-          <span>
-            {lang === "ne"
-              ? "तपाईं अफलाइन हुनुहुन्छ। स्थानीय क्यासबाट पछिल्लो सुरक्षित डाटा देखाइएको छ।"
-              : "You are offline. Showing the latest available cached data."}
-          </span>
+        <div className="flex items-center justify-center gap-2 bg-danger px-4 py-2.5 text-center text-xs font-semibold text-white">
+          <WifiOff className="h-4 w-4 shrink-0" />
+          <span>{t.offlineBanner}</span>
         </div>
       )}
 
-      <header className="sticky top-0 z-50 border-b border-emerald-950/10 bg-white/95 shadow-[0_8px_30px_rgba(15,55,35,0.07)] backdrop-blur-xl">
-        <div className="mx-auto flex min-h-[78px] max-w-[1440px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+      <div className="flex w-full flex-1">
+        {/* Left sidebar navigation (desktop) */}
+        <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-divider bg-white lg:flex">
           <button
             type="button"
             onClick={() => selectTab("home")}
-            className="group flex min-w-0 items-center gap-3 rounded-2xl text-left outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-4"
+            className="group flex px-5 pb-4 pt-6 text-left outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
             aria-label="Safe Field Nepal home"
           >
-            <span className="flex min-w-0 flex-col items-start gap-1">
-              <img
-                src="/logo.png"
-                alt="Safe Field logo"
-                className="h-11 w-auto max-w-[190px] shrink-0 object-contain sm:h-12 sm:max-w-[220px]"
-              />
-              <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-emerald-700 sm:text-[10px] sm:tracking-[0.16em]">
-                Earth intelligence for every field
-              </span>
-            </span>
+            <Image
+              src="/logo.png"
+              alt="Safe Field"
+              className="h-11 w-auto max-w-full object-contain object-left"
+              width={544}
+              height={160}
+              priority
+            />
           </button>
 
-          <div className="hidden h-9 w-px bg-emerald-900/10 lg:block" />
-
-          <div className="hidden min-w-0 flex-1 items-center justify-center gap-2 lg:flex">
-            <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-800 ring-1 ring-emerald-700/10">
-              NASA Earth data
-            </span>
-            <span className="text-xs font-medium text-slate-500">Field decisions, backed by evidence</span>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            {partnerLogoVisible && (
-              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 sm:h-11 sm:w-11" title="Partner logo — replace the image in frontend/public">
-                <img
-                  src="/partner-logo.png"
-                  alt="Partner organization logo"
-                  className="h-full w-full object-contain"
-                  onError={() => setPartnerLogoVisible(false)}
-                />
-              </div>
-            )}
-            <span className="hidden rounded-full border border-emerald-100 bg-emerald-50 px-3 py-2 text-[11px] font-semibold text-emerald-800 sm:inline-flex sm:items-center sm:gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              {isOnline ? "System online" : "Offline"}
-            </span>
-            <button
-              type="button"
-              onClick={() => setLang(lang === "en" ? "ne" : "en")}
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
-              aria-label={lang === "en" ? "Switch to Nepali" : "Switch to English"}
-            >
-              <Globe2 className="h-4 w-4 text-emerald-700" />
-              <span>{lang === "en" ? "नेपाली" : "English"}</span>
-            </button>
-          </div>
-        </div>
-
-        <nav aria-label="Main navigation" className="hidden border-t border-slate-100 bg-[#fbfdfb] lg:block">
-          <div className="mx-auto flex max-w-[1440px] items-center gap-1 px-6 lg:px-8">
-            {NAV_ITEMS.map((item, index) => {
+          <nav aria-label="Main navigation" className="flex flex-1 flex-col gap-1 px-3 py-2">
+            {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
               return (
@@ -217,95 +381,106 @@ export default function SafeFieldNepalApp() {
                   type="button"
                   onClick={() => selectTab(item.id)}
                   aria-current={isActive ? "page" : undefined}
-                  className={`relative flex min-h-[58px] items-center gap-2.5 px-5 text-[13px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600 ${
+                  className={`flex min-h-[46px] items-center gap-3 rounded-md px-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
                     isActive
-                      ? "text-emerald-900"
-                      : "text-slate-500 hover:bg-emerald-50/80 hover:text-emerald-800"
+                      ? "bg-mint text-forest shadow-[inset_0_0_0_2px_var(--color-leaf)]"
+                      : "text-ink-soft hover:bg-canvas hover:text-ink"
                   }`}
                 >
-                  <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${isActive ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-500"}`}>
+                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${isActive ? "bg-action text-white" : "bg-soft text-ink-muted"}`}>
                     <Icon className="h-4 w-4" />
                   </span>
-                  <span>{lang === "ne" ? item.labelNe : item.labelEn}</span>
-                  {isActive && <span className="absolute inset-x-4 bottom-0 h-[3px] rounded-t-full bg-emerald-600" />}
-                  {index < NAV_ITEMS.length - 1 && !isActive && <span className="sr-only">Navigation item</span>}
+                  <span className="truncate">{lang === "ne" ? item.labelNe : item.labelEn}</span>
                 </button>
               );
             })}
-            <div className="ml-auto flex items-center gap-2 py-2 text-[11px] font-medium text-slate-400">
-              <Leaf className="h-3.5 w-3.5 text-emerald-600" />
-              Built for Nepal&apos;s farming communities
+          </nav>
+
+          <div className="border-t border-divider px-5 py-4">
+            <LanguageToggle lang={lang} setLang={setLang} />
+          </div>
+        </aside>
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* Mobile top header */}
+          <header className="sticky top-0 z-50 border-b border-divider bg-white/95 backdrop-blur-xl lg:hidden">
+            <div className="flex min-h-[64px] items-center justify-between gap-3 px-4">
+              <button
+                type="button"
+                onClick={() => selectTab("home")}
+                className="group flex min-w-0 items-center rounded-xl text-left outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+                aria-label="Safe Field Nepal home"
+              >
+                <Image
+                  src="/logo.png"
+                  alt="Safe Field"
+                  className="h-9 w-auto max-w-full object-contain object-left"
+                  width={544}
+                  height={160}
+                />
+              </button>
+              <div className="shrink-0">
+                <LanguageToggle lang={lang} setLang={setLang} />
+              </div>
             </div>
-          </div>
-        </nav>
-      </header>
+          </header>
 
-      <section className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-3 py-5 pb-28 sm:px-6 sm:py-7 sm:pb-28 lg:px-8 lg:py-9 lg:pb-9">
-        <div className="mb-5 flex items-center justify-between gap-3 px-1">
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700 sm:text-[11px]">SAFE FIELD NEPAL / 2026</p>
-            <h1 className="mt-1 truncate text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">
-              {lang === "ne" ? currentTab?.labelNe : currentTab?.labelEn}
-            </h1>
-          </div>
-          <div className="hidden items-center gap-2 rounded-full border border-emerald-100 bg-white px-3 py-2 text-[11px] font-semibold text-slate-500 shadow-sm sm:flex">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            Nepal pilot region
-          </div>
+          <section className="flex w-full flex-1 flex-col px-3 pb-28 pt-5 sm:px-6 sm:pb-32 sm:pt-7 lg:px-8 lg:pb-8 lg:pt-7">
+            {activeTab === "home" && (
+              <ScreenAHome
+                selectedLat={selectedLat}
+                selectedLon={selectedLon}
+                onLocationSelect={handleLocationChange}
+                onFieldPolygonSelect={handlePolygonChange}
+                fieldPolygon={selectedFieldPolygon}
+                onProceedToField={handleProceedToField}
+                lang={lang}
+              />
+            )}
+
+            {activeTab === "field" && (
+              <ScreenBField
+                data={assessmentData}
+                loading={loading}
+                error={assessmentError}
+                fertilizerType={fertilizerType}
+                setFertilizerType={handleFertilizerChange}
+                cropStage={cropStage}
+                setCropStage={handleCropStageChange}
+                sandPercentOverride={sandPercentOverride}
+                onSandOverrideChange={handleSandOverrideChange}
+                onRunAssessment={handleRunAssessment}
+                onProceedToDecision={() => selectTab("decision")}
+                lang={lang}
+              />
+            )}
+
+            {activeTab === "decision" && (
+              <ScreenCDecision
+                data={assessmentData}
+                onProceedToTrends={() => selectTab("trends")}
+                lang={lang}
+              />
+            )}
+
+            {activeTab === "trends" && (
+              <ScreenDTrends
+                data={assessmentData}
+                onProceedToMethods={() => selectTab("methods")}
+                lang={lang}
+              />
+            )}
+
+            {activeTab === "methods" && <ScreenEMethods data={assessmentData} lang={lang} />}
+          </section>
         </div>
+      </div>
 
-        {activeTab === "home" && (
-          <ScreenAHome
-            selectedLat={selectedLat}
-            selectedLon={selectedLon}
-            onLocationSelect={(lat, lon) => {
-              setSelectedLat(lat);
-              setSelectedLon(lon);
-              setSelectedFieldPolygon(null);
-            }}
-            onFieldPolygonSelect={setSelectedFieldPolygon}
-            onProceedToField={() => selectTab("field")}
-            lang={lang}
-          />
-        )}
-
-        {activeTab === "field" && (
-          <ScreenBField
-            data={assessmentData}
-            loading={loading}
-            fertilizerType={fertilizerType}
-            setFertilizerType={setFertilizerType}
-            cropStage={cropStage}
-            setCropStage={setCropStage}
-            sandPercentOverride={sandPercentOverride}
-            onSandOverrideChange={setSandPercentOverride}
-            onRunAssessment={handleRunAssessment}
-            onProceedToDecision={() => selectTab("decision")}
-            lang={lang}
-          />
-        )}
-
-        {activeTab === "decision" && (
-          <ScreenCDecision
-            data={assessmentData}
-            onProceedToTrends={() => selectTab("trends")}
-            lang={lang}
-          />
-        )}
-
-        {activeTab === "trends" && (
-          <ScreenDTrends
-            data={assessmentData}
-            onProceedToMethods={() => selectTab("methods")}
-            lang={lang}
-          />
-        )}
-
-        {activeTab === "methods" && <ScreenEMethods data={assessmentData} lang={lang} />}
-      </section>
-
-      <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-[60] border-t border-emerald-900/10 bg-white/95 px-1 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-8px_28px_rgba(15,55,35,0.10)] backdrop-blur-xl lg:hidden">
-        <div className="mx-auto grid max-w-xl grid-cols-5 gap-0.5">
+      <nav
+        aria-label="Mobile navigation"
+        className="fixed inset-x-0 bottom-0 z-[60] flex justify-center px-4 pb-[max(env(safe-area-inset-bottom),12px)] lg:hidden"
+      >
+        <div className="grid w-full max-w-md grid-cols-5 gap-0.5 rounded-full bg-charcoal p-1.5 shadow-[0_8px_28px_rgba(24,44,30,0.32)]">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -315,9 +490,15 @@ export default function SafeFieldNepalApp() {
                 type="button"
                 onClick={() => selectTab(item.id)}
                 aria-current={isActive ? "page" : undefined}
-                className={`flex min-w-0 min-h-[58px] flex-col items-center justify-center gap-1 rounded-xl px-1 py-1 text-[10px] font-semibold transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600 ${isActive ? "bg-emerald-50 text-emerald-800" : "text-slate-500 hover:bg-slate-50"}`}
+                className={`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-full px-1 py-1.5 text-[9px] font-medium transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+                  isActive ? "text-white" : "text-white/55 hover:text-white"
+                }`}
               >
-                <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${isActive ? "bg-emerald-700 text-white shadow-sm" : "text-slate-500"}`}>
+                <span
+                  className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
+                    isActive ? "bg-action text-white" : "text-white/70"
+                  }`}
+                >
                   <Icon className="h-[17px] w-[17px]" />
                 </span>
                 <span className="max-w-full truncate">{lang === "ne" ? item.labelNe : item.shortEn}</span>
@@ -326,40 +507,18 @@ export default function SafeFieldNepalApp() {
           })}
         </div>
       </nav>
-      <footer className="mt-auto border-t border-emerald-950/10 bg-[#102f24] text-white">
-        <div className="mx-auto grid max-w-[1440px] gap-9 px-5 py-10 sm:px-8 md:grid-cols-2 lg:grid-cols-[1.25fr_0.8fr_1.2fr] lg:gap-12 lg:px-10 lg:py-12">
-          <div>
-            <img src="/logo.png" alt="Safe Field logo" className="h-12 w-auto max-w-[210px] object-contain object-left" />
-            <p className="mt-3 max-w-sm text-sm leading-6 text-emerald-50/75">Earth intelligence for every field. Safe Field Nepal helps farmers explore satellite, weather and environmental evidence alongside their own field information.</p>
-            <p className="mt-4 text-xs font-semibold text-emerald-200">NASA International Space Apps Challenge 2026</p>
-          </div>
 
-          <div>
-            <h2 className="text-xs font-extrabold uppercase tracking-[0.16em] text-white">Explore</h2>
-            <ul className="mt-4 space-y-3 text-sm text-emerald-50/75">
-              {NAV_ITEMS.map((item) => (
-                <li key={item.id}>
-                  <button type="button" onClick={() => { selectTab(item.id); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="transition hover:text-white focus-visible:outline-none focus-visible:underline">
-                    {item.labelEn}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h2 className="text-xs font-extrabold uppercase tracking-[0.16em] text-white">Data & responsible use</h2>
-            <p className="mt-4 text-sm leading-6 text-emerald-50/75">The current assessment calls NASA POWER, Open-Meteo, ISRIC SoilGrids and Open-Elevation. GPM IMERG, SMAP and NASADEM are not connected to this assessment endpoint. Availability, resolution and update frequency vary by source.</p>
-            <p className="mt-3 text-xs leading-5 text-emerald-100/60">This tool provides research-informed estimates, not a substitute for field measurements, official land surveys or advice from local agricultural experts. Verify important decisions on the ground.</p>
-          </div>
-        </div>
-        <div className="border-t border-white/10">
-          <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-5 py-4 text-[11px] text-emerald-100/55 sm:px-8 md:flex-row md:items-center md:justify-between lg:px-10">
-            <span>© {new Date().getFullYear()} Safe Field Nepal. Built for Nepal&apos;s farming communities.</span>
-            <span>Earth intelligence for every field.</span>
-          </div>
-        </div>
-      </footer>
+      <AskAssistant
+        lang={lang}
+        context={{
+          latitude: selectedLat,
+          longitude: selectedLon,
+          answers: { fertilizerType, cropStage, saveMoney: true, sandPercentOverride },
+          assessment: assessmentData,
+          previousAssessment: previousAssessmentState,
+          farmerContent: null,
+        }}
+      />
     </main>
   );
 }

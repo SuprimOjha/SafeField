@@ -29,6 +29,10 @@ async def fetch_json_with_retry(
                 return response.json()
             except (httpx.HTTPError, ValueError) as exc:
                 last_exc = exc
+                # A 429 is an explicit upstream rate limit. Immediate retries
+                # consume more quota and do not help; let callers use cached data.
+                if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429:
+                    break
                 if attempt < retries:
                     await asyncio.sleep(0.6 * (attempt + 1))
 

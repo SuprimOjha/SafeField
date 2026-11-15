@@ -4,6 +4,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+FRONTEND_PRODUCTION_ORIGINS = (
+    "https://safefieldnp.netlify.app",
+    "https://safefieldnp.vercel.app",  # Keep the previous deployment working during migration.
+)
 
 
 class Settings(BaseSettings):
@@ -32,7 +36,15 @@ class Settings(BaseSettings):
 
     @property
     def cors_origin_list(self) -> list[str]:
-        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+        # Keep the deployed farmer frontend allowed even if a hosting
+        # environment variable is missing or contains only local origins.
+        configured_origins = [
+            origin.strip().rstrip("/")
+            for origin in self.cors_origins.split(",")
+            if origin.strip()
+        ]
+        origins = [*FRONTEND_PRODUCTION_ORIGINS, *configured_origins]
+        return list(dict.fromkeys(origins))
 
 
 @lru_cache
