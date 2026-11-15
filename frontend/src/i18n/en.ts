@@ -4,6 +4,11 @@ export const en = {
   // Header / shell
   brandTagline: "Earth intelligence for every field",
   offlineBanner: "You are offline. Showing the latest available cached data.",
+  askHubEyebrow: "FIELD SUPPORT",
+  askHubTitle: "Ask about your field",
+  askHubBody: "Get clear explanations of the current assessment, rainfall data, soil information, data sources and safety limits. Answers are based on the information currently available for this field.",
+  askHubButton: "Open field assistant",
+  askHubPrivacy: "The assistant uses this session’s assessment context. It does not replace local agricultural advice or an on-field check.",
 
   // Screen A — Home / map
   fieldMappingBadge: "Nepal field mapping",
