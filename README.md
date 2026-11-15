@@ -32,6 +32,26 @@ Our goal is simple: farmers should not need to understand complex satellite data
 
 The interface supports **English and Nepali**, switched with an `EN | ने` toggle in the top bar. The choice is remembered on the device.
 
+## A Farmer's Perspective
+
+How do farmers decide when to spray pesticides or apply fertilizer?
+
+For many farmers, these decisions are based on years of experience and observations of their surroundings. In this interview, a farmer explains how they observe patterns in the sky and clouds to anticipate weather conditions and make decisions about agricultural activities, including pesticide spraying and fertilizer application.
+
+This highlights an important challenge: farmers often have to rely on visual observations, experience and educated guesses when environmental information is difficult to access.
+
+**Why this matters for Safe Field Nepal**
+
+We believe farmers should not have to depend entirely on guessing environmental conditions. By bringing NASA satellite observations, rainfall information, weather forecasts, soil estimates and terrain context together, Safe Field Nepal aims to make relevant environmental information easier to explore before farmers make important field decisions.
+
+Watch the farmer's perspective:
+
+[![Farmer explaining agricultural decision-making through observations of sky and clouds](https://img.youtube.com/vi/pV69Ai-zlAE/maxresdefault.jpg)](https://www.youtube.com/watch?v=pV69Ai-zlAE)
+
+*The farmer's observations represent practical local experience, not scientifically validated weather predictions or pesticide and fertilizer recommendations.*
+
+*Research note: This interview was recorded before the NASA Space Apps Challenge 2026 hackathon, during our preliminary research phase, when we were exploring farmers' real-world experiences, agricultural practices and challenges.*
+
 ## What It Can Do
 
 The app is **field-first**. The map opens on a Nepal overview with no pre-selected location, and the assessment and Ask assistant stay gated until the farmer marks their own land. There is no default town or farm shown on the map.
