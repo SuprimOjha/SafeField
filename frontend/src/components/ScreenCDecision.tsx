@@ -1,16 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { FieldAssessmentResponse, DecisionSignal } from "@/types/safefield";
+import { FieldAssessmentResponse } from "@/types/safefield";
 import FarmerContentPanel from "@/components/FarmerContentPanel";
 import DecisionCard from "@/components/DecisionCard";
 import FreshnessStrip from "@/components/FreshnessStrip";
 import DataReceiptDrawer from "@/components/DataReceiptDrawer";
 import { getDict, type Lang } from "@/i18n";
 import {
-  CheckCircle2,
-  AlertTriangle,
-  Clock,
   ChevronDown,
   ChevronUp,
   CloudRain,
@@ -43,38 +40,7 @@ export default function ScreenCDecision({
 
   const { decision, forecast } = data;
 
-  const getSignalTheme = (signal: DecisionSignal) => {
-    if (signal === "CONDITIONS LOOK SUITABLE") {
-      return {
-        bg: "bg-action-soft",
-        border: "border-leaf",
-        badgeBg: "bg-action text-white",
-        icon: <CheckCircle2 className="w-12 h-12 text-leaf shrink-0" />,
-        label: lang === "ne" ? t.signalSuitableNe : t.signalSuitable,
-      };
-    }
-    if (signal === "WAIT AND RECHECK") {
-      return {
-        bg: "bg-amber-soft",
-        border: "border-amber",
-        badgeBg: "bg-amber text-amber-ink",
-        icon: <Clock className="w-12 h-12 text-amber-ink shrink-0" />,
-        label:
-          lang === "ne"
-            ? `${t.signalWaitNe} — ${decision.wait_days_recommended} ${t.daysUnit}`
-            : `${t.signalWait} — ${decision.wait_days_recommended} ${t.daysUnit}${decision.wait_days_recommended === 1 ? "" : "s"}`,
-      };
-    }
-    return {
-      bg: "bg-amber-soft",
-      border: "border-amber",
-      badgeBg: "bg-amber text-amber-ink",
-      icon: <AlertTriangle className="w-10 h-10 text-amber-ink shrink-0" />,
-      label: lang === "ne" ? t.signalReviewNe : t.signalReview,
-    };
-  };
 
-  const theme = getSignalTheme(decision.signal);
 
   return (
     <div className="space-y-6">
