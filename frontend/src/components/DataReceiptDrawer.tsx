@@ -20,7 +20,7 @@ function SourceReceipt({ title, source, t }: { title: string; source: FreshnessB
     <dl>
       <MetadataRow label={t.receiptDataset} value={source.dataset_name} />
       <MetadataRow label={t.receiptSource} value={source.source_org} />
-      <MetadataRow label={t.receiptNasa} value={source.is_nasa ? "Yes" : "No"} />
+      <MetadataRow label={t.receiptNasa} value={source.is_nasa ? t.receiptYes : t.receiptNo} />
       <MetadataRow label={t.receiptStatus} value={source.status} />
       <MetadataRow label={t.receiptLatestDate} value={source.latest_observation_date} />
       <MetadataRow label={t.receiptFetched} value={source.fetched_at_utc} />
@@ -68,6 +68,7 @@ export default function DataReceiptDrawer({ data, lang }: DataReceiptDrawerProps
             <h3 className="mb-2 text-base font-bold text-forest">{t.rainfallReceipt}</h3>
             <dl>
               <MetadataRow label={t.receiptSource} value={rainfall.provenance.source_name} />
+              <MetadataRow label={t.receiptNasa} value={t.receiptNotProvided} />
               <MetadataRow label={t.receiptDataset} value={rainfall.provenance.dataset} />
               <MetadataRow label={t.receiptVersion} value={rainfall.provenance.version} />
               <MetadataRow label={t.receiptKind} value={rainfall.provenance.kind} />
