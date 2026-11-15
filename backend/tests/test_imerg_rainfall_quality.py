@@ -190,3 +190,23 @@ def test_point_lookup_probe_reports_why_a_lookup_is_unavailable(tmp_path):
     assert probe["nearest_cell"] is None
     assert probe["matched_days"] == []
     assert "daily IMERG record" in probe["reason"]
+
+
+def test_cells_differing_only_by_float32_rounding_are_the_same_cell(tmp_path):
+    cache = ImergGridCache(str(tmp_path / "float-rounding.sqlite"))
+    days = _recent_days()
+    fetched_at = datetime.now(timezone.utc)
+    # A REAL column in the hosted Postgres cache reads this value back as 27.45,
+    # so a cell must resolve regardless of which spelling a day was stored with.
+    cache.store_daily_grid(
+        days[0], [27.450000762939453], [85.25], [[1.0]], [[48]], _granule_id(days[0]), fetched_at
+    )
+    for day in days[1:]:
+        cache.store_daily_grid(
+            day, [27.45], [85.25], [[1.0]], [[48]], _granule_id(day), fetched_at
+        )
+
+    result = cache.get_recent_rain(27.46, 85.28, 72)
+
+    assert result.status == "AVAILABLE"
+    assert result.amount_mm == 3.0

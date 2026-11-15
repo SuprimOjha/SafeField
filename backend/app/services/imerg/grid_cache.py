@@ -11,6 +11,10 @@ TOTAL_DAILY_SAMPLES = 48
 MIN_VALID_DAILY_SAMPLES = 39  # ceil(80% of 48 half-hour slots); software quality gate, not a NASA flag.
 MIN_POLYGON_COVERAGE = 0.8
 MAX_CACHE_AGE_DAYS = 5
+# A grid cell centre is matched within this many degrees. IMERG spacing is
+# 0.1 degrees (~10 km), so 1e-4 (~11 m) cannot merge two cells, but it does
+# absorb the float4 rounding a REAL column can apply on read-back.
+CELL_MATCH_TOLERANCE = 1e-4
 
 
 def extract_product_version(granule_id: str) -> str:
@@ -180,8 +184,12 @@ class ImergGridCache:
             if nearest is None:
                 return None, []
             rows = conn.execute(f"""SELECT * FROM imerg_daily_cells
-                WHERE latitude = ? AND longitude = ? AND date_utc IN ({placeholders})
-                ORDER BY date_utc DESC""", (nearest["latitude"], nearest["longitude"], *[d.isoformat() for d in dates])).fetchall()
+                WHERE ABS(latitude - ?) <= ? AND ABS(longitude - ?) <= ?
+                AND date_utc IN ({placeholders})
+                ORDER BY date_utc DESC""",
+                (nearest["latitude"], CELL_MATCH_TOLERANCE,
+                 nearest["longitude"], CELL_MATCH_TOLERANCE,
+                 *[d.isoformat() for d in dates])).fetchall()
         return nearest, rows
 
     def point_lookup_probe(self, latitude: float, longitude: float, hours: int = 72) -> dict[str, object]:
@@ -204,29 +212,19 @@ class ImergGridCache:
             "reason": None,
         }
         if nearest is not None:
-            cell_latitude = nearest["latitude"]
-            cell_longitude = nearest["longitude"]
             with self._connect() as conn:
-                probe["cell_types"] = [type(cell_latitude).__name__, type(cell_longitude).__name__]
-                probe["same_latitude_rows"] = int(
-                    conn.execute(
-                        "SELECT COUNT(*) AS n FROM imerg_daily_cells WHERE latitude = ?",
-                        (cell_latitude,),
-                    ).fetchone()["n"]
-                )
-                probe["same_longitude_rows"] = int(
-                    conn.execute(
-                        "SELECT COUNT(*) AS n FROM imerg_daily_cells WHERE longitude = ?",
-                        (cell_longitude,),
-                    ).fetchone()["n"]
-                )
-                probe["same_cell_rows"] = int(
-                    conn.execute(
-                        "SELECT COUNT(*) AS n FROM imerg_daily_cells "
-                        "WHERE latitude = ? AND longitude = ?",
-                        (cell_latitude, cell_longitude),
-                    ).fetchone()["n"]
-                )
+                try:
+                    columns = conn.execute(
+                        "SELECT column_name, data_type FROM information_schema.columns "
+                        "WHERE table_schema = ? AND table_name = ? "
+                        "AND column_name IN ('latitude', 'longitude')",
+                        ("safefield", "imerg_daily_cells"),
+                    ).fetchall()
+                    probe["coordinate_column_types"] = {
+                        row["column_name"]: row["data_type"] for row in columns
+                    } or "unavailable"
+                except Exception:
+                    probe["coordinate_column_types"] = "unavailable"
         return probe
 
     def _get_point_rain(self, latitude: float, longitude: float, hours: int) -> RainfallObservation:
