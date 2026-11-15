@@ -922,8 +922,8 @@ export default function ScreenAHome({
 
           <div className="mt-3 rounded-xl border border-divider bg-white p-3">
             <p className="text-sm font-bold text-forest">{t.surveyStandTitle}</p>
-            <p className="mt-1 text-sm text-ink-soft">{lang === "ne" ? "स्थिर उभिनुहोस्। पाँच GPS फिक्स सङ्कलन गरिन्छ; १५ मिटरभन्दा कमजोर फिक्स हटाइन्छ।" : "Stand still. Five GPS fixes are collected; fixes worse than 15 m accuracy are rejected."}</p>
-            <button type="button" onClick={startStandSurvey} disabled={surveyCollecting} className="mt-3 inline-flex min-h-12 items-center gap-2 rounded-full bg-action px-5 text-sm font-bold text-white disabled:opacity-50">{surveyCollecting ? <Loader2 className="h-4 w-4 animate-spin"/> : <LocateFixed className="h-4 w-4"/>}{surveyCollecting ? (lang === "ne" ? "GPS फिक्स सङ्कलन हुँदैछ…" : "Collecting GPS fixes…") : (lang === "ne" ? "बिन्दु सङ्कलन सुरु गर्नुहोस्" : "Start point capture")}</button>
+            <p className="mt-1 text-sm text-ink-soft">{t.surveyStandHelp}</p>
+            <button type="button" onClick={startStandSurvey} disabled={surveyCollecting} className="mt-3 inline-flex min-h-12 items-center gap-2 rounded-full bg-action px-5 text-sm font-bold text-white disabled:opacity-50">{surveyCollecting ? <Loader2 className="h-4 w-4 animate-spin"/> : <LocateFixed className="h-4 w-4"/>}{surveyCollecting ? t.surveyCollecting : t.surveyStartCapture}</button>
             {surveyPoints.length>0 && <p className="mt-2 text-base text-ink-soft">{t.surveyOtherPoints}: {surveyPoints.length}</p>}
             {gpsReceipt && <details className="mt-2 text-sm text-ink-soft"><summary className="min-h-12 cursor-pointer py-3 font-semibold">{t.surveyGpsReceipt}</summary><p>{t.surveyFixesUsed}: {gpsReceipt.used} · {t.surveyFixesRejected}: {gpsReceipt.rejected}</p></details>}
           </div>
