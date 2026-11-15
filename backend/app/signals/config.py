@@ -41,6 +41,11 @@ class SignalGates(BaseModel):
     spray_max_rain_probability: float = Field(default=40.0, ge=0, le=100)
     rain_heavy_24h_mm: float = Field(default=50.0, ge=0)
     rain_heavy_72h_mm: float = Field(default=80.0, ge=0)
+    rain_heavy_forecast_mm: float = Field(default=10.0, ge=0)
+    # Spread allowed between independent rainfall estimates on the same window
+    # before they are called disagreeing. Software classification assumption.
+    agreement_rain_abs_mm: float = Field(default=5.0, ge=0)
+    agreement_rain_rel_fraction: float = Field(default=0.5, ge=0, le=1)
 
     @property
     def assumption_note(self) -> str:
