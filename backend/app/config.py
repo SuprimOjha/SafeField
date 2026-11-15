@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,6 +23,18 @@ class Settings(BaseSettings):
     earthdata_username: str = ""
     earthdata_password: str = ""
 
+    # Automatic data refresh and retention. The refresh installs newly published
+    # IMERG days, then removes data older than these windows. Values are
+    # conservative design defaults; every deletion keeps the latest window.
+    data_refresh_enabled: bool = True
+    data_refresh_interval_hours: float = Field(default=6.0, gt=0)
+    data_refresh_startup_delay_seconds: float = Field(default=60.0, ge=0)
+    imerg_refresh_days: int = Field(default=3, ge=1, le=30)
+    imerg_retention_days: int = Field(default=30, ge=1, le=365)
+    api_cache_retention_days: int = Field(default=30, ge=1, le=365)
+    signal_retention_days: int = Field(default=120, ge=1, le=730)
+    automation_status_path: str = str(BASE_DIR / "data" / "automation-status.json")
+
     # Nepal bounding box validation (26.3 to 30.5 N, 80.0 to 88.3 E)
     nepal_min_lat: float = 26.3
     nepal_max_lat: float = 30.5
@@ -29,7 +42,9 @@ class Settings(BaseSettings):
     nepal_max_lon: float = 88.3
 
     model_config = SettingsConfigDict(
-        env_file=str(BASE_DIR.parent / ".env"),
+        # backend/.env wins over the repository-root .env so deployment
+        # credentials can live with the backend service.
+        env_file=(str(BASE_DIR.parent / ".env"), str(BASE_DIR / ".env")),
         env_file_encoding="utf-8",
         extra="ignore",
     )

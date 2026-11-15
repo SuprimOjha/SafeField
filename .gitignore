@@ -18,6 +18,10 @@ backend/data/imerg/processed/
 backend/data/signals/
 backend/data/status.json
 
+# Automatic refresh status and lock are runtime state, not source code.
+backend/data/automation-status.json
+backend/data/automation-status.json.lock
+
 # Node / Next.js
 frontend/node_modules/
 frontend/.next/

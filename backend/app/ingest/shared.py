@@ -114,6 +114,27 @@ def prune_snapshots(
     return removed
 
 
+def prune_snapshots_older_than(
+    source: str,
+    cutoff: date,
+    root: Path | None = None,
+) -> list[Path]:
+    """Delete dated snapshots whose observation day is before cutoff."""
+    directory = source_dir(source, root)
+    if not directory.exists():
+        return []
+    removed: list[Path] = []
+    for path in directory.glob("*.json"):
+        try:
+            day = date.fromisoformat(path.stem)
+        except ValueError:
+            continue
+        if day < cutoff:
+            path.unlink()
+            removed.append(path)
+    return removed
+
+
 def data_size_bytes(root: Path | None = None) -> int:
     base = root or data_root()
     if not base.exists():

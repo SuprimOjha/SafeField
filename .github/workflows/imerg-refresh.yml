@@ -37,17 +37,22 @@ jobs:
             echo "configured=false" >> "$GITHUB_OUTPUT"
             echo "Earthdata secrets are not configured; skipping scheduled cache refresh."
           fi
-      - name: Fetch recent IMERG Late daily granules
+      - name: Refresh IMERG and prune old data
         if: steps.credentials.outputs.configured == 'true'
         working-directory: backend
         env:
           EARTHDATA_USERNAME: ${{ secrets.EARTHDATA_USERNAME }}
           EARTHDATA_PASSWORD: ${{ secrets.EARTHDATA_PASSWORD }}
-        run: python -m app.cli fetch-imerg --days ${{ github.event.inputs.days || '7' }}
+          IMERG_RETENTION_DAYS: "30"
+          API_CACHE_RETENTION_DAYS: "30"
+          SIGNAL_RETENTION_DAYS: "120"
+        run: python -m app.cli refresh-data --days ${{ github.event.inputs.days || '7' }}
       - uses: actions/upload-artifact@v4
         if: steps.credentials.outputs.configured == 'true'
         with:
           name: safefield-imerg-sqlite-cache
-          path: backend/app/cache/safefield_cache.db
+          path: |
+            backend/app/cache/safefield_cache.db
+            backend/data/automation-status.json
           if-no-files-found: error
           retention-days: 7

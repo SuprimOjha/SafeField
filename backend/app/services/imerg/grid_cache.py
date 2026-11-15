@@ -91,6 +91,47 @@ class ImergGridCache:
         age_days = (datetime.now(timezone.utc).date() - date.fromisoformat(row["latest_date"])).days
         return 0 <= age_days <= MAX_CACHE_AGE_DAYS
 
+    def latest_installed_date(self) -> date | None:
+        with self._connect() as conn:
+            row = conn.execute("SELECT MAX(date_utc) AS latest_date FROM imerg_daily_cells").fetchone()
+        if not row or not row["latest_date"]:
+            return None
+        return date.fromisoformat(row["latest_date"])
+
+    def installed_dates(self, limit: int | None = None) -> list[date]:
+        """Distinct observation dates present, newest first."""
+        query = "SELECT DISTINCT date_utc FROM imerg_daily_cells ORDER BY date_utc DESC"
+        params: tuple[object, ...] = ()
+        if limit is not None:
+            if limit < 1:
+                return []
+            query += " LIMIT ?"
+            params = (limit,)
+        with self._connect() as conn:
+            rows = conn.execute(query, params).fetchall()
+        return [date.fromisoformat(row["date_utc"]) for row in rows]
+
+    def has_day(self, day: date) -> bool:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT 1 FROM imerg_daily_cells WHERE date_utc = ? LIMIT 1",
+                (day.isoformat(),),
+            ).fetchone()
+        return row is not None
+
+    def prune_older_than(self, cutoff: date) -> int:
+        """Delete cells for days strictly older than cutoff; return deleted day count."""
+        cutoff_text = cutoff.isoformat()
+        with self._connect() as conn:
+            old_days = conn.execute(
+                "SELECT DISTINCT date_utc FROM imerg_daily_cells WHERE date_utc < ?",
+                (cutoff_text,),
+            ).fetchall()
+            if old_days:
+                conn.execute("DELETE FROM imerg_daily_cells WHERE date_utc < ?", (cutoff_text,))
+                conn.commit()
+        return len(old_days)
+
     def get_recent_rain(self, latitude: float, longitude: float, hours: int, field_polygon: list[tuple[float, float]] | None = None) -> RainfallObservation:
         if field_polygon:
             return self._get_polygon_rain(hours, field_polygon)

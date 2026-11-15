@@ -40,9 +40,32 @@ def _read_daily_granule(path: Path, observed_day: date) -> tuple[list[float], li
         return cropped["lat"].values.tolist(), cropped["lon"].values.tolist(), precip_rows, count_rows
 
 
-def fetch_imerg(days: int = 7, lookback_extra_days: int = 5, cache: ImergGridCache | None = None, today_utc: date | None = None) -> dict[str, Any]:
+def fetch_imerg(
+    days: int = 7,
+    lookback_extra_days: int = 5,
+    cache: ImergGridCache | None = None,
+    today_utc: date | None = None,
+    force: bool = False,
+) -> dict[str, Any]:
     if days < 1 or days > 30:
         raise ValueError("days must be between 1 and 30")
+
+    today = today_utc or datetime.now(timezone.utc).date()
+    grid_cache = cache or ImergGridCache()
+    installed = set() if force else set(
+        grid_cache.installed_dates(limit=days + lookback_extra_days + 1)
+    )
+    newest_window = [today - timedelta(days=offset) for offset in range(1, days + 1)]
+    if not force and all(day in installed for day in newest_window):
+        return {
+            "collection": COLLECTION,
+            "version": None,
+            "stream": "LATE",
+            "status": "up_to_date",
+            "processed": [],
+            "skipped_dates": [day.isoformat() for day in newest_window],
+        }
+
     import earthaccess
 
     settings = get_settings()
@@ -53,22 +76,37 @@ def fetch_imerg(days: int = 7, lookback_extra_days: int = 5, cache: ImergGridCac
     if settings.earthdata_token:
         os.environ["EARTHDATA_TOKEN"] = settings.earthdata_token
     if not earthaccess.login(strategy="environment"):
-        raise RuntimeError("NASA Earthdata authentication failed. Set EARTHDATA_USERNAME and EARTHDATA_PASSWORD in the root .env file.")
+        raise RuntimeError(
+            "NASA Earthdata authentication failed. Set EARTHDATA_USERNAME and "
+            "EARTHDATA_PASSWORD in backend/.env (or repository-root .env)."
+        )
 
-    today = today_utc or datetime.now(timezone.utc).date()
     found: list[tuple[date, Any]] = []
+    skipped: list[str] = []
     for offset in range(1, days + lookback_extra_days + 1):
         candidate = today - timedelta(days=offset)
-        day_string = candidate.isoformat()
-        granules = earthaccess.search_data(
-            short_name=COLLECTION, version=COLLECTION_VERSION,
-            temporal=(f"{day_string}T00:00:00Z", f"{day_string}T23:59:59Z"), bounding_box=NEPAL_BBOX, count=10,
-        )
-        if granules:
-            found.append((candidate, granules[0]))
-        if len(found) >= days:
+        if candidate in installed:
+            skipped.append(candidate.isoformat())
+        else:
+            day_string = candidate.isoformat()
+            granules = earthaccess.search_data(
+                short_name=COLLECTION, version=COLLECTION_VERSION,
+                temporal=(f"{day_string}T00:00:00Z", f"{day_string}T23:59:59Z"), bounding_box=NEPAL_BBOX, count=10,
+            )
+            if granules:
+                found.append((candidate, granules[0]))
+        if len(found) + len(skipped) >= days:
             break
     if not found:
+        if skipped:
+            return {
+                "collection": COLLECTION,
+                "version": None,
+                "stream": "LATE",
+                "status": "up_to_date",
+                "processed": [],
+                "skipped_dates": skipped,
+            }
         raise RuntimeError(f"No {COLLECTION} V07 daily granules found within {days + lookback_extra_days} completed UTC days.")
 
     raw_dir = Path(__file__).resolve().parents[3] / "data" / "imerg" / "raw"
@@ -82,7 +120,6 @@ def fetch_imerg(days: int = 7, lookback_extra_days: int = 5, cache: ImergGridCac
     if len(product_versions) != 1:
         raise RuntimeError(f"Refusing to combine IMERG granules from different product versions: {sorted(product_versions)}")
 
-    grid_cache = cache or ImergGridCache()
     fetched_at = datetime.now(timezone.utc)
     processed = []
     for (observed_day, granule), path in zip(found, downloaded_paths):
@@ -90,4 +127,11 @@ def fetch_imerg(days: int = 7, lookback_extra_days: int = 5, cache: ImergGridCac
         granule_id = path.stem
         cell_count = grid_cache.store_daily_grid(observed_day, latitudes, longitudes, values, counts, granule_id, fetched_at)
         processed.append({"date_utc": observed_day.isoformat(), "granule_id": granule_id, "valid_cells": cell_count, "file": path.name})
-    return {"collection": COLLECTION, "version": next(iter(product_versions)), "stream": "LATE", "processed": processed}
+    return {
+        "collection": COLLECTION,
+        "version": next(iter(product_versions)),
+        "stream": "LATE",
+        "status": "ok",
+        "processed": processed,
+        "skipped_dates": skipped,
+    }

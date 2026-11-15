@@ -175,10 +175,25 @@ async def get_imerg_integration_status() -> dict[str, object]:
         "supported_streams_in_contract": ["LATE"],
         "message": "Recent IMERG Late cells are cached and used for rainfall screening." if ready else "No fresh IMERG Late cache is installed; field assessment falls back to NASA POWER where available.",
         "next_steps": [] if ready else [
-            "Configure NASA Earthdata Login credentials.",
-            "Run python -m app.cli fetch-imerg --days 7 from the backend directory.",
+            "Add EARTHDATA_USERNAME and EARTHDATA_PASSWORD to backend/.env.",
+            "The backend refreshes IMERG automatically; or run python -m app.cli refresh-data from the backend directory.",
             "Validate the local cache against rain gauges before operational use.",
         ],
+    }
+
+
+@router.get("/integrations/imerg/automation")
+async def get_imerg_automation_status() -> dict[str, object]:
+    """Report the last automatic refresh result; never includes credentials."""
+    from app.ingest.automation import read_automation_status
+
+    try:
+        payload = read_automation_status()
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return {
+        "status": "NOT_RUN" if payload is None else payload.get("status"),
+        "last_run": payload,
     }
 
 

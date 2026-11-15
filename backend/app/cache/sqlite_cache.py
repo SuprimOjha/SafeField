@@ -35,11 +35,18 @@ class SQLiteCache:
             )
             conn.commit()
 
-    def get(self, key: str, allow_stale: bool = False) -> tuple[dict[str, Any], str, bool] | None:
+    def get(
+        self,
+        key: str,
+        allow_stale: bool = False,
+        max_stale_seconds: float | None = None,
+    ) -> tuple[dict[str, Any], str, bool] | None:
         """
         Returns (payload_dict, fetched_at_utc, is_stale) or None if missing.
         If allow_stale=False, expired entries return None.
         If allow_stale=True, expired entries are returned with is_stale=True for offline/error fallback.
+        Entries older than the configured retention window are never returned,
+        even as stale fallbacks, so superseded values cannot be shown later.
         """
         now = time.time()
         with self._connect() as conn:
@@ -49,6 +56,14 @@ class SQLiteCache:
             ).fetchone()
 
         if row is None:
+            return None
+
+        retention_seconds = (
+            max_stale_seconds
+            if max_stale_seconds is not None
+            else get_settings().api_cache_retention_days * 86400
+        )
+        if now - float(row["created_epoch"]) > retention_seconds:
             return None
 
         is_expired = (now - float(row["created_epoch"])) > int(row["ttl_seconds"])
@@ -75,3 +90,22 @@ class SQLiteCache:
                 (key, serialized, fetched_at_utc, now, ttl_seconds),
             )
             conn.commit()
+
+    def prune_older_than(self, cutoff_epoch: float) -> int:
+        """Delete entries fetched before cutoff_epoch; return removed entry count."""
+        with self._connect() as conn:
+            cursor = conn.execute(
+                "DELETE FROM api_cache WHERE created_epoch < ?", (cutoff_epoch,)
+            )
+            conn.commit()
+            return max(cursor.rowcount, 0)
+
+    def prune_older_than_days(self, days: int, now: float | None = None) -> int:
+        if days < 1:
+            raise ValueError("days must be at least 1")
+        return self.prune_older_than((now or time.time()) - days * 86400)
+
+    def count(self) -> int:
+        with self._connect() as conn:
+            row = conn.execute("SELECT COUNT(*) AS total FROM api_cache").fetchone()
+        return int(row["total"]) if row else 0
