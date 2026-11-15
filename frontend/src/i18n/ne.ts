@@ -106,6 +106,7 @@ export const ne: Dictionary = {
   receiptYes: "हो",
   receiptNo: "होइन",
   receiptNotProvided: "API ले उपलब्ध गराएको छैन",
+  receiptNotExposed: "हालको API प्रतिक्रियामा उपलब्ध छैन",
   receiptStatus: "उपलब्धता",
   receiptLatestDate: "पछिल्लो मान्य मिति",
   receiptFetched: "प्राप्त गरिएको (UTC)",
