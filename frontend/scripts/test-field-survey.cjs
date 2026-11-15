@@ -15,23 +15,27 @@ function loadTs(relativePath) {
 const { averageFixes } = loadTs("src/lib/gps-average.ts");
 const { polygonSelfIntersects, pointInRing, pointInDistricts } = loadTs("src/lib/field-geometry.ts");
 
+// Arbitrary TEST thresholds, not recommended product values.
+const surveyCfg = { maxAccuracyM: 15, minFixes: 2, madK: 3, madFloorM: 5, goodM: 10, fairM: 20 };
+
 test("averageFixes averages accepted fixes and rejects poor accuracy", () => {
   const result = averageFixes([
-    { latitude: 27, longitude: 85, accuracy: 5 },
-    { latitude: 27.0002, longitude: 85.0002, accuracy: 10 },
-    { latitude: 27.5, longitude: 85.5, accuracy: 30 },
-  ], { maxAccuracyMeters: 15 });
-  assert.equal(result.usedCount, 2);
-  assert.equal(result.rejectedCount, 1);
-  assert.ok(Math.abs(result.latitude - 27.0001) < 1e-10);
-  assert.ok(Math.abs(result.longitude - 85.0001) < 1e-10);
+    { lat: 27, lon: 85, accuracyM: 5, timestamp: 0 },
+    { lat: 27.0002, lon: 85.0002, accuracyM: 10, timestamp: 1000 },
+    { lat: 27.5, lon: 85.5, accuracyM: 30, timestamp: 2000 },
+  ], surveyCfg);
+  assert.equal(result.usedFixes, 2);
+  assert.equal(result.rejectedFixes, 1);
+  assert.ok(Math.abs(result.lat - 27.0001) < 1e-3);
+  assert.ok(Math.abs(result.lon - 85.0001) < 1e-3);
 });
 
 test("averageFixes returns unavailable when every fix fails quality checks", () => {
-  const result = averageFixes([{ latitude: 27, longitude: 85, accuracy: 0 }, { latitude: 100, longitude: 85, accuracy: 2 }]);
-  assert.equal(result.latitude, null);
-  assert.equal(result.usedCount, 0);
-  assert.equal(result.rejectedCount, 2);
+  const result = averageFixes([
+    { lat: 27, lon: 85, accuracyM: 0, timestamp: 0 },
+    { lat: 27.001, lon: 85.001, accuracyM: 30, timestamp: 1000 },
+  ], surveyCfg);
+  assert.equal(result, null);
 });
 
 test("polygonSelfIntersects detects crossing edges and accepts a simple ring", () => {

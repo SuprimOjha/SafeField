@@ -1,3 +1,5 @@
+import asyncio
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,7 +12,21 @@ from app.api.signal_routes import router as signal_router
 async def lifespan(app: FastAPI):
     settings = get_settings()
     app.state.settings = settings
-    yield
+    stop = asyncio.Event()
+    scheduler = None
+    task = None
+    running_tests = bool(os.environ.get("PYTEST_CURRENT_TEST")) or settings.app_env == "test"
+    if settings.data_refresh_enabled and not running_tests:
+        from app.ingest.scheduler import DataRefreshScheduler
+
+        scheduler = DataRefreshScheduler(settings)
+        task = asyncio.create_task(scheduler.run(stop))
+        app.state.refresh_task = task
+    try:
+        yield
+    finally:
+        if scheduler is not None:
+            await scheduler.stop(task, stop)
 
 
 def create_app() -> FastAPI:

@@ -16,7 +16,10 @@ def _prompt_earthdata_credentials() -> None:
         os.environ["EARTHDATA_PASSWORD"] = getpass.getpass("NASA Earthdata password (input hidden): ")
 
     if not os.environ.get("EARTHDATA_USERNAME", "").strip() or not os.environ.get("EARTHDATA_PASSWORD", ""):
-        raise RuntimeError("Earthdata username and password are required. No credentials were saved.")
+        raise RuntimeError(
+            "Earthdata username and password are required. Set them in backend/.env "
+            "(or repository-root .env); no credentials were saved."
+        )
 
 
 def main() -> int:
@@ -55,6 +58,19 @@ def main() -> int:
         default=1,
         help="Number of latest available daily granules to install (1-30; default: 1)",
     )
+
+    refresh_parser = subparsers.add_parser(
+        "refresh-data",
+        help="Install the latest IMERG days and delete data outside retention windows",
+    )
+    refresh_parser.add_argument("--days", type=int, default=None, help="Days to check for new IMERG data (default: IMERG_REFRESH_DAYS)")
+    refresh_parser.add_argument("--imerg-retention-days", type=int, default=None)
+    refresh_parser.add_argument("--signal-retention-days", type=int, default=None)
+    refresh_parser.add_argument("--api-cache-retention-days", type=int, default=None)
+    refresh_parser.add_argument("--no-prune", action="store_true", help="Install new data without deleting old data")
+
+    automation_parser = subparsers.add_parser("automation-status", help="Show the last automatic data refresh result")
+    automation_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
     args = parser.parse_args()
 
     if args.command == "status":
@@ -111,6 +127,50 @@ def main() -> int:
             dry_run=args.dry_run,
         )
         print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+
+    if args.command == "refresh-data":
+        from app.ingest.automation import run_data_refresh
+
+        report = run_data_refresh(
+            trigger="cli",
+            days=args.days,
+            imerg_retention_days=args.imerg_retention_days,
+            signal_retention_days=args.signal_retention_days,
+            api_cache_retention_days=args.api_cache_retention_days,
+            prune=not args.no_prune,
+        )
+        print(json.dumps(report.model_dump(mode="json"), indent=2, ensure_ascii=False))
+        return 0 if report.status == "ok" else 1
+
+    if args.command == "automation-status":
+        from app.ingest.automation import read_automation_status
+
+        try:
+            payload = read_automation_status()
+        except ValueError as exc:
+            print(json.dumps({"status": "error", "message": str(exc)}, indent=2))
+            return 1
+        if payload is None:
+            print(json.dumps({"status": "not_run"}, indent=2))
+            return 0
+        if args.json:
+            print(json.dumps(payload, indent=2, ensure_ascii=False, default=str))
+        else:
+            print(f"Automatic data refresh: {payload.get('status', 'unknown')}")
+            print(f"  last run: {payload.get('finished_at') or payload.get('started_at')}")
+            print(f"  {payload.get('message', '')}")
+            imerg = payload.get("imerg") or {}
+            prune = payload.get("prune") or {}
+            print(f"  installed IMERG days: {', '.join(imerg.get('installed_dates') or []) or 'none'}")
+            print(
+                "  pruned: "
+                f"{prune.get('imerg_days', 0)} IMERG day(s), "
+                f"{prune.get('api_cache_entries', 0)} API cache entr(ies), "
+                f"{prune.get('signal_snapshots', 0)} snapshot(s), "
+                f"{prune.get('incoming_files', 0)} incoming file(s), "
+                f"{prune.get('imerg_raw_files', 0)} raw granule(s)"
+            )
         return 0
 
     if args.command == "fetch-imerg":

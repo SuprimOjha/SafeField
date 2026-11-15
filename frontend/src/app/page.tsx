@@ -12,8 +12,9 @@ import ScreenEMethods from "@/components/ScreenEMethods";
 import AskAssistant from "@/components/AskAssistant";
 import ScreenAskHub from "@/components/ScreenAskHub";
 import {
-  MapPin,
-  SlidersHorizontal,
+  Ellipsis,
+  Home,
+  MapPinned,
   TrendingUp,
   WifiOff,
   MessageCircleQuestion,
@@ -74,18 +75,19 @@ function getServerOnlineStatus() {
 }
 
 const NAV_ITEMS = [
-  { id: "home", labelEn: "Today", shortEn: "Today", labelNe: "आज", shortNe: "आज", icon: MapPin },
-  { id: "field", labelEn: "My field", shortEn: "Field", labelNe: "मेरो खेत", shortNe: "खेत", icon: SlidersHorizontal },
+  { id: "home", labelEn: "Today", shortEn: "Today", labelNe: "आज", shortNe: "आज", icon: Home },
+  { id: "field", labelEn: "My field", shortEn: "Field", labelNe: "मेरो खेत", shortNe: "खेत", icon: MapPinned },
   { id: "trends", labelEn: "Climate trends", shortEn: "Trends", labelNe: "जलवायु प्रवृत्ति", shortNe: "प्रवृत्ति", icon: TrendingUp },
   { id: "ask", labelEn: "Ask", shortEn: "Ask", labelNe: "सोध्नुहोस्", shortNe: "सोध", icon: MessageCircleQuestion },
-  { id: "methods", labelEn: "More", shortEn: "More", labelNe: "थप", shortNe: "थप", icon: SlidersHorizontal },
+  { id: "methods", labelEn: "More", shortEn: "More", labelNe: "थप", shortNe: "थप", icon: Ellipsis },
 ] as const;
 
 const SESSION_KEY = "safefield_session";
 
 type PersistedSession = {
-  lat: number;
-  lon: number;
+  hasField: boolean;
+  lat: number | null;
+  lon: number | null;
   fertilizerType: string;
   cropStage: string;
   sandPercentOverride: number | null;
@@ -126,14 +128,18 @@ function getSessionSnapshot(): PersistedSession | null {
         typeof parsed.fertilizerType === "string" &&
         typeof parsed.cropStage === "string"
       ) {
+        // Sessions saved before the field-first flow have no `hasField` flag,
+        // so they must not restore a field the farmer never chose again.
+        const hasField = parsed.hasField === true;
         sessionValueCache = {
-          lat: parsed.lat,
-          lon: parsed.lon,
+          hasField,
+          lat: hasField ? parsed.lat : null,
+          lon: hasField ? parsed.lon : null,
           fertilizerType: parsed.fertilizerType,
           cropStage: parsed.cropStage,
           sandPercentOverride: typeof parsed.sandPercentOverride === "number" ? parsed.sandPercentOverride : null,
-          polygon: Array.isArray(parsed.polygon) ? parsed.polygon : null,
-          assessment: parsed.assessment && typeof parsed.assessment === "object" ? parsed.assessment : null,
+          polygon: hasField && Array.isArray(parsed.polygon) ? parsed.polygon : null,
+          assessment: hasField && parsed.assessment && typeof parsed.assessment === "object" ? parsed.assessment : null,
         };
       }
     } catch {
@@ -147,75 +153,13 @@ function getServerSessionSnapshot(): PersistedSession | null {
   return null;
 }
 
-/** Simplified US flag tile — 13 stripes + canton; reads cleanly at 28px. */
-function FlagUSTile() {
-  const stripeH = 24 / 13;
-  const redIndexes = [0, 2, 4, 6, 8, 10, 12];
-  return (
-    <span
-      aria-hidden="true"
-      className="relative block h-6 w-7 shrink-0 overflow-hidden rounded-[6px] bg-white ring-1 ring-black/10"
-    >
-      <svg viewBox="0 0 28 24" className="block h-full w-full" preserveAspectRatio="none">
-        {redIndexes.map((i) => (
-          <rect key={i} x="0" y={i * stripeH} width="28" height={stripeH} fill="#B22234" />
-        ))}
-        <rect x="0" y="0" width="11.2" height={stripeH * 7} fill="#3C3B6E" />
-        {[1.9, 4.6, 7.3].map((y) =>
-          [2.2, 5.6, 9.0].map((x) => (
-            <circle key={`${x}-${y}`} cx={x} cy={y} r="0.75" fill="#ffffff" />
-          )),
-        )}
-      </svg>
-    </span>
-  );
-}
-
-/** Nepal flag tile — shape-accurate double pennant with moon and sun emblems. */
-function FlagNPTile() {
-  return (
-    <span
-      aria-hidden="true"
-      className="relative block h-6 w-7 shrink-0 overflow-hidden rounded-[6px] bg-white ring-1 ring-black/10"
-    >
-      <svg viewBox="0 0 20 16" className="block h-full w-full" preserveAspectRatio="xMidYMid meet">
-        <path
-          d="M2,1.4 L15.2,6.8 L6.8,8.2 L16.4,14.2 L2,14.2 Z"
-          fill="#DC143C"
-        />
-        {/* Moon (upper pennant, crescent horns up) */}
-        <circle cx="8.2" cy="5.6" r="1.4" fill="#ffffff" />
-        <circle cx="8.2" cy="4.9" r="1.4" fill="#DC143C" />
-        {/* Sun (lower pennant) with short rays */}
-        <g stroke="#ffffff" strokeWidth="0.5">
-          <line x1="8.4" y1="9.7" x2="8.4" y2="9.4" />
-          <line x1="8.4" y1="13.1" x2="8.4" y2="13.4" />
-          <line x1="6.7" y1="11.4" x2="6.4" y2="11.4" />
-          <line x1="10.1" y1="11.4" x2="10.4" y2="11.4" />
-          <line x1="7.2" y1="10.2" x2="7.0" y2="10.0" />
-          <line x1="9.6" y1="12.6" x2="9.8" y2="12.8" />
-          <line x1="9.6" y1="10.2" x2="9.8" y2="10.0" />
-          <line x1="7.2" y1="12.6" x2="7.0" y2="12.8" />
-        </g>
-        <circle cx="8.4" cy="11.4" r="1.3" fill="#ffffff" />
-        <path
-          d="M2,1.4 L15.2,6.8 L6.8,8.2 L16.4,14.2 L2,14.2 Z"
-          fill="none"
-          stroke="#003893"
-          strokeWidth="1.7"
-          strokeLinejoin="miter"
-        />
-      </svg>
-    </span>
-  );
-}
-
+/** Compact two-state language switch: English (EN) / Nepali (ने). */
 function LanguageToggle({ lang, setLang }: { lang: Lang; setLang: (next: Lang) => void }) {
   return (
     <div
       role="group"
       aria-label={lang === "en" ? "Language selection" : "भाषा छनोट"}
-      className="inline-flex min-h-10 items-center gap-0.5 rounded-full border border-line bg-white p-1"
+      className="inline-flex min-h-10 items-center rounded-full border border-line bg-white p-1"
     >
       <button
         type="button"
@@ -223,11 +167,11 @@ function LanguageToggle({ lang, setLang }: { lang: Lang; setLang: (next: Lang) =
         aria-pressed={lang === "en"}
         aria-label="English"
         title="English"
-        className={`inline-flex items-center rounded-full p-1.5 transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
-          lang === "en" ? "bg-brand-blue-deep shadow-card" : "hover:bg-soft"
+        className={`inline-flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-[11px] font-bold transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+          lang === "en" ? "bg-brand-blue-deep text-white shadow-card" : "text-ink-soft hover:bg-soft"
         }`}
       >
-        <FlagUSTile />
+        EN
       </button>
       <button
         type="button"
@@ -235,11 +179,11 @@ function LanguageToggle({ lang, setLang }: { lang: Lang; setLang: (next: Lang) =
         aria-pressed={lang === "ne"}
         aria-label="नेपाली"
         title="नेपाली"
-        className={`inline-flex items-center rounded-full p-1.5 transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
-          lang === "ne" ? "bg-brand-blue-deep shadow-card" : "hover:bg-soft"
+        className={`inline-flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-[11px] font-bold transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+          lang === "ne" ? "bg-brand-blue-deep text-white shadow-card" : "text-ink-soft hover:bg-soft"
         }`}
       >
-        <FlagNPTile />
+        ने
       </button>
     </div>
   );
@@ -261,6 +205,7 @@ export default function SafeFieldNepalApp() {
 
   const [latState, setLatState] = useState<number | null>(null);
   const [lonState, setLonState] = useState<number | null>(null);
+  const [hasFieldState, setHasFieldState] = useState<boolean | null>(null);
   const [fertilizerState, setFertilizerState] = useState<string | null>(null);
   const [cropState, setCropState] = useState<string | null>(null);
   const [sandState, setSandState] = useState<number | null | undefined>(undefined);
@@ -271,13 +216,16 @@ export default function SafeFieldNepalApp() {
   // failed refresh never corrupts the comparison (honest answer, rule 1).
   const [previousAssessmentState, setPreviousAssessmentState] = useState<FieldAssessmentResponse | null>(null);
 
-  const selectedLat = latState ?? persisted?.lat ?? 26.45;
-  const selectedLon = lonState ?? persisted?.lon ?? 87.28;
+  // No field is selected until the farmer marks one on the map, uses GPS, or
+  // walks the boundary. Weather, assessment and Ask stay gated behind this.
+  const hasField = hasFieldState ?? persisted?.hasField ?? false;
+  const selectedLat = hasField ? (latState ?? persisted?.lat ?? null) : null;
+  const selectedLon = hasField ? (lonState ?? persisted?.lon ?? null) : null;
   const fertilizerType = fertilizerState ?? persisted?.fertilizerType ?? "Urea";
   const cropStage = cropState ?? persisted?.cropStage ?? "Vegetative / Tillering";
   const sandPercentOverride = sandState === undefined ? (persisted?.sandPercentOverride ?? null) : sandState;
   const selectedFieldPolygon = polygonState === undefined ? (persisted?.polygon ?? null) : polygonState;
-  const assessmentData = assessmentState === undefined ? (persisted?.assessment ?? null) : assessmentState;
+  const assessmentData = hasField ? (assessmentState === undefined ? (persisted?.assessment ?? null) : assessmentState) : null;
 
   const [assessmentError, setAssessmentError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -287,8 +235,9 @@ export default function SafeFieldNepalApp() {
   // when the user actually changes something, so the stored session is never
   // clobbered by default values during hydration.
   const effectiveRef = useRef<PersistedSession>({
-    lat: 26.45,
-    lon: 87.28,
+    hasField: false,
+    lat: null,
+    lon: null,
     fertilizerType: "Urea",
     cropStage: "Vegetative / Tillering",
     sandPercentOverride: null,
@@ -299,6 +248,7 @@ export default function SafeFieldNepalApp() {
   // Keep the mirror in sync with the latest effective values after each render.
   useEffect(() => {
     effectiveRef.current = {
+      hasField,
       lat: selectedLat,
       lon: selectedLon,
       fertilizerType,
@@ -336,12 +286,13 @@ export default function SafeFieldNepalApp() {
   const handleLocationChange = useCallback((lat: number, lon: number) => {
     setLatState(lat);
     setLonState(lon);
+    setHasFieldState(true);
     setPolygonState(null);
     // A stored assessment belongs to the previous field; clear it so the new
     // location never shows another field's numbers.
     setAssessmentState(null);
     setAssessmentError(null);
-    updateSession({ lat, lon, polygon: null, assessment: null });
+    updateSession({ hasField: true, lat, lon, polygon: null, assessment: null });
   }, [updateSession]);
 
   const handlePolygonChange = useCallback((polygon: [number, number][] | null) => {
@@ -366,6 +317,7 @@ export default function SafeFieldNepalApp() {
   // Fetching starts after the effect runs; state updates happen only after the
   // asynchronous request settles, avoiding synchronous state updates in effects.
   const refreshAssessment = useCallback(async () => {
+    if (!hasField || selectedLat === null || selectedLon === null) return;
     const requestId = ++requestSequence.current;
     const outgoing = assessmentData;
     setLoading(true);
@@ -399,7 +351,7 @@ export default function SafeFieldNepalApp() {
     } finally {
       if (requestId === requestSequence.current) setLoading(false);
     }
-  }, [selectedLat, selectedLon, fertilizerType, cropStage, sandPercentOverride, assessmentData, startTransition, updateSession]);
+  }, [hasField, selectedLat, selectedLon, fertilizerType, cropStage, sandPercentOverride, assessmentData, startTransition, updateSession]);
 
   const handleRunAssessment = useCallback(() => {
     void refreshAssessment();
@@ -412,6 +364,14 @@ export default function SafeFieldNepalApp() {
     setActiveTab(tab);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // Used by the no-field CTAs on My field, Ask and the assistant: go to the
+  // home map and open its location tools.
+  const handleSelectField = useCallback(() => {
+    setActiveTab("home");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.setTimeout(() => window.dispatchEvent(new Event("safefield-focus-field")), 120);
+  }, []);
 
   return (
     <main id="main-content" tabIndex={-1} className="flex min-h-screen flex-col bg-canvas text-ink">
@@ -496,6 +456,7 @@ export default function SafeFieldNepalApp() {
               <ScreenAHome
                 selectedLat={selectedLat}
                 selectedLon={selectedLon}
+                hasField={hasField}
                 data={assessmentData}
                 loading={loading}
                 error={assessmentError}
@@ -511,6 +472,8 @@ export default function SafeFieldNepalApp() {
 
             {activeTab === "field" && (
               <ScreenBField
+                hasField={hasField}
+                onSelectField={handleSelectField}
                 data={assessmentData}
                 loading={loading}
                 error={assessmentError}
@@ -542,7 +505,9 @@ export default function SafeFieldNepalApp() {
               />
             )}
 
-            {activeTab === "ask" && <ScreenAskHub lang={lang} />}
+            {activeTab === "ask" && (
+              <ScreenAskHub hasField={hasField} onSelectField={handleSelectField} lang={lang} />
+            )}
 
             {activeTab === "methods" && <ScreenEMethods data={assessmentData} lang={lang} />}
           </section>
@@ -585,9 +550,11 @@ export default function SafeFieldNepalApp() {
 
       <AskAssistant
         lang={lang}
+        hasField={hasField}
+        onSelectField={handleSelectField}
         context={{
-          latitude: selectedLat,
-          longitude: selectedLon,
+          latitude: selectedLat ?? 0,
+          longitude: selectedLon ?? 0,
           answers: { fertilizerType, cropStage, saveMoney: true, sandPercentOverride },
           assessment: assessmentData,
           previousAssessment: previousAssessmentState,

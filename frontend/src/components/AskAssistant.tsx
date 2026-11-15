@@ -23,7 +23,7 @@
 // L0 response already carries; they never introduce new claims or numbers.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Eraser, MessageCircleQuestion, SquareX, Volume2, X } from "lucide-react";
+import { Eraser, MapPinned, MessageCircleQuestion, SquareX, Volume2, X } from "lucide-react";
 import { getDict, ne as dictNe, en as dictEn, type Lang } from "@/i18n";
 import { buildAskResponse, buildMedicalSafetyResponse } from "@/lib/ask/answer";
 import { INTENT_LABELS } from "@/lib/ask/intents";
@@ -243,10 +243,12 @@ function AnswerBubble({ turn, lang, t, speechSupported, speakingId, onSpeak, onO
 
 export interface AskAssistantProps {
   lang: Lang;
+  hasField: boolean;
+  onSelectField: () => void;
   context: AskFieldContext;
 }
 
-export default function AskAssistant({ lang, context }: AskAssistantProps) {
+export default function AskAssistant({ lang, hasField, onSelectField, context }: AskAssistantProps) {
   const t = getDict(lang);
   const [open, setOpen] = useState(false);
   const [turns, setTurns] = useState<AskTurn[]>([]);
@@ -443,71 +445,98 @@ export default function AskAssistant({ lang, context }: AskAssistantProps) {
               {t.askReviewNote}
             </p>
 
-            <div ref={logRef} className="flex-1 overflow-y-auto px-4 py-4">
-              <section aria-label={t.askQuestions}>
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                  {t.askQuestions}
-                </h3>
-                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {PRIMARY_INTENTS.map((intent) => (
+            {hasField ? (
+              <div ref={logRef} className="flex-1 overflow-y-auto px-4 py-4">
+                <p className="mb-3 flex items-start gap-2 rounded-lg border border-info/30 bg-info-soft px-3 py-2 text-xs leading-5 text-ink-soft">
+                  <Volume2 className="mt-0.5 h-4 w-4 shrink-0 text-info" aria-hidden="true" />
+                  <span>{t.askReadAloudNote}</span>
+                </p>
+                <section aria-label={t.askQuestions}>
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                    {t.askQuestions}
+                  </h3>
+                  <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {PRIMARY_INTENTS.map((intent) => (
+                      <button
+                        key={intent}
+                        type="button"
+                        onClick={() => askQuestion(intent, {}, INTENT_LABELS[intent])}
+                        className="flex min-h-11 items-center rounded-xl border border-border-strong bg-white px-3 py-2 text-left text-sm font-medium text-ink-soft transition active:scale-[0.98] hover:bg-action-soft hover:text-brand-blue-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+                      >
+                        {INTENT_LABELS[intent][lang]}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-2 flex flex-col gap-2">
                     <button
-                      key={intent}
                       type="button"
-                      onClick={() => askQuestion(intent, {}, INTENT_LABELS[intent])}
-                      className="flex min-h-11 items-center rounded-xl border border-border-strong bg-white px-3 py-2 text-left text-sm font-medium text-ink-soft transition active:scale-[0.98] hover:bg-action-soft hover:text-brand-blue-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+                      onClick={() => askQuestion("unknown", {}, INTENT_LABELS.unknown)}
+                      className="flex min-h-11 w-full items-center rounded-xl border border-dashed border-line bg-white px-3 py-2 text-left text-sm font-medium text-ink-soft transition active:scale-[0.98] hover:bg-canvas hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
                     >
-                      {INTENT_LABELS[intent][lang]}
+                      {INTENT_LABELS.unknown[lang]}
                     </button>
-                  ))}
-                </div>
-                <div className="mt-2 flex flex-col gap-2">
-                  <button
-                    type="button"
-                    onClick={() => askQuestion("unknown", {}, INTENT_LABELS.unknown)}
-                    className="flex min-h-11 w-full items-center rounded-xl border border-dashed border-line bg-white px-3 py-2 text-left text-sm font-medium text-ink-soft transition active:scale-[0.98] hover:bg-canvas hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
-                  >
-                    {INTENT_LABELS.unknown[lang]}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={askMedical}
-                    className="flex min-h-11 w-full items-center rounded-xl border border-danger/30 bg-danger-soft px-3 py-2 text-left text-sm font-semibold text-danger transition active:scale-[0.98] hover:bg-danger hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
-                  >
-                    {t.askFeelingUnwell}
-                  </button>
-                </div>
-              </section>
+                    <button
+                      type="button"
+                      onClick={askMedical}
+                      className="flex min-h-11 w-full items-center rounded-xl border border-danger/30 bg-danger-soft px-3 py-2 text-left text-sm font-semibold text-danger transition active:scale-[0.98] hover:bg-danger hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+                    >
+                      {t.askFeelingUnwell}
+                    </button>
+                  </div>
+                </section>
 
-              <div
-                role="log"
-                aria-live="polite"
-                aria-label={t.askLogLabel}
-                className="mt-4 flex flex-col gap-4"
-              >
-                {answeredTurns.length === 0 ? (
-                  <p className="text-sm text-ink-muted">{t.askEmptyLog}</p>
-                ) : (
-                  answeredTurns.map((turn) => (
-                    <AnswerBubble
-                      key={turn.id}
-                      turn={turn}
-                      lang={lang}
-                      t={t}
-                      speechSupported={speechSupported}
-                      speakingId={speakingId}
-                      onSpeak={speak}
-                      onOption={onOption}
-                    />
-                  ))
-                )}
+                <div
+                  role="log"
+                  aria-live="polite"
+                  aria-label={t.askLogLabel}
+                  className="mt-4 flex flex-col gap-4"
+                >
+                  {answeredTurns.length === 0 ? (
+                    <p className="text-sm text-ink-muted">{t.askEmptyLog}</p>
+                  ) : (
+                    answeredTurns.map((turn) => (
+                      <AnswerBubble
+                        key={turn.id}
+                        turn={turn}
+                        lang={lang}
+                        t={t}
+                        speechSupported={speechSupported}
+                        speakingId={speakingId}
+                        onSpeak={speak}
+                        onOption={onOption}
+                      />
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto px-4 py-6">
+                <div className="rounded-2xl border border-[#C7E0FF] bg-brand-blue-soft p-5">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-brand-blue-deep shadow-card">
+                    <MapPinned className="h-6 w-6" aria-hidden="true" />
+                  </span>
+                  <h3 className="mt-3 text-lg font-bold text-brand-blue-deep">{t.askNeedsFieldTitle}</h3>
+                  <p className="mt-1.5 text-sm leading-6 text-ink-soft">{t.askNeedsFieldBody}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeAssistant();
+                      onSelectField();
+                    }}
+                    className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-action px-5 text-sm font-bold text-white transition hover:bg-action-pressed active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+                  >
+                    <MapPinned className="h-4 w-4" aria-hidden="true" />
+                    {t.askNeedsFieldCta}
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center justify-between gap-3 border-t border-divider px-4 py-3 pb-[max(env(safe-area-inset-bottom),12px)]">
               <button
                 type="button"
                 onClick={clearConversation}
-                disabled={turns.length === 0}
+                disabled={!hasField || turns.length === 0}
                 className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold text-ink-soft transition active:scale-[0.98] enabled:hover:bg-canvas enabled:hover:text-ink disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
               >
                 <Eraser className="h-4 w-4" aria-hidden="true" />

@@ -12,12 +12,12 @@ const SATELLITE_TILES =
 export const ESRI_ATTRIBUTION =
   "Sources: Esri, Maxar, Earthstar Geographics, and the GIS User Community.";
 
-export function createMap(container: HTMLElement, center: [number, number]): MapLibreMap {
+export function createMap(container: HTMLElement, center: [number, number], zoom = 7): MapLibreMap {
   return new MapLibreMap({
     container,
     style: STREET_STYLE,
     center,
-    zoom: 7,
+    zoom,
     minZoom: 5,
     maxZoom: 18,
     maxBounds: [[79.8, 26.2], [88.5, 30.6]],
