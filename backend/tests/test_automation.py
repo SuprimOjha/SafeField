@@ -48,6 +48,7 @@ def make_settings(tmp_path: Path, **overrides) -> Settings:
         "api_cache_retention_days": 30,
         "signal_retention_days": 120,
         "data_refresh_interval_hours": 6.0,
+        "snapshot_download_enabled": True,
     }
     values.update(overrides)
     return Settings(**values)

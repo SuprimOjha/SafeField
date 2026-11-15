@@ -148,7 +148,7 @@ The backend can keep its local satellite cache current without manual steps. Whe
 
 1. waits `DATA_REFRESH_STARTUP_DELAY_SECONDS` (default 60 s) so startup stays fast;
 2. installs the most recently published NASA GPM IMERG Late daily granules for the last `IMERG_REFRESH_DAYS` completed UTC days (default 3), skipping dates already installed;
-3. asks NASA CMR for the latest complete SMAP soil-moisture day (`SPL4SMGP` v008), VIIRS land-surface-temperature day (`VNP21A1D` v002) and VIIRS 16-day vegetation composite (`VNP13A1` v002), downloads the Nepal tiles, aggregates them onto the 0.1° Nepal grid, and stages one JSON per source in `backend/data/incoming/<source>/`;
+3. installs any snapshot already staged in `backend/data/incoming/<source>/` (the GitHub workflows run the NASA CMR search, download and 0.1° aggregation, then publish the day);
 4. installs any staged snapshot through the same validation used for manual ingests;
 5. only after new data is installed, deletes data that is outside the retention windows;
 6. repeats every `DATA_REFRESH_INTERVAL_HOURS` (default 6 h).
@@ -248,7 +248,7 @@ For GitHub Actions, add `SUPABASE_DB_URL`, `SUPABASE_URL` and `SUPABASE_SECRET_K
 
 Supabase Storage is capped to the live window to stay inside the free tier. The durable long timeline lives in git instead: `.github/workflows/data-publish.yml` runs daily at 03:45 UTC (or manually), restores the existing published snapshots, refreshes the NASA products with `SIGNAL_RETENTION_DAYS=180`, and commits every validated signal day plus `status.json` to the `data` branch. The job refuses to erase existing branch data when the local data directory is empty, and stops with an error if the branch would exceed `max_bytes` (default 500 MB, editable in the manual trigger).
 
-The archive is written by the bot with these repository secrets: `EARTHDATA_TOKEN` or `EARTHDATA_USERNAME`/`EARTHDATA_PASSWORD`. It does not pass Supabase credentials, so archiving never consumes the free bucket. The running backend reads the recent window (Supabase Storage or local disk); it does not query the `data` branch at request time, so a live deployment depends only on the last few days of snapshots. History accumulates from the first successful run; the workflow publishes the latest complete day of each product and does not backfill older days. Inspect the branch with `git fetch origin data && git ls-tree --name-only origin/data signals/smap`.
+The archive is written by the bot with these repository secrets: `EARTHDATA_TOKEN` or `EARTHDATA_USERNAME`/`EARTHDATA_PASSWORD`. The same job also mirrors the last `SUPABASE_RECENT_DAYS` days to Supabase (when the Supabase secrets exist) so the API host can restore the latest snapshots without doing the memory-heavy download itself. The running backend reads the recent window (Supabase Storage or local disk); it does not query the `data` branch at request time, so a live deployment depends only on the last few days of snapshots. History accumulates from the first successful run; the workflow publishes the latest complete day of each product and does not backfill older days. Inspect the branch with `git fetch origin data && git ls-tree --name-only origin/data signals/smap`.
 
 ## Tests and Quality Gates
 

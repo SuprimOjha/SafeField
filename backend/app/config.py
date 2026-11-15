@@ -44,6 +44,11 @@ class Settings(BaseSettings):
     # ``data`` branch by the archive workflow.
     supabase_recent_days: int = Field(default=3, ge=1, le=30)
 
+    # Automatic NASA snapshot downloads use several hundred MB of memory. The
+    # API host installs snapshots it already has; the GitHub workflows download
+    # new days on runners with enough memory. Enable this only with headroom.
+    snapshot_download_enabled: bool = False
+
     # Automatic data refresh and retention. The refresh installs newly published
     # IMERG days, then removes data older than these windows. Values are
     # conservative design defaults; every deletion keeps the latest window.

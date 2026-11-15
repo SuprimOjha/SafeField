@@ -585,7 +585,7 @@ def run_data_refresh(
     signal_retention_days: int | None = None,
     api_cache_retention_days: int | None = None,
     prune: bool = True,
-    download_snapshots: bool = True,
+    download_snapshots: bool | None = None,
     today_utc: date | None = None,
     fetch_fn: Callable[..., dict[str, Any]] | None = None,
     snapshot_fetch_fn: Callable[..., list[ProductResult]] | None = None,
@@ -600,6 +600,8 @@ def run_data_refresh(
     absent, and no secret is written to the status file.
     """
     settings = settings or get_settings()
+    if download_snapshots is None:
+        download_snapshots = settings.snapshot_download_enabled
     today = today_utc or datetime.now(timezone.utc).date()
     refresh_days = days or settings.imerg_refresh_days
     imerg_keep = imerg_retention_days or settings.imerg_retention_days

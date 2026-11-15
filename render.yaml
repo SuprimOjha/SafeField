@@ -36,6 +36,10 @@ services:
         value: "true"
       - key: SUPABASE_RECENT_DAYS
         value: "3"
+      # Snapshot downloads use several hundred MB of memory; GitHub Actions
+      # fetches and archives them, and this host installs/mirrors recent data.
+      - key: SNAPSHOT_DOWNLOAD_ENABLED
+        value: "false"
       # Secrets are entered in the Render dashboard and never stored here.
       - key: EARTHDATA_USERNAME
         sync: false
