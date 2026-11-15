@@ -53,26 +53,34 @@ export default function FarmerLogbook({
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoadedKey(null);
+    let cancelled = false;
+    let restoredSetup = EMPTY_SETUP;
+    let restoredLogs: FarmerLog[] = [];
     try {
       const raw = window.localStorage.getItem(key);
       if (raw) {
         const parsed = JSON.parse(raw) as { setup?: CropSetup; logs?: FarmerLog[] };
-        setSetup(parsed.setup && typeof parsed.setup === "object" ? { ...EMPTY_SETUP, ...parsed.setup } : EMPTY_SETUP);
-        setLogs(Array.isArray(parsed.logs) ? parsed.logs.filter((item) =>
+        restoredSetup = parsed.setup && typeof parsed.setup === "object"
+          ? { ...EMPTY_SETUP, ...parsed.setup }
+          : EMPTY_SETUP;
+        restoredLogs = Array.isArray(parsed.logs) ? parsed.logs.filter((item) =>
           item && typeof item.id === "string" &&
           ["irrigation", "rain", "planting", "field_note"].includes(item.kind) &&
           typeof item.date === "string" && typeof item.amount === "string" && typeof item.note === "string"
-        ) : []);
-      } else {
-        setSetup(EMPTY_SETUP);
-        setLogs([]);
+        ) : [];
       }
     } catch {
-      setSetup(EMPTY_SETUP);
-      setLogs([]);
+      restoredSetup = EMPTY_SETUP;
+      restoredLogs = [];
     }
-    setLoadedKey(key);
+    // Defer state updates until after the effect body; guard against a fast field switch.
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+      setSetup(restoredSetup);
+      setLogs(restoredLogs);
+      setLoadedKey(key);
+    });
+    return () => { cancelled = true; };
   }, [key]);
 
   useEffect(() => {
