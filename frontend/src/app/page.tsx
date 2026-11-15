@@ -10,18 +10,18 @@ import ScreenCDecision from "@/components/ScreenCDecision";
 import ScreenDTrends from "@/components/ScreenDTrends";
 import ScreenEMethods from "@/components/ScreenEMethods";
 import AskAssistant from "@/components/AskAssistant";
+import ScreenAskHub from "@/components/ScreenAskHub";
 import {
   MapPin,
   SlidersHorizontal,
-  CheckCircle2,
   TrendingUp,
-  Database,
   Globe2,
   WifiOff,
+  MessageCircleQuestion,
 } from "lucide-react";
 import { getDict, type Lang } from "@/i18n";
 
-type TabId = "home" | "field" | "decision" | "trends" | "methods";
+type TabId = "home" | "field" | "decision" | "trends" | "ask" | "methods";
 
 function subscribeToLanguage(onChange: () => void) {
   if (typeof window === "undefined") return () => {};
@@ -74,11 +74,11 @@ function getServerOnlineStatus() {
 }
 
 const NAV_ITEMS = [
-  { id: "home", labelEn: "Choose location", shortEn: "Location", labelNe: "स्थान छान्नुहोस्", icon: MapPin },
-  { id: "field", labelEn: "My field", shortEn: "My field", labelNe: "मेरो खेत", icon: SlidersHorizontal },
-  { id: "decision", labelEn: "Recommendations", shortEn: "Advice", labelNe: "सुझाव", icon: CheckCircle2 },
+  { id: "home", labelEn: "Today", shortEn: "Today", labelNe: "आज", icon: MapPin },
+  { id: "field", labelEn: "My field", shortEn: "Field", labelNe: "मेरो खेत", icon: SlidersHorizontal },
   { id: "trends", labelEn: "Climate trends", shortEn: "Trends", labelNe: "जलवायु प्रवृत्ति", icon: TrendingUp },
-  { id: "methods", labelEn: "Data & methods", shortEn: "Data", labelNe: "डाटा र विधि", icon: Database },
+  { id: "ask", labelEn: "Ask", shortEn: "Ask", labelNe: "सोध्नुहोस्", icon: MessageCircleQuestion },
+  { id: "methods", labelEn: "More", shortEn: "More", labelNe: "थप", icon: SlidersHorizontal },
 ] as const;
 
 const SESSION_KEY = "safefield_session";
@@ -473,6 +473,8 @@ export default function SafeFieldNepalApp() {
                 lang={lang}
               />
             )}
+
+            {activeTab === "ask" && <ScreenAskHub lang={lang} />}
 
             {activeTab === "methods" && <ScreenEMethods data={assessmentData} lang={lang} />}
           </section>
