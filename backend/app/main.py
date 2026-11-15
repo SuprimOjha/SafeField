@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -6,6 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.api.routes import router as api_router
 from app.api.signal_routes import router as signal_router
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -16,6 +19,20 @@ async def lifespan(app: FastAPI):
     scheduler = None
     task = None
     running_tests = bool(os.environ.get("PYTEST_CURRENT_TEST")) or settings.app_env == "test"
+    if settings.supabase_storage_enabled and settings.supabase_restore_on_startup:
+        from app.storage.sync import restore_from_storage
+
+        try:
+            report = await asyncio.to_thread(restore_from_storage, settings)
+            if report.status == "error":
+                logger.warning("Supabase Storage restore failed: %s", report.error)
+            else:
+                logger.info(
+                    "Supabase Storage restore downloaded %s file(s).",
+                    report.downloaded_files,
+                )
+        except Exception:  # startup must not fail because a remote copy is unavailable
+            logger.exception("Supabase Storage restore failed")
     if settings.data_refresh_enabled and not running_tests:
         from app.ingest.scheduler import DataRefreshScheduler
 
@@ -27,6 +44,10 @@ async def lifespan(app: FastAPI):
     finally:
         if scheduler is not None:
             await scheduler.stop(task, stop)
+        if settings.postgres_cache_enabled:
+            from app.cache.postgres_cache import close_postgres_pools
+
+            close_postgres_pools()
 
 
 def create_app() -> FastAPI:

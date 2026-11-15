@@ -1,4 +1,5 @@
 from typing import Any
+from app.cache import create_cache
 from app.cache.sqlite_cache import SQLiteCache
 from app.schemas import FreshnessBadge
 from app.services.http_client import fetch_json_with_retry, utc_now_iso
@@ -45,7 +46,7 @@ class SoilGridsClient:
     """Queries ISRIC SoilGrids 250m REST API for 0-5cm texture estimates."""
 
     def __init__(self, cache: SQLiteCache | None = None) -> None:
-        self.cache = cache or SQLiteCache()
+        self.cache = cache or create_cache()
 
     async def get_soil_texture(self, latitude: float, longitude: float) -> SoilTextureResponse:
         lat_r = round(latitude, 4)

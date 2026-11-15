@@ -1,5 +1,6 @@
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
+from app.cache import create_cache
 from app.cache.sqlite_cache import SQLiteCache
 from app.schemas import DailyWeatherRecord, FreshnessBadge, PowerSummaryResponse
 from app.services.http_client import fetch_json_with_retry, utc_now_iso
@@ -31,7 +32,7 @@ class NasaPowerClient:
     """Client for NASA POWER Agroclimatology (AG) daily point observations."""
 
     def __init__(self, cache: SQLiteCache | None = None) -> None:
-        self.cache = cache or SQLiteCache()
+        self.cache = cache or create_cache()
 
     async def get_field_weather_and_history(
         self,

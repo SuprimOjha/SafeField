@@ -2,6 +2,7 @@ import asyncio
 import xml.etree.ElementTree as ET
 from typing import Any
 import httpx
+from app.cache import create_cache
 from app.cache.sqlite_cache import SQLiteCache
 from app.config import get_settings
 from app.schemas import FreshnessBadge, GibsLayerInfo, SatelliteObservationStatus
@@ -24,7 +25,7 @@ class NasaCmrGibsClient:
     """
 
     def __init__(self, cache: SQLiteCache | None = None) -> None:
-        self.cache = cache or SQLiteCache()
+        self.cache = cache or create_cache()
         self.settings = get_settings()
 
     async def get_gibs_layer_catalog(self) -> dict[str, GibsLayerInfo]:

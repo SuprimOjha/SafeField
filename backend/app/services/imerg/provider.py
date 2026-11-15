@@ -1,3 +1,4 @@
+from app.cache import create_imerg_cache
 from app.services.imerg.grid_cache import ImergGridCache
 from app.services.rainfall import RainfallObservation, RainfallProvider
 
@@ -6,7 +7,7 @@ class ImergLateProvider(RainfallProvider):
     """Read-only provider backed by the pre-installed GPM IMERG Late grid cache."""
 
     def __init__(self, cache: ImergGridCache | None = None) -> None:
-        self.cache = cache or ImergGridCache()
+        self.cache = cache or create_imerg_cache()
 
     @property
     def is_available(self) -> bool:

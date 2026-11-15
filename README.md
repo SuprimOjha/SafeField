@@ -192,6 +192,42 @@ python -m app.cli status                    # installed snapshot state
 
 Only **NASA GPM IMERG rainfall** is installed automatically. SMAP soil moisture, land-surface temperature and vegetation snapshots are **pruned** by the retention job but are **not downloaded automatically**; they still need the existing manual ingest commands. When data is missing, the interface says so instead of substituting another product. If Earthdata credentials are absent, the refresh records `skipped_no_credentials` and the app keeps whatever it already has, clearly labelled by age.
 
+## Optional Supabase Storage
+
+SQLite and the local `backend/data/` directories remain the default and work with no cloud account. Setting Supabase values in `backend/.env` moves the cached data into a Supabase project so the backend no longer depends on one server's disk.
+
+| Data | Where it goes | Notes |
+|---|---|---|
+| Cached live API responses, IMERG grid cells | Supabase Postgres, private `safefield` schema | Tables are created automatically; `SUPABASE_DB_URL` |
+| Satellite snapshots, staged provider JSON, raw IMERG granules | Supabase Storage bucket (`safefield-data`) | Private bucket, created on first run; `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` |
+
+Setup:
+
+1. In Supabase, open **Project Settings → Database** and copy the Postgres connection string into `SUPABASE_DB_URL` (append `?sslmode=require` if it is not already present).
+2. Copy the project URL into `SUPABASE_URL` and the **service-role** key into `SUPABASE_SERVICE_ROLE_KEY`. The service-role key is server-side only: it must never be exposed to the frontend, logged, or committed.
+3. Keep `SUPABASE_STORAGE_BUCKET=safefield-data` or choose another name.
+4. Restart the backend.
+
+Behaviour:
+
+- The cache backend keeps the same interface and SQL as the SQLite cache, so no API route changes.
+- Tables live in a separate `safefield` schema, not `public`. Supabase's PostgREST API exposes only `public`, so the anon key cannot read the cache.
+- The local disk is still the fast read/write path. After a refresh, files are mirrored up; on startup, missing snapshots and staged JSON are restored from Storage (`SUPABASE_RESTORE_ON_STARTUP=false` disables this). Raw IMERG granules are mirrored but not auto-restored because they can be re-downloaded.
+- The same retention windows apply remotely: expired files are deleted from the bucket in the refresh job.
+- Storage failures are reported as `status: error` in the automation status and turn the run `partial`; they never hide a successful install. Error messages include the HTTP status and object path, never the key.
+- Field boundaries are still never uploaded. Only provider/satellite data is stored.
+
+Manual commands:
+
+```bash
+cd backend
+python -m app.cli storage-sync             # mirror local data files up
+python -m app.cli storage-sync --force     # re-upload even when sizes match
+python -m app.cli storage-restore          # restore missing snapshots/staged JSON
+```
+
+For GitHub Actions, add `SUPABASE_DB_URL`, `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` as repository secrets; the workflow passes them through when they exist.
+
 ## Tests and Quality Gates
 
 ```bash
@@ -216,7 +252,7 @@ The content validator (`python -m app.cli validate-content`) checks the source a
 - **Netlify (current):** https://safefieldnp.netlify.app serves the current dashboard build.
 - **Vercel:** the `safefieldnp.vercel.app` project currently serves an earlier build. Its Git connection and production branch need to be corrected in the Vercel dashboard before it will reflect this repository.
 
-The frontend can be built with `npm run build` and served by any Node host. The backend needs a persistent disk for the SQLite cache and the IMERG files if the automatic refresh is enabled.
+The frontend can be built with `npm run build` and served by any Node host. The backend works with no cloud account on a host with a persistent disk for the SQLite cache and IMERG files. With the optional Supabase settings above, cached data and data files live in Supabase instead, so an ephemeral disk is enough.
 
 ## Current Scope and Limitations
 

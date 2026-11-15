@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel
 
+from app.cache import create_cache
 from app.cache.sqlite_cache import SQLiteCache
 from app.schemas import FreshnessBadge
 from app.services.http_client import fetch_json_with_retry, utc_now_iso
@@ -100,7 +101,7 @@ class OpenMeteoForecastClient:
     """Five-day non-NASA forecast client with cached responses and honest failure states."""
 
     def __init__(self, cache: SQLiteCache | None = None) -> None:
-        self.cache = cache or SQLiteCache()
+        self.cache = cache or create_cache()
 
     async def get_5day_rain_forecast(self, latitude: float, longitude: float) -> ForecastResponse:
         # Open-Meteo's forecast grid is roughly 9–11 km. Two-decimal cache keys

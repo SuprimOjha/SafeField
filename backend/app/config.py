@@ -23,6 +23,17 @@ class Settings(BaseSettings):
     earthdata_username: str = ""
     earthdata_password: str = ""
 
+    # Optional Supabase storage. When SUPABASE_DB_URL is set, cached API
+    # responses and IMERG grid cells live in Supabase Postgres instead of the
+    # local SQLite file. When SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are
+    # set, snapshot and raw data files are mirrored to Supabase Storage.
+    # Without these variables the app runs exactly as before on local disk.
+    supabase_db_url: str = ""
+    supabase_url: str = ""
+    supabase_service_role_key: str = ""
+    supabase_storage_bucket: str = "safefield-data"
+    supabase_restore_on_startup: bool = True
+
     # Automatic data refresh and retention. The refresh installs newly published
     # IMERG days, then removes data older than these windows. Values are
     # conservative design defaults; every deletion keeps the latest window.
@@ -48,6 +59,14 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @property
+    def postgres_cache_enabled(self) -> bool:
+        return bool(self.supabase_db_url.strip())
+
+    @property
+    def supabase_storage_enabled(self) -> bool:
+        return bool(self.supabase_url.strip() and self.supabase_service_role_key.strip())
 
     @property
     def cors_origin_list(self) -> list[str]:

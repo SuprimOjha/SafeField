@@ -21,11 +21,13 @@ from typing import Any, Callable, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.cache import create_cache, create_imerg_cache
 from app.cache.sqlite_cache import SQLiteCache
 from app.config import Settings, get_settings
 from app.ingest.raw import incoming_dir
 from app.ingest.shared import prune_snapshots_older_than
 from app.services.imerg.grid_cache import ImergGridCache
+from app.storage.sync import get_storage, prune_remote, sync_up
 
 AUTOMATION_SCHEMA_VERSION = 1
 SNAPSHOT_SOURCES = ("smap", "lst", "vegetation")
@@ -64,6 +66,15 @@ class PruneSection(BaseModel):
     error: str | None = None
 
 
+class StorageSection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["ok", "skipped", "error"] = "skipped"
+    uploaded_files: int = 0
+    deleted_files: int = 0
+    error: str | None = None
+
+
 class AutomationStatus(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -76,6 +87,7 @@ class AutomationStatus(BaseModel):
     duration_seconds: float | None = None
     imerg: RefreshSection
     prune: PruneSection
+    storage: StorageSection = Field(default_factory=StorageSection)
     windows: dict[str, int] = Field(default_factory=dict)
 
 
@@ -294,7 +306,7 @@ def _run_prune(
     try:
         section.imerg_days = grid_cache.prune_older_than(imerg_cutoff)
         section.imerg_raw_files = _prune_raw_granules(raw_dir, imerg_cutoff)
-        section.api_cache_entries = SQLiteCache(settings.cache_db_path).prune_older_than_days(
+        section.api_cache_entries = create_cache(settings).prune_older_than_days(
             api_cache_retention_days
         )
         for source in SNAPSHOT_SOURCES:
@@ -305,6 +317,49 @@ def _run_prune(
     except Exception as exc:  # keep the install result even if a prune target fails
         section.status = "error"
         section.error = _redact(f"{type(exc).__name__}: {exc}", settings)
+    return section
+
+
+def _run_storage_sync(
+    settings: Settings,
+    *,
+    root: Path | None,
+    raw_dir: Path | None,
+    signal_cutoff: date,
+    imerg_cutoff: date,
+    prune: bool,
+    storage: Any | None = None,
+) -> StorageSection:
+    """Mirror new files to Supabase Storage and remove expired remote objects."""
+    client = storage or get_storage(settings)
+    section = StorageSection()
+    if client is None:
+        return section
+    try:
+        reports = [sync_up(settings, root=root, raw_dir=raw_dir, storage=client)]
+        if prune:
+            reports.append(
+                prune_remote(
+                    settings,
+                    signal_cutoff=signal_cutoff,
+                    imerg_cutoff=imerg_cutoff,
+                    storage=client,
+                )
+            )
+        section.uploaded_files = sum(report.uploaded_files for report in reports)
+        section.deleted_files = sum(report.deleted_files for report in reports)
+        errors = [report.error for report in reports if report.status == "error"]
+        if errors:
+            section.status = "error"
+            section.error = _redact("; ".join(item for item in errors if item), settings)
+        else:
+            section.status = "ok"
+    except Exception as exc:  # storage must never hide the install result
+        section.status = "error"
+        section.error = _redact(f"{type(exc).__name__}: {exc}", settings)
+    finally:
+        if storage is None:
+            client.close()
     return section
 
 
@@ -321,6 +376,7 @@ def run_data_refresh(
     fetch_fn: Callable[..., dict[str, Any]] | None = None,
     root: Path | None = None,
     imerg_raw_dir: Path | None = None,
+    storage: Any | None = None,
 ) -> AutomationStatus:
     """Install the latest IMERG days, then prune data outside retention windows.
 
@@ -366,7 +422,7 @@ def run_data_refresh(
         )
 
     try:
-        grid_cache = ImergGridCache(settings.cache_db_path)
+        grid_cache = create_imerg_cache(settings)
         imerg_section = _run_imerg(settings, refresh_days, grid_cache, fetch_fn)
         prune_section = (
             _run_prune(
@@ -383,6 +439,16 @@ def run_data_refresh(
             else PruneSection(status="skipped")
         )
 
+        storage_section = _run_storage_sync(
+            settings,
+            root=root,
+            raw_dir=imerg_raw_dir,
+            signal_cutoff=today - timedelta(days=signal_keep),
+            imerg_cutoff=today - timedelta(days=imerg_keep),
+            prune=prune,
+            storage=storage,
+        )
+
         if imerg_section.status == "error":
             overall: RefreshStatus = (
                 "partial" if prune_section.status != "error" else "error"
@@ -393,6 +459,9 @@ def run_data_refresh(
             overall = "partial"
         else:
             overall = "ok"
+
+        if storage_section.status == "error" and overall == "ok":
+            overall = "partial"
 
         installed = len(imerg_section.installed_dates)
         pruned_total = (
@@ -421,6 +490,16 @@ def run_data_refresh(
                 f"Refresh failed: {imerg_section.error or prune_section.error}"
             )
 
+        if storage_section.status == "error":
+            message += f" Supabase Storage sync failed: {storage_section.error}"
+        elif storage_section.status == "ok" and (
+            storage_section.uploaded_files or storage_section.deleted_files
+        ):
+            message += (
+                f" Supabase Storage: uploaded {storage_section.uploaded_files} "
+                f"file(s), removed {storage_section.deleted_files}."
+            )
+
         finished_at = datetime.now(timezone.utc)
         status = AutomationStatus(
             trigger=trigger,
@@ -431,6 +510,7 @@ def run_data_refresh(
             duration_seconds=round((finished_at - started_at).total_seconds(), 3),
             imerg=imerg_section,
             prune=prune_section,
+            storage=storage_section,
             windows=windows,
         )
         write_automation_status(status, automation_status_path(settings))

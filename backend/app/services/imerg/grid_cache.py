@@ -27,6 +27,9 @@ class ImergGridCache:
     def __init__(self, db_path: str | None = None) -> None:
         self.db_path = Path(db_path or get_settings().cache_db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._init_db()
+
+    def _init_db(self) -> None:
         with self._connect() as conn:
             conn.execute("""CREATE TABLE IF NOT EXISTS imerg_daily_cells (
                 date_utc TEXT NOT NULL, latitude REAL NOT NULL, longitude REAL NOT NULL,
@@ -39,6 +42,11 @@ class ImergGridCache:
             # Correct legacy metadata only when the immutable granule ID proves V07C.
             conn.execute("""UPDATE imerg_daily_cells SET version = '07C'
                 WHERE granule_id LIKE '%.V07C' AND version <> '07C'""")
+
+    def _insert_cells_sql(self) -> str:
+        return """INSERT OR REPLACE INTO imerg_daily_cells
+                (date_utc, latitude, longitude, precipitation_mm_day, valid_samples, granule_id, product, version, stream, fetched_at_utc)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
 
     def _connect(self):
         connection = sqlite3.connect(str(self.db_path), timeout=20.0)
@@ -78,9 +86,7 @@ class ImergGridCache:
                     continue
                 rows.append((day.isoformat(), lat_value, lon_value, rain_value, int(sample_count), granule_id, "GPM_3IMERGDL", product_version, "LATE", fetched_at.isoformat()))
         with self._connect() as conn:
-            conn.executemany("""INSERT OR REPLACE INTO imerg_daily_cells
-                (date_utc, latitude, longitude, precipitation_mm_day, valid_samples, granule_id, product, version, stream, fetched_at_utc)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", rows)
+            conn.executemany(self._insert_cells_sql(), rows)
         return len(rows)
 
     def has_fresh_data(self) -> bool:

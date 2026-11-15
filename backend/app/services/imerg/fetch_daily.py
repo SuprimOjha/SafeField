@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from typing import Any
 from app.config import get_settings
+from app.cache import create_imerg_cache
 from app.services.imerg.grid_cache import ImergGridCache, extract_product_version
 
 NEPAL_BBOX = (80.0, 26.3, 88.3, 30.5)
@@ -51,7 +52,7 @@ def fetch_imerg(
         raise ValueError("days must be between 1 and 30")
 
     today = today_utc or datetime.now(timezone.utc).date()
-    grid_cache = cache or ImergGridCache()
+    grid_cache = cache or create_imerg_cache()
     installed = set() if force else set(
         grid_cache.installed_dates(limit=days + lookback_extra_days + 1)
     )

@@ -71,6 +71,15 @@ def main() -> int:
 
     automation_parser = subparsers.add_parser("automation-status", help="Show the last automatic data refresh result")
     automation_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+
+    storage_sync_parser = subparsers.add_parser(
+        "storage-sync", help="Upload installed snapshots and raw files to Supabase Storage"
+    )
+    storage_sync_parser.add_argument("--force", action="store_true", help="Upload every file even if the remote size matches")
+
+    subparsers.add_parser(
+        "storage-restore", help="Download snapshot and staged JSON files missing from local disk"
+    )
     args = parser.parse_args()
 
     if args.command == "status":
@@ -171,6 +180,15 @@ def main() -> int:
                 f"{prune.get('incoming_files', 0)} incoming file(s), "
                 f"{prune.get('imerg_raw_files', 0)} raw granule(s)"
             )
+            storage = payload.get("storage") or {}
+            print(
+                "  Supabase Storage: "
+                f"{storage.get('status', 'skipped')} "
+                f"(uploaded {storage.get('uploaded_files', 0)}, "
+                f"removed {storage.get('deleted_files', 0)})"
+            )
+            if storage.get("error"):
+                print(f"  storage error: {storage['error']}")
         return 0
 
     if args.command == "fetch-imerg":
@@ -181,6 +199,48 @@ def main() -> int:
         result = fetch_imerg(days=args.days)
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
+
+    if args.command == "storage-sync":
+        from dataclasses import asdict
+
+        from app.config import get_settings
+        from app.storage.sync import get_storage, sync_up
+
+        if get_storage(get_settings()) is None:
+            print(
+                json.dumps(
+                    {
+                        "status": "skipped",
+                        "message": "Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in backend/.env first.",
+                    },
+                    indent=2,
+                )
+            )
+            return 1
+        report = sync_up(force=args.force)
+        print(json.dumps(asdict(report), indent=2, ensure_ascii=False))
+        return 0 if report.status == "ok" else 1
+
+    if args.command == "storage-restore":
+        from dataclasses import asdict
+
+        from app.config import get_settings
+        from app.storage.sync import get_storage, restore_down
+
+        if get_storage(get_settings()) is None:
+            print(
+                json.dumps(
+                    {
+                        "status": "skipped",
+                        "message": "Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in backend/.env first.",
+                    },
+                    indent=2,
+                )
+            )
+            return 1
+        report = restore_down()
+        print(json.dumps(asdict(report), indent=2, ensure_ascii=False))
+        return 0 if report.status == "ok" else 1
 
     if args.command == "validate-content":
         report = validate_content()
