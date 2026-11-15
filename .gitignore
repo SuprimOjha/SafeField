@@ -22,7 +22,7 @@ backend/data/signals/*
 !backend/data/signals/smap/
 !backend/data/signals/vegetation/
 backend/data/signals/lst/*
-!backend/data/signals/lst/2026-11-02.json
+!backend/data/signals/lst/2026-01-14.json
 backend/data/signals/smap/*
 !backend/data/signals/smap/2026-11-12.json
 backend/data/signals/vegetation/*

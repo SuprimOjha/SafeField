@@ -277,12 +277,16 @@ Three real NASA snapshots ship in `backend/data/signals` so a fresh deployment r
 | Files | Product | Valid date | Cells |
 | --- | --- | --- | --- |
 | `smap/2026-11-12.json` | SMAP L4 `SPL4SMGP` | 2026-11-12 | 4,628 |
-| `lst/2026-11-02.json` | VIIRS `VNP21A1D` daily | 2026-11-02 | 3,486 |
+| `lst/2026-01-14.json` | VIIRS `VNP21A1D` daily | 2026-01-14 | 3,486 |
 | `vegetation/2026-11-08.json` | VIIRS `VNP13A1` 16-day composite, 2026-10-24 to 2026-11-08 | 2026-11-08 | 3,486 |
 
 `backend/data/signals/baselines.json` lists them, and retention pruning (`prune_snapshots`, `prune_snapshots_older_than`) never deletes a listed file, so `SIGNAL_RETENTION_DAYS` cannot remove the only copy of a shipped baseline. Everything else still expires on the normal retention windows.
 
-The snapshots are installed, but installation is not the same as being displayable. The pre-existing software gates are unchanged: LST needs at least 50% quality-approved clear cells and vegetation needs at least 80% QA-good cells, measured across the whole Nepal grid. In these baselines LST has 146 of 3,486 clear cells (4%) and vegetation has 95 of 3,486 QA-good cells (3%), so `heat_surface`, `ndvi` and `evi` report `unavailable` with that reason instead of showing a value. SMAP quality flags are different, and both soil-moisture signals resolve from the 2026-11-12 baseline. The next daily LST day or the next 16-day composite is unlikely to change the outcome during the cloudy post-monsoon season; making these three signals displayable needs a baseline with much higher clear-sky coverage (for example a dry-season composite) or a change to the gates. Neither is done here, so the app keeps reporting the honest reason.
+The snapshots are installed, but installation is not the same as being displayable. The software gates are unchanged: LST needs at least 50% quality-approved clear cells and vegetation needs at least 80% QA-good cells, measured across the whole Nepal grid.
+
+The LST baseline is a clear dry-season day: 2,723 of 3,486 cells (78%) pass the clear-sky and quality checks, so `heat_surface` shows the 2026-01-14 value with status `stale` and the note that the field value is not live data. A post-monsoon LST day was tried first (2026-11-02) and had only 146 clear cells (4%).
+
+`ndvi` and `evi` stay `unavailable`. The shipped composite has 95 of 3,486 QA-good cells (3%), but the limit is the gate, not the weather: the reader accepts only pixel reliability rank 0 ("Excellent"). Re-aggregating the 2026-01-01 to 2026-01-16 dry-season composite gives 14 of 3,486 cells under that rule, 48% of cells when ranks 0-1 ("Excellent", "Good") are counted, and 69.5% when ranks 0-2 ("Excellent", "Good", "Acceptable") are counted on NDVI alone - all below the 80% gate, and lower again once EVI must pass too. No real composite available for Nepal clears 80% of cells, so the three vegetation signals report the honest reason instead of a value. Changing that is a gate decision for the project, not something this baseline fixes.
 
 ## Tests and Quality Gates
 

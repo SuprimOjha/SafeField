@@ -1,7 +1,7 @@
 {
   "comment": "Verified baseline snapshots that ship with the app. Retention pruning keeps these even when they are older than SIGNAL_RETENTION_DAYS.",
   "files": [
-    "lst/2026-11-02.json",
+    "lst/2026-01-14.json",
     "smap/2026-11-12.json",
     "vegetation/2026-11-08.json"
   ]

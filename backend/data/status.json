@@ -1,10 +1,11 @@
 {
-  "generated_at": "2026-11-15T15:54:36Z",
+  "generated_at": "2026-11-15T16:50:13Z",
   "schema_version": 1,
   "sources": {
     "lst": {
-      "coverage": null,
+      "coverage": 0.7811,
       "files": [
+        "2026-01-14.json",
         "2026-11-02.json"
       ],
       "granule_ids": [
@@ -14,7 +15,7 @@
         "VNP21A1D.A2026306.h25v06.002.2026307134311"
       ],
       "last_error": null,
-      "last_success_at": "2026-11-15T15:54:36Z",
+      "last_success_at": "2026-11-15T16:50:13Z",
       "latest_data_date": "2026-11-02",
       "product": "VNP21A1D",
       "source": "lst",
