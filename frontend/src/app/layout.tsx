@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Noto_Sans_Devanagari } from "next/font/google";
 import "./globals.css";
 
@@ -17,7 +17,14 @@ const notoDevanagari = Noto_Sans_Devanagari({
 
 export const metadata: Metadata = {
   title: "Safe Field Nepal - NASA Space Apps 2026",
-  description: "Decision support for fertilizer timing using NASA Earth observations and climate evidence.",
+  description: "Field-level screening and climate context for farmers in Nepal, with clear data sources, uncertainty and local-review guidance.",
+  applicationName: "Safe Field Nepal",
+  openGraph: {
+    title: "Safe Field Nepal",
+    description: "Understand field conditions with transparent Earth-observation and climate evidence.",
+    type: "website",
+    locale: "ne_NP",
+  },
   icons: {
     icon: [
       { url: "/satellite-icon.png", sizes: "128x128", type: "image/png" },
@@ -28,15 +35,21 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  themeColor: "#087bfa",
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${notoDevanagari.variable}`}>
-      <body className="bg-warm text-ink antialiased selection:bg-mint selection:text-forest">
-        <a href="#main-content" className="sr-only focus:not-sr-only focus:p-3 focus:bg-forest focus:text-white">
+    <html lang="ne" className={`${inter.variable} ${notoDevanagari.variable}`}>
+      <body className="bg-canvas text-ink antialiased selection:bg-brand-blue-soft selection:text-brand-blue-deep">
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:p-3 focus:bg-brand-blue-deep focus:text-white">
           Skip to main content
         </a>
         {children}

@@ -23,6 +23,7 @@ import { get5DayRainForecast } from "@/lib/server/forecast";
 import { getRecentRain } from "@/lib/server/rainfall";
 import { evaluateTiming } from "@/lib/server/decision";
 import { analyzeHeavyRainTrend } from "@/lib/server/trend";
+import { sanitizeUpstreamError } from "@/lib/server/upstream";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -78,9 +79,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ detail: "sand_percent_override must be between 0 and 100." }, { status: 422 });
   }
 
-  let fieldPolygon: [number, number][] | null;
   try {
-    fieldPolygon = parseFieldPolygon(params.get("field_polygon"));
+    // Validate any supplied polygon, even though the current assessment is point/grid based.
+    parseFieldPolygon(params.get("field_polygon"));
   } catch (errorResponse) {
     if (errorResponse instanceof Response) return errorResponse;
     throw errorResponse;
@@ -149,7 +150,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Field assessment failed:", error);
     return NextResponse.json(
-      { detail: `Field assessment failed: ${String(error)}` },
+      { detail: `Field assessment could not be completed (${sanitizeUpstreamError(error)}). No values were guessed; please try again.` },
       { status: 502 },
     );
   }

@@ -1,112 +1,126 @@
-# Safe Field Nepal
+<p align="center">
+  <img src="aassets/SFD.png" alt="Safe Field Nepal logo" width="500" />
+</p>
 
-Safe Field Nepal is a NASA Space Apps Challenge research prototype for exploring field location, gridded weather context, predicted soil texture and cautious fertilizer-timing screening in Nepal.
+<p align="center">
+  Making agricultural data easier to understand, one field at a time.
+</p>
 
-## Farmer map and location selection
+<p align="center">
+  A Nepal-focused agricultural research prototype built for the
+  <a href="https://www.spaceappschallenge.org/2026/challenges/field-shift-adapting-farms-with-nasa-data/">NASA Space Apps Challenge 2026</a>.
+</p>
 
-The map uses MapLibre GL JS with OpenFreeMap Bright as the default street basemap and an optional Esri World Imagery overlay. Farmers can select one of Nepal's 77 districts, use GPS, or tap once on the map to place a pin. Drawing a field polygon is optional and estimates area; it is not required to receive a location-based assessment. A polygon does not increase the resolution of the underlying gridded data. When a fresh GPM IMERG Late daily cache is installed, the assessment uses the nearest 0.1° (~10 km) grid cell; otherwise it falls back to the coarse NASA POWER rainfall grid (~55 km). A selected polygon is area-weighted using equal-area cell intersections when sample-weighted effective coverage is at least 80%; point selection uses the nearest cell. See [basemap terms and limitations](docs/ESRI_AND_BASEMAP_NOTES.md).
+<p align="center">
+  <img alt="NASA Space Apps Challenge 2026" src="https://img.shields.io/badge/NASA%20Space%20Apps-2026-0B5FFF?style=flat-square" />
+  <img alt="Project status" src="https://img.shields.io/badge/status-research%20prototype-orange?style=flat-square" />
+  <img alt="Interface languages" src="https://img.shields.io/badge/languages-English%20%7C%20Nepali-168B5B?style=flat-square" />
+</p>
 
-## Current assessment inputs
+---
 
-| Input | Provider | Role and limitation |
-|---|---|---|
-| Rainfall | GPM IMERG Late daily cache when fresh; NASA POWER fallback | IMERG ~10 km; POWER ~55 km and may be delayed; point lookup only, not a field-polygon average |
-| Air temperature and modelled wetness proxies | NASA POWER | Coarse gridded reanalysis-based data (~55 km); not an on-farm sensor |
-| Rain forecast | Open-Meteo | Non-NASA forecast; used for a short-term outlook |
-| Predicted soil texture | ISRIC SoilGrids | 250 m prediction for 0–5 cm topsoil; not a field soil test |
-| Elevation and slope estimate | Open-Elevation API | Underlying DEM lineage/resolution are not verified by this integration |
+## Why We Built Safe Field Nepal
 
-GPM IMERG Late is an optional cached rainfall input. GPM IMERG Final, SMAP and NASADEM are **not connected** to the current field-assessment endpoint.
+Farmers make important decisions based on rainfall, soil conditions, weather and the changing environment. However, useful environmental information is often spread across different sources and can be difficult to interpret at an individual farm level.
 
-## Decision engine status
+We chose this project because we wanted to explore how satellite observations and open environmental data could become easier for Nepalese farmers to access and understand. Safe Field Nepal brings available rainfall information, weather forecasts, soil-texture estimates and terrain context together in one location-aware platform.
 
-The engine is deterministic and explainable, but its rainfall, texture and slope cut-offs are prototype design assumptions pending review by Nepalese agronomists. The current labels are:
-- `CONDITIONS LOOK SUITABLE`
-- `WAIT AND RECHECK`
-- `LOCAL REVIEW NEEDED`
+Our goal is simple: farmers should not need to understand complex satellite datasets to explore information about their land. The application presents available evidence in a more approachable way, while showing its source, date, freshness and limitations.
 
-These are screening labels, not fertilizer application instructions, rates or safety certifications. Missing inputs remain unavailable and trigger local review. The legacy `save_money` preference does not change warnings or decisions. A farmer-provided sand-fraction override can be passed to the assessment.
+- **Live prototype:** https://safefieldnp.netlify.app
+- **Project presentation:** https://canva.link/oef8hx002ollo33
 
-## Run locally
+The interface supports **English and Nepali**.
 
-Backend:
+## What It Can Do
 
-```powershell
-cd backend
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-```
+A farmer can start by searching for a place, selecting a district, using GPS or choosing a point directly on the map. Drawing a field boundary is optional, so users can begin with a simple location selection.
 
-Frontend:
+After selecting a location, the prototype can help users explore:
 
-```powershell
-cd frontend
-npm install
-npm run dev
-```
+- **Field mapping:** Find a location, mark a point and optionally draw a field boundary.
+- **Rainfall information:** Explore recent rainfall estimates using NASA GPM IMERG data when a fresh local cache is available, with a fallback to Open-Meteo past-days reanalysis where supported.
+- **Weather forecasts:** View short-term forecasts from Open-Meteo, identified separately from NASA data.
+- **Soil information:** Explore estimated sand, silt and clay fractions from ISRIC SoilGrids.
+- **Terrain context:** View elevation and estimated slope information.
+- **Climate trends:** Explore historical heavy-rain-day frequency using NASA POWER records.
+- **Environmental screening:** Review a preliminary screening result based on available rainfall, forecast, soil-texture, wetness and slope inputs.
+- **Farm records:** Record crop setup, field activities, irrigation and farmer-entered observations.
+- **Offline awareness:** Use a recent browser-cached assessment when offline, while retaining its original timestamps and identifying it as cached information.
 
-Open `http://localhost:3000`. Configure `NEXT_PUBLIC_API_BASE_URL` when the backend is not running at the default local URL.
+The screening result uses labels such as `CONDITIONS LOOK SUITABLE`, `WAIT AND RECHECK` and `LOCAL REVIEW NEEDED`. These are preliminary screening labels, not fertilizer instructions or guarantees about field conditions.
 
-## Tests
+## Is It Designed for Farmers?
 
-```powershell
-cd backend
-pytest
-```
+Yes. Farmer accessibility is one of the main reasons for building the project. The workflow starts with familiar actions: find a place, select a district, use the phone's location or mark land on a map. Users do not need to configure scientific datasets themselves.
 
-## Project documentation
+The interface is designed to keep information understandable through clear labels, visible measurements and explanations of where the data comes from. English and Nepali language support is included to make the experience more accessible in Nepal.
 
-- [Data provenance and limitations](docs/DATA_PROVENANCE.md)
-- [Prototype decision-rule register](docs/RULE_REGISTER.md)
-- [Farmer handling safety](docs/FARMER_SAFETY.md)
-- [Scientific and field validation plan](docs/VALIDATION_PLAN.md)
-- [GPM IMERG integration status](docs/IMERG_INTEGRATION_STATUS.md)
-- [Nepal farmer-health evidence status](docs/RESEARCH_EVIDENCE_STATUS.md)
-- [Mobile usability requirements](docs/MOBILE_USABILITY.md)
-- [Basemap provider notes](docs/ESRI_AND_BASEMAP_NOTES.md)
-- [Judge demonstration checklist](docs/DEMO_AND_JUDGE_CHECKLIST.md)
+We want Safe Field Nepal to become a practical tool that farmers can use to explore their land and make more informed decisions—not a complicated scientific dashboard.
 
-## Responsible use
+However, being designed for farmers does not yet mean that farmer usability has been proven. This is a research prototype, and its ease of use and practical value still need to be evaluated with local farmers and agricultural experts. Feedback from real users will help us improve the language, location-selection workflow, map experience and way information is presented.
 
-This is an educational research prototype, not formal agronomic advice. Check the fertilizer product label, a soil test and local agricultural extension guidance. Verify important conditions on the ground. Do not infer a fertilizer dose from this app.
+## How It Works
 
-## Validation still required
+Safe Field Nepal combines several environmental and geospatial sources. Each source has different coverage, resolution and update timing, so the application aims to show data provenance and limitations rather than presenting every value as a direct field measurement.
 
-The repository does not claim completed farmer trials, expert sign-off, Nepal-specific farmer-health study validation, real-device acceptance testing, or production readiness. See the validation plan before making those claims.
+| Data source | How it is used |
+|---|---|
+| [NASA GPM IMERG](https://gpm.nasa.gov/data/imerg) | Recent rainfall grid when a fresh local cache is available |
+| [NASA POWER](https://power.larc.nasa.gov/) | Historical and regional climate context |
+| [Open-Meteo](https://open-meteo.com/) | Short-term weather forecast and past-days rainfall fallback |
+| [ISRIC SoilGrids](https://soilgrids.org/) | Predicted soil-texture fractions |
+| [Open-Meteo Elevation API](https://open-meteo.com/en/docs/elevation-api) | Elevation context, using Copernicus DEM GLO-90 as its primary dataset |
+| [OpenFreeMap](https://openfreemap.org/) and [Esri World Imagery](https://www.esri.com/) | Map display and optional imagery layer |
 
+The current assessment API is geographically bounded to Nepal coordinates between **26.3–30.5° N** and **80.0–88.3° E**. The API identifies Morang, Sunsari, Jhapa and Ilam as pilot districts.
 
-## Safe Field data setup and manual tasks
+## Built With
 
-### 1. Install IMERG Late rainfall data
+| Layer | Technologies |
+|---|---|
+| Frontend | Next.js, React, TypeScript, Tailwind CSS |
+| Maps and visualisation | MapLibre GL JS, Recharts, Lucide React |
+| Backend API | Python, FastAPI, Pydantic, Uvicorn |
+| Scientific analysis | NumPy, SciPy, pymannkendall, statsmodels |
+| Geospatial processing | earthaccess, xarray, netCDF4, Shapely, pyproj |
+| Data cache | SQLite |
 
-Create a root `.env` from `.env.example` and enter your NASA Earthdata Login credentials as `EARTHDATA_USERNAME` and `EARTHDATA_PASSWORD`. Never commit `.env`. From the `backend` directory, install requirements and run the one fetch command:
+## Current Scope and Limitations
 
-```bash
-python -m pip install -r requirements.txt
-python -m app.cli fetch-imerg --days 7
-```
+Safe Field Nepal is an **educational research prototype**, not a validated agronomic advisory service.
 
-The command downloads only outside API request handling and writes Nepal-cropped daily GPM_3IMERGDL grid cells to the local SQLite cache. See [IMERG fetch instructions](backend/docs/IMERG_FETCH.md). Live Earthdata authentication and upstream availability must be checked locally.
+The current working prototype focuses on field location, environmental context, rainfall and weather evidence, climate-trend exploration and cautious fertilizer-timing screening. It does **not yet generate, rank or compare crop-rotation plans**. That would require additional crop-calendar and rotation data, farmer-priority inputs, locally reviewed agronomic rules and field validation.
 
-### 2. Add researched farmer guidance
+Some important limitations:
 
-Drop source records into `backend/content/sources.json`, and researched fertilizer references, verified conversions and home remedies into the corresponding JSON files. Keep the `_example` keys as templates; the loader ignores them. Run:
+- Screening thresholds are preliminary design assumptions and have not yet been validated by Nepalese agronomists.
+- Satellite and gridded datasets cover areas much larger than an individual farm. Drawing a field boundary does not increase the resolution of the underlying data.
+- SoilGrids provides modelled estimates, not laboratory soil-test results.
+- NASA POWER wetness variables are modelled proxies, not direct soil-moisture sensor measurements.
+- Forecasts and reanalysis products have uncertainty and must be distinguished from observations.
+- Farmer-entered records are user-provided information, not independently verified measurements.
+- The project has not yet established completed farmer trials, expert sign-off, real-device acceptance testing or production readiness.
+- The prototype does not calculate fertilizer doses or provide validated fertilizer application instructions.
 
-```bash
-cd backend
-python -m app.cli validate-content
-```
+Farmers should verify field conditions locally, use appropriate soil tests and consult local agricultural extension services before making important farming decisions.
 
-Only records with verified provenance are eligible. Fertilizer reference ranges require an official source and are displayed as source references, not personalized prescriptions. Non-official remedy quantities are hidden. Free-text remedy fields reject dose-like expressions. The API exposes validation counts at `GET /api/content-status`.
+For further details, see the [validation plan](docs/VALIDATION_PLAN.md).
 
-### Data use and limitations
+## Acknowledgements
 
-- NASA POWER is a coarse gridded reanalysis-based data source; it is not an on-farm sensor.
-- GPM IMERG Late is a separate ~0.1° daily precipitation product. The local grid cache is not a field-boundary average.
-- Open-Meteo is a non-NASA forecast; SoilGrids is a non-NASA modeled soil estimate; elevation lineage remains unverified.
-- The decision engine is a prototype screening aid, not an agronomist-approved recommendation or safety certification.
-- **Independent project, not endorsed by NASA.**
+Developed for the **NASA Space Apps Challenge 2026**, under the challenge **Field Shift: Adapting Farms with NASA Data**.
 
-AI-use disclosure: generative AI assistance was used during software implementation and documentation; scientific source records and local agronomic content must be independently researched and reviewed before publication.
+We acknowledge NASA and the open-data organisations that provide the scientific and geospatial datasets used by this prototype.
+
+Safe Field Nepal is an independent team project. It is **not affiliated with, produced by or endorsed by NASA**. NASA data and logos remain subject to their respective source and usage terms.
+
+---
+
+<p align="center">
+  <img src="aassets/image.png" alt="Safe Field Nepal" width="400" />
+</p>
+
+<p align="center">
+  Better information. Smarter decisions. Stronger farming communities.
+</p>

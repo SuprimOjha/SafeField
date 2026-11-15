@@ -59,7 +59,7 @@ export default function ScreenDTrends({
 
   if (!data) {
     return (
-      <div className="rounded-xl border border-divider bg-white p-8 text-center text-ink-soft shadow-float">
+      <div className="rounded-2xl border border-line bg-white p-8 text-center text-ink-soft shadow-card">
         {t.selectFirst}
       </div>
     );
@@ -70,11 +70,11 @@ export default function ScreenDTrends({
   return (
     <div className="space-y-6">
       {/* Statistical Verdict Card */}
-      <div className="rounded-xl border border-divider bg-white p-6 shadow-float space-y-4">
+      <div className="rounded-2xl border border-line bg-white p-6 shadow-card space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <TrendingUp className="w-6 h-6 text-leaf" />
-            <h2 className="text-2xl font-bold text-forest">
+            <TrendingUp className="w-6 h-6 text-info" />
+            <h2 className="text-2xl font-bold tracking-tight text-ink">
               {t.trendsTitle}
             </h2>
           </div>
@@ -100,7 +100,7 @@ export default function ScreenDTrends({
           </span>
         </div>
 
-        <p className="text-base text-ink bg-mint border border-divider p-4 rounded-lg leading-relaxed">
+        <p className="text-base text-ink bg-surface-blue border border-[#D7E9FF] p-4 rounded-lg leading-relaxed">
           {climate_trend.plain_language_summary}
         </p>
 
@@ -144,10 +144,10 @@ export default function ScreenDTrends({
       </div>
 
       {/* Historical Time-Series Chart */}
-      <div className="rounded-xl border border-divider bg-white p-6 shadow-float">
+      <div className="rounded-2xl border border-line bg-white p-6 shadow-card">
         <div className="flex items-center gap-2 mb-4">
-          <Activity className="w-5 h-5 text-leaf" />
-          <h3 className="text-lg font-bold text-forest">
+          <Activity className="w-5 h-5 text-info" />
+          <h3 className="text-lg font-bold text-ink">
             {t.chartTitle}
           </h3>
         </div>
@@ -156,33 +156,33 @@ export default function ScreenDTrends({
           <div className="w-full h-[340px]">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={annualSeries} margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E4E9E2" />
-                <XAxis dataKey="year" tick={{ fontSize: 12, fill: "#657168" }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E3EAF2" />
+                <XAxis dataKey="year" tick={{ fontSize: 12, fill: "currentColor" }} />
                 <YAxis
-                  tick={{ fontSize: 12, fill: "#657168" }}
-                  label={{ value: t.yAxisLabel, angle: -90, position: "insideLeft", fontSize: 12 }}
+                  tick={{ fontSize: 12, fill: "currentColor" }}
+                  label={{ value: t.yAxisLabel, angle: -90, position: "insideLeft", fontSize: 12, fill: "currentColor" }}
                 />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#ffffff",
-                    borderColor: "#E4E9E2",
-                    borderRadius: "18px",
-                    boxShadow: "0 4px 18px rgba(24, 44, 30, 0.1)",
+                    borderColor: "#E3EAF2",
+                    borderRadius: "16px",
+                    boxShadow: "0 4px 14px rgba(20, 45, 80, 0.06)",
                     fontSize: "13px",
                   }}
                 />
-                <Legend formatter={(value) => <span style={{ color: "#657168" }}>{value}</span>} />
+                <Legend formatter={(value) => <span style={{ color: "currentColor" }}>{value}</span>} />
                 <Bar
                   dataKey="heavyRainDays"
                   name={t.legendHeavyDays}
-                  fill="#2F8F4E"
+                  fill="#087BFA"
                   radius={[6, 6, 0, 0]}
                 />
                 <Line
                   type="monotone"
                   dataKey="trendLine"
                   name={t.legendTrend}
-                  stroke="#F2B93B"
+                  stroke="#0755E8"
                   strokeWidth={3}
                   dot={false}
                 />
@@ -198,7 +198,7 @@ export default function ScreenDTrends({
       <div className="flex justify-end">
         <button
           onClick={onProceedToMethods}
-          className="flex items-center gap-2 rounded-full bg-action px-8 py-4 text-lg font-semibold text-white shadow-float transition hover:bg-action-pressed"
+          className="flex items-center gap-2 rounded-full bg-action px-8 py-4 text-lg font-semibold text-white shadow-float transition hover:bg-action-pressed active:scale-[0.98]"
         >
           {t.nextMethods}
           <ArrowRight className="w-5 h-5" />

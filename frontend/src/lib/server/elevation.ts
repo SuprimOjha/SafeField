@@ -10,7 +10,7 @@
 
 import type { FreshnessBadgeData, ElevationResponse } from "@/types/safefield";
 import { cacheGet, cacheSet, utcNowIso } from "./cache";
-import { fetchJson } from "./upstream";
+import { fetchJson, sanitizeUpstreamError, withHardDeadline } from "./upstream";
 
 const OPEN_METEO_ELEVATION_URL = "https://api.open-meteo.com/v1/elevation";
 const OPEN_ELEVATION_URL = "https://api.open-elevation.com/api/v1/lookup";
@@ -69,11 +69,11 @@ function slopeFromStencil(elevations: number[], deltaDeg: number, latDeg: number
 async function fetchOpenMeteoElevations(points: { lat: number; lon: number }[]): Promise<number[]> {
   const latitudes = points.map((p) => p.lat.toFixed(6)).join(",");
   const longitudes = points.map((p) => p.lon.toFixed(6)).join(",");
-  const raw = await fetchJson<{ elevation: number[] }>(OPEN_METEO_ELEVATION_URL, {
+  const raw = await withHardDeadline(fetchJson<{ elevation: number[] }>(OPEN_METEO_ELEVATION_URL, {
     params: { latitude: latitudes, longitude: longitudes },
-    timeoutMs: 12_000,
-    retries: 1,
-  });
+    timeoutMs: 10_000,
+    retries: 0,
+  }), 12_000, "Open-Meteo elevation");
   if (!Array.isArray(raw.elevation) || raw.elevation.length !== points.length) {
     throw new Error("Open-Meteo elevation grid incomplete");
   }
@@ -81,12 +81,12 @@ async function fetchOpenMeteoElevations(points: { lat: number; lon: number }[]):
 }
 
 async function fetchOpenElevationElevations(points: { lat: number; lon: number }[]): Promise<number[]> {
-  const raw = await fetchJson<{ results: { elevation: number }[] }>(OPEN_ELEVATION_URL, {
+  const raw = await withHardDeadline(fetchJson<{ results: { elevation: number }[] }>(OPEN_ELEVATION_URL, {
     method: "POST",
     body: { locations: points.map((p) => ({ latitude: p.lat, longitude: p.lon })) },
-    timeoutMs: 15_000,
+    timeoutMs: 10_000,
     retries: 0,
-  });
+  }), 10_000, "Open-Elevation");
   const results = raw.results ?? [];
   if (results.length !== points.length) throw new Error("Incomplete elevation grid returned");
   return results.map((r) => Number(r.elevation));
@@ -95,10 +95,10 @@ async function fetchOpenElevationElevations(points: { lat: number; lon: number }
 async function fetchOpenTopoDataElevations(points: { lat: number; lon: number }[]): Promise<number[]> {
   // OpenTopoData SRTM 30 m dataset; pipe-separated coordinate list, one request.
   const locations = points.map((p) => `${p.lat.toFixed(6)},${p.lon.toFixed(6)}`).join("|");
-  const raw = await fetchJson<{ results: { elevation: number | null }[] }>(`${OPEN_TOPO_DATA_URL}?locations=${encodeURIComponent(locations)}`, {
-    timeoutMs: 15_000,
+  const raw = await withHardDeadline(fetchJson<{ results: { elevation: number | null }[] }>(`${OPEN_TOPO_DATA_URL}?locations=${encodeURIComponent(locations)}`, {
+    timeoutMs: 10_000,
     retries: 0,
-  });
+  }), 10_000, "OpenTopoData");
   const results = raw.results ?? [];
   if (results.length !== points.length) throw new Error("Incomplete OpenTopoData elevation grid returned");
   const values = results.map((r) => Number(r.elevation));
@@ -196,7 +196,7 @@ export async function getFieldSlopeAndElevation(
         ...stale.response.freshness,
         status: "CACHED_FALLBACK",
         fetched_at_utc: utcNowIso(),
-        caveat: `Showing previously cached elevation estimate because the upstream request failed: ${String(lastError)}. ${stale.response.freshness.caveat}`,
+        caveat: `Showing the previously cached elevation estimate because the upstream request did not complete (${sanitizeUpstreamError(lastError)}). ${stale.response.freshness.caveat}`,
       },
     };
     return parsed;
@@ -217,7 +217,7 @@ export async function getFieldSlopeAndElevation(
       null,
       utcNowIso(),
       "Unknown",
-      `Elevation service unavailable: ${String(lastError)}. No default elevation or slope is substituted.`,
+      `Elevation service is temporarily unavailable, so no terrain value is shown (${sanitizeUpstreamError(lastError)}). No default elevation or slope is substituted.`,
       "https://open-meteo.com/en/docs/elevation-api",
     ),
   };

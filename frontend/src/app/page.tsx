@@ -10,18 +10,17 @@ import ScreenCDecision from "@/components/ScreenCDecision";
 import ScreenDTrends from "@/components/ScreenDTrends";
 import ScreenEMethods from "@/components/ScreenEMethods";
 import AskAssistant from "@/components/AskAssistant";
+import ScreenAskHub from "@/components/ScreenAskHub";
 import {
   MapPin,
   SlidersHorizontal,
-  CheckCircle2,
   TrendingUp,
-  Database,
-  Globe2,
   WifiOff,
+  MessageCircleQuestion,
 } from "lucide-react";
 import { getDict, type Lang } from "@/i18n";
 
-type TabId = "home" | "field" | "decision" | "trends" | "methods";
+type TabId = "home" | "field" | "decision" | "trends" | "ask" | "methods";
 
 function subscribeToLanguage(onChange: () => void) {
   if (typeof window === "undefined") return () => {};
@@ -74,11 +73,11 @@ function getServerOnlineStatus() {
 }
 
 const NAV_ITEMS = [
-  { id: "home", labelEn: "Choose location", shortEn: "Location", labelNe: "स्थान छान्नुहोस्", icon: MapPin },
-  { id: "field", labelEn: "My field", shortEn: "My field", labelNe: "मेरो खेत", icon: SlidersHorizontal },
-  { id: "decision", labelEn: "Recommendations", shortEn: "Advice", labelNe: "सुझाव", icon: CheckCircle2 },
-  { id: "trends", labelEn: "Climate trends", shortEn: "Trends", labelNe: "जलवायु प्रवृत्ति", icon: TrendingUp },
-  { id: "methods", labelEn: "Data & methods", shortEn: "Data", labelNe: "डाटा र विधि", icon: Database },
+  { id: "home", labelEn: "Today", shortEn: "Today", labelNe: "आज", shortNe: "आज", icon: MapPin },
+  { id: "field", labelEn: "My field", shortEn: "Field", labelNe: "मेरो खेत", shortNe: "खेत", icon: SlidersHorizontal },
+  { id: "trends", labelEn: "Climate trends", shortEn: "Trends", labelNe: "जलवायु प्रवृत्ति", shortNe: "प्रवृत्ति", icon: TrendingUp },
+  { id: "ask", labelEn: "Ask", shortEn: "Ask", labelNe: "सोध्नुहोस्", shortNe: "सोध", icon: MessageCircleQuestion },
+  { id: "methods", labelEn: "More", shortEn: "More", labelNe: "थप", shortNe: "थप", icon: SlidersHorizontal },
 ] as const;
 
 const SESSION_KEY = "safefield_session";
@@ -147,33 +146,99 @@ function getServerSessionSnapshot(): PersistedSession | null {
   return null;
 }
 
+/** Simplified US flag tile — 13 stripes + canton; reads cleanly at 28px. */
+function FlagUSTile() {
+  const stripeH = 24 / 13;
+  const redIndexes = [0, 2, 4, 6, 8, 10, 12];
+  return (
+    <span
+      aria-hidden="true"
+      className="relative block h-6 w-7 shrink-0 overflow-hidden rounded-[6px] bg-white ring-1 ring-black/10"
+    >
+      <svg viewBox="0 0 28 24" className="block h-full w-full" preserveAspectRatio="none">
+        {redIndexes.map((i) => (
+          <rect key={i} x="0" y={i * stripeH} width="28" height={stripeH} fill="#B22234" />
+        ))}
+        <rect x="0" y="0" width="11.2" height={stripeH * 7} fill="#3C3B6E" />
+        {[1.9, 4.6, 7.3].map((y) =>
+          [2.2, 5.6, 9.0].map((x) => (
+            <circle key={`${x}-${y}`} cx={x} cy={y} r="0.75" fill="#ffffff" />
+          )),
+        )}
+      </svg>
+    </span>
+  );
+}
+
+/** Nepal flag tile — shape-accurate double pennant with moon and sun emblems. */
+function FlagNPTile() {
+  return (
+    <span
+      aria-hidden="true"
+      className="relative block h-6 w-7 shrink-0 overflow-hidden rounded-[6px] bg-white ring-1 ring-black/10"
+    >
+      <svg viewBox="0 0 20 16" className="block h-full w-full" preserveAspectRatio="xMidYMid meet">
+        <path
+          d="M2,1.4 L15.2,6.8 L6.8,8.2 L16.4,14.2 L2,14.2 Z"
+          fill="#DC143C"
+        />
+        {/* Moon (upper pennant, crescent horns up) */}
+        <circle cx="8.2" cy="5.6" r="1.4" fill="#ffffff" />
+        <circle cx="8.2" cy="4.9" r="1.4" fill="#DC143C" />
+        {/* Sun (lower pennant) with short rays */}
+        <g stroke="#ffffff" strokeWidth="0.5">
+          <line x1="8.4" y1="9.7" x2="8.4" y2="9.4" />
+          <line x1="8.4" y1="13.1" x2="8.4" y2="13.4" />
+          <line x1="6.7" y1="11.4" x2="6.4" y2="11.4" />
+          <line x1="10.1" y1="11.4" x2="10.4" y2="11.4" />
+          <line x1="7.2" y1="10.2" x2="7.0" y2="10.0" />
+          <line x1="9.6" y1="12.6" x2="9.8" y2="12.8" />
+          <line x1="9.6" y1="10.2" x2="9.8" y2="10.0" />
+          <line x1="7.2" y1="12.6" x2="7.0" y2="12.8" />
+        </g>
+        <circle cx="8.4" cy="11.4" r="1.3" fill="#ffffff" />
+        <path
+          d="M2,1.4 L15.2,6.8 L6.8,8.2 L16.4,14.2 L2,14.2 Z"
+          fill="none"
+          stroke="#003893"
+          strokeWidth="1.7"
+          strokeLinejoin="miter"
+        />
+      </svg>
+    </span>
+  );
+}
+
 function LanguageToggle({ lang, setLang }: { lang: Lang; setLang: (next: Lang) => void }) {
   return (
     <div
       role="group"
       aria-label={lang === "en" ? "Language selection" : "भाषा छनोट"}
-      className="inline-flex min-h-10 items-center rounded-full border border-line bg-white p-1"
+      className="inline-flex min-h-10 items-center gap-0.5 rounded-full border border-line bg-white p-1"
     >
-      <Globe2 className="mx-1.5 h-4 w-4 text-ink-soft" aria-hidden="true" />
       <button
         type="button"
         onClick={() => setLang("en")}
         aria-pressed={lang === "en"}
-        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
-          lang === "en" ? "bg-forest text-white" : "text-ink-soft hover:text-ink"
+        aria-label="English"
+        title="English"
+        className={`inline-flex items-center rounded-full p-1.5 transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+          lang === "en" ? "bg-brand-blue-deep shadow-card" : "hover:bg-soft"
         }`}
       >
-        EN
+        <FlagUSTile />
       </button>
       <button
         type="button"
         onClick={() => setLang("ne")}
         aria-pressed={lang === "ne"}
-        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
-          lang === "ne" ? "bg-forest text-white" : "text-ink-soft hover:text-ink"
+        aria-label="नेपाली"
+        title="नेपाली"
+        className={`inline-flex items-center rounded-full p-1.5 transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+          lang === "ne" ? "bg-brand-blue-deep shadow-card" : "hover:bg-soft"
         }`}
       >
-        ने
+        <FlagNPTile />
       </button>
     </div>
   );
@@ -282,6 +347,10 @@ export default function SafeFieldNepalApp() {
   // Browser-tab title follows the active screen; the home tab shows the
   // plain app name ("Safe Field Nepal").
   useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
+  useEffect(() => {
     const item = NAV_ITEMS.find((entry) => entry.id === activeTab);
     const label = lang === "ne" ? item?.labelNe : item?.labelEn;
     document.title = activeTab === "home" || !label
@@ -298,14 +367,16 @@ export default function SafeFieldNepalApp() {
     setAssessmentError(null);
     setAssessmentState(null);
     try {
+      // Keep the precise field polygon on this device. The API receives only
+      // rounded representative coordinates; no field geometry is transmitted.
       const data = await fetchFieldAssessment(
-        selectedLat,
-        selectedLon,
+        Number(selectedLat.toFixed(2)),
+        Number(selectedLon.toFixed(2)),
         fertilizerType,
         cropStage,
         true,
         sandPercentOverride,
-        selectedFieldPolygon,
+        null,
       );
       if (requestId === requestSequence.current) {
         startTransition(() => {
@@ -323,7 +394,7 @@ export default function SafeFieldNepalApp() {
     } finally {
       if (requestId === requestSequence.current) setLoading(false);
     }
-  }, [selectedLat, selectedLon, fertilizerType, cropStage, sandPercentOverride, selectedFieldPolygon, assessmentData, startTransition, updateSession]);
+  }, [selectedLat, selectedLon, fertilizerType, cropStage, sandPercentOverride, assessmentData, startTransition, updateSession]);
 
   const handleRunAssessment = useCallback(() => {
     void refreshAssessment();
@@ -343,10 +414,10 @@ export default function SafeFieldNepalApp() {
   };
 
   return (
-    <main id="main-content" tabIndex={-1} className="flex min-h-screen flex-col bg-warm text-ink">
-      <a href="#main-content" className="sr-only z-[100] rounded-full bg-white px-4 py-3 font-semibold text-forest focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:shadow-float focus:ring-2 focus:ring-action">Skip to main content</a>
+    <main id="main-content" tabIndex={-1} className="flex min-h-screen flex-col bg-canvas text-ink">
+      <a href="#main-content" className="sr-only z-[100] rounded-full bg-white px-4 py-3 font-semibold text-brand-blue-deep focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:shadow-float focus:ring-2 focus:ring-brand-blue">Skip to main content</a>
       {!isOnline && (
-        <div className="flex items-center justify-center gap-2 bg-danger px-4 py-2.5 text-center text-xs font-semibold text-white">
+        <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 border-b border-warning bg-warning-soft px-4 py-2.5 text-center text-xs font-semibold text-amber-ink">
           <WifiOff className="h-4 w-4 shrink-0" />
           <span>{t.offlineBanner}</span>
         </div>
@@ -381,14 +452,14 @@ export default function SafeFieldNepalApp() {
                   type="button"
                   onClick={() => selectTab(item.id)}
                   aria-current={isActive ? "page" : undefined}
-                  className={`flex min-h-[46px] items-center gap-3 rounded-md px-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+                  className={`flex min-h-[46px] items-center gap-3 rounded-lg border border-transparent px-3 text-sm font-semibold transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
                     isActive
-                      ? "bg-mint text-forest shadow-[inset_0_0_0_2px_var(--color-leaf)]"
-                      : "text-ink-soft hover:bg-canvas hover:text-ink"
+                      ? "bg-brand-blue-soft text-brand-blue-deep border-[#C7E0FF]"
+                      : "text-ink-soft hover:bg-soft hover:text-ink"
                   }`}
                 >
                   <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${isActive ? "bg-action text-white" : "bg-soft text-ink-muted"}`}>
-                    <Icon className="h-4 w-4" />
+                    <Icon className="h-4 w-4" aria-hidden="true" />
                   </span>
                   <span className="truncate">{lang === "ne" ? item.labelNe : item.labelEn}</span>
                 </button>
@@ -402,8 +473,8 @@ export default function SafeFieldNepalApp() {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* Mobile top header */}
-          <header className="sticky top-0 z-50 border-b border-divider bg-white/95 backdrop-blur-xl lg:hidden">
+          {/* Mobile top header — light glass over scrolling content */}
+          <header className="glass-topbar sticky top-0 z-50 lg:hidden">
             <div className="flex min-h-[64px] items-center justify-between gap-3 px-4">
               <button
                 type="button"
@@ -425,13 +496,14 @@ export default function SafeFieldNepalApp() {
             </div>
           </header>
 
-          <section className="flex w-full flex-1 flex-col px-3 pb-28 pt-5 sm:px-6 sm:pb-32 sm:pt-7 lg:px-8 lg:pb-8 lg:pt-7">
+          <section className="flex w-full flex-1 flex-col px-3 pb-44 pt-5 sm:px-6 sm:pb-32 sm:pt-7 lg:px-8 lg:pb-24 lg:pt-7">
             {activeTab === "home" && (
               <ScreenAHome
                 selectedLat={selectedLat}
                 selectedLon={selectedLon}
                 onLocationSelect={handleLocationChange}
                 onFieldPolygonSelect={handlePolygonChange}
+                onSandOverrideChange={handleSandOverrideChange}
                 fieldPolygon={selectedFieldPolygon}
                 onProceedToField={handleProceedToField}
                 lang={lang}
@@ -471,16 +543,20 @@ export default function SafeFieldNepalApp() {
               />
             )}
 
+            {activeTab === "ask" && <ScreenAskHub lang={lang} />}
+
             {activeTab === "methods" && <ScreenEMethods data={assessmentData} lang={lang} />}
           </section>
         </div>
       </div>
 
+        {/* Floating bottom navigation capsule — white liquid glass with blue
+            active states, per the Blue Horizon mobile spec */}
       <nav
         aria-label="Mobile navigation"
         className="fixed inset-x-0 bottom-0 z-[60] flex justify-center px-4 pb-[max(env(safe-area-inset-bottom),12px)] lg:hidden"
       >
-        <div className="grid w-full max-w-md grid-cols-5 gap-0.5 rounded-full bg-charcoal p-1.5 shadow-[0_8px_28px_rgba(24,44,30,0.32)]">
+        <div className="glass-bottomnav shadow-float grid w-full max-w-md grid-cols-5 gap-0.5 rounded-2xl p-1.5">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -490,18 +566,18 @@ export default function SafeFieldNepalApp() {
                 type="button"
                 onClick={() => selectTab(item.id)}
                 aria-current={isActive ? "page" : undefined}
-                className={`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-full px-1 py-1.5 text-[9px] font-medium transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
-                  isActive ? "text-white" : "text-white/55 hover:text-white"
+                className={`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-full px-1 py-1.5 text-[11px] leading-tight font-semibold transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+                  isActive ? "text-brand-blue-deep" : "text-ink-muted hover:text-ink"
                 }`}
               >
                 <span
                   className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
-                    isActive ? "bg-action text-white" : "text-white/70"
+                    isActive ? "bg-brand-blue-soft text-brand-blue-deep" : "text-ink-muted"
                   }`}
                 >
-                  <Icon className="h-[17px] w-[17px]" />
+                  <Icon className="h-[17px] w-[17px]" aria-hidden="true" />
                 </span>
-                <span className="max-w-full truncate">{lang === "ne" ? item.labelNe : item.shortEn}</span>
+                <span className="max-w-full truncate px-0.5">{lang === "ne" ? item.shortNe : item.shortEn}</span>
               </button>
             );
           })}

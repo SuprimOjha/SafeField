@@ -11,7 +11,10 @@
     "copy:maplibre-workers": "node scripts/copy-maplibre-workers.mjs",
     "predev": "npm run copy:maplibre-workers && npm run prepare:nepal-data",
     "prebuild": "npm run copy:maplibre-workers && npm run prepare:nepal-data",
-    "prepare:nepal-data": "node scripts/prepare-nepal-data.cjs"
+    "prepare:nepal-data": "node scripts/prepare-nepal-data.cjs",
+    "test:i18n": "node scripts/check-i18n-parity.mjs",
+    "test:field-survey": "node --test scripts/test-field-survey.cjs",
+    "test:gps": "node --experimental-strip-types --test src/lib/gps-average.test.ts"
   },
   "dependencies": {
     "lucide-react": "^1.72.0",

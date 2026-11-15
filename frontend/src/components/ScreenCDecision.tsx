@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { FieldAssessmentResponse, DecisionSignal } from "@/types/safefield";
+import { FieldAssessmentResponse } from "@/types/safefield";
 import FarmerContentPanel from "@/components/FarmerContentPanel";
+import DecisionCard from "@/components/DecisionCard";
+import FreshnessStrip from "@/components/FreshnessStrip";
+import DataReceiptDrawer from "@/components/DataReceiptDrawer";
 import { getDict, type Lang } from "@/i18n";
 import {
-  CheckCircle2,
-  AlertTriangle,
-  Clock,
   ChevronDown,
   ChevronUp,
   CloudRain,
@@ -32,7 +32,7 @@ export default function ScreenCDecision({
 
   if (!data) {
     return (
-      <div className="rounded-xl border border-line bg-white p-8 text-center text-ink-soft shadow-float">
+      <div className="rounded-2xl border border-line bg-white p-8 text-center text-ink-soft shadow-card">
         {t.selectFirst}
       </div>
     );
@@ -40,71 +40,17 @@ export default function ScreenCDecision({
 
   const { decision, forecast } = data;
 
-  const getSignalTheme = (signal: DecisionSignal) => {
-    if (signal === "CONDITIONS LOOK SUITABLE") {
-      return {
-        bg: "bg-action-soft",
-        border: "border-leaf",
-        badgeBg: "bg-action text-white",
-        icon: <CheckCircle2 className="w-12 h-12 text-leaf shrink-0" />,
-        label: lang === "ne" ? t.signalSuitableNe : t.signalSuitable,
-      };
-    }
-    if (signal === "WAIT AND RECHECK") {
-      return {
-        bg: "bg-amber-soft",
-        border: "border-amber",
-        badgeBg: "bg-amber text-amber-ink",
-        icon: <Clock className="w-12 h-12 text-amber-ink shrink-0" />,
-        label:
-          lang === "ne"
-            ? `${t.signalWaitNe} — ${decision.wait_days_recommended} ${t.daysUnit}`
-            : `${t.signalWait} — ${decision.wait_days_recommended} ${t.daysUnit}${decision.wait_days_recommended === 1 ? "" : "s"}`,
-      };
-    }
-    return {
-      bg: "bg-amber-soft",
-      border: "border-amber",
-      badgeBg: "bg-amber text-amber-ink",
-      icon: <AlertTriangle className="w-10 h-10 text-amber-ink shrink-0" />,
-      label: lang === "ne" ? t.signalReviewNe : t.signalReview,
-    };
-  };
 
-  const theme = getSignalTheme(decision.signal);
 
   return (
     <div className="space-y-6">
-      {/* Primary Outdoor Decision Banner */}
-      <section aria-label={t.decisionBannerLabel} aria-live="polite" className={`${theme.bg} ${theme.border} border shadow-float ${decision.signal === "CONDITIONS LOOK SUITABLE" ? "text-forest p-6 md:p-8" : "text-amber-ink p-5 md:p-6"} rounded-xl` }>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-start md:items-center gap-4">
-            {theme.icon}
-            <div>
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <span className={`text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full ${theme.badgeBg}`}>
-                  {t.confidenceLabel} {decision.confidence}
-                </span>
-                {decision.wait_days_recommended > 0 && (
-                  <span className="rounded-full bg-amber px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-ink">
-                    {t.waitDaysLabel.replace("{days}", String(decision.wait_days_recommended))}
-                  </span>
-                )}
-              </div>
-              <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-                {theme.label}
-              </h2>
-            </div>
-          </div>
-        </div>
+      <DecisionCard decision={decision} lang={lang} />
+      <FreshnessStrip rainfall={data.rainfall_observation} lang={lang} />
+      <div className="flex justify-start"><DataReceiptDrawer data={data} lang={lang} /></div>
 
-        <p className={`mt-3 text-base font-semibold ${decision.signal === "CONDITIONS LOOK SUITABLE" ? "text-forest" : "text-amber-ink"}`}>{decision.primary_reason}</p>
-        <p className={`mt-2 text-sm leading-relaxed ${decision.signal === "CONDITIONS LOOK SUITABLE" ? "text-forest/85" : "text-amber-ink"}`}>{decision.detailed_explanation}</p>
-        <p className={`mt-3 rounded-lg border p-3 text-xs leading-5 ${decision.signal === "CONDITIONS LOOK SUITABLE" ? "border-divider bg-white/70 text-forest" : "border-amber bg-white/70 text-amber-ink"}`}>{t.decisionFootnote}</p>
-      </section>
 
       {/* 5-Day Non-NASA Rain Outlook Strip */}
-      <div className="rounded-xl border border-line bg-white p-6 shadow-float">
+      <div className="rounded-2xl border border-line bg-white p-6 shadow-card">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
           <div className="flex items-center gap-2">
             <CloudRain className="w-5 h-5 text-info" />
@@ -119,7 +65,7 @@ export default function ScreenCDecision({
         {forecast.forecast_days.length > 0 ? (
           <>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-soft">
-              <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${forecast.freshness.status === "LIVE" ? "bg-action-soft text-forest" : "bg-amber-soft text-amber-ink"}`}>
+              <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${forecast.freshness.status === "LIVE" ? "bg-action-soft text-brand-blue-deep" : "bg-amber-soft text-amber-ink"}`}>
                 {forecast.freshness.status === "LIVE" ? t.liveForecast : t.cachedForecast}
               </span>
               <span className="tnum">{t.fetchedAt} {new Date(forecast.freshness.fetched_at_utc).toLocaleString()}</span>
@@ -130,7 +76,7 @@ export default function ScreenCDecision({
                 return (
                   <div
                     key={day.date}
-                    className={`rounded-md border p-3.5 ${isWet ? "border-info/30 bg-info-soft" : "border-line bg-soft"}`}
+                    className={`rounded-lg border p-3.5 ${isWet ? "border-info/30 bg-info-soft" : "border-line bg-soft"}`}
                   >
                     <div className="tnum text-[11px] font-medium text-ink-soft">{day.date}</div>
                     <div className={`tnum mt-1 text-xl font-bold ${isWet ? "text-info" : "text-ink"}`}>
@@ -174,21 +120,21 @@ export default function ScreenCDecision({
       </div>
 
       {/* Transparent "Why?" Drawer */}
-      <div className="overflow-hidden rounded-xl border border-divider bg-white shadow-float">
+      <div className="overflow-hidden rounded-2xl border border-line bg-white shadow-card">
         <button
           aria-expanded={whyOpen}
           aria-controls="decision-explanation"
           onClick={() => setWhyOpen(!whyOpen)}
-          className="flex w-full items-center justify-between bg-action-soft/70 px-6 py-4 text-left transition hover:bg-action-soft"
+          className="flex w-full items-center justify-between bg-action-soft/70 px-6 py-4 text-left transition hover:bg-action-soft active:scale-[0.98]"
         >
           <div className="flex items-center gap-2.5">
-            <ShieldCheck className="w-5 h-5 text-leaf" />
-            <span className="text-base font-bold text-forest">{t.whyDecision}</span>
+            <ShieldCheck className="w-5 h-5 text-brand-blue-deep" />
+            <span className="text-base font-bold text-brand-blue-deep">{t.whyDecision}</span>
           </div>
           {whyOpen ? (
-            <ChevronUp className="w-5 h-5 text-leaf" />
+            <ChevronUp className="w-5 h-5 text-brand-blue-deep" />
           ) : (
-            <ChevronDown className="w-5 h-5 text-leaf" />
+            <ChevronDown className="w-5 h-5 text-brand-blue-deep" />
           )}
         </button>
 
@@ -214,7 +160,7 @@ export default function ScreenCDecision({
                   </div>
                   <span
                     className={`self-start rounded-full px-2.5 py-1 text-[11px] font-semibold sm:self-center shrink-0 ${
-                      isRisky ? "bg-danger-soft text-danger" : "bg-action-soft text-forest"
+                      isRisky ? "bg-danger-soft text-danger" : "bg-action-soft text-brand-blue-deep"
                     }`}
                   >
                     {rule.impact}
@@ -231,21 +177,21 @@ export default function ScreenCDecision({
 
       <FarmerContentPanel lang={lang} />
 
-      <section className="space-y-3 rounded-xl border border-leaf bg-action-soft p-5">
-        <div className="flex items-center gap-2 text-forest"><ShieldCheck className="h-5 w-5" /><h3 className="font-extrabold">{t.safetyTitle}</h3></div>
-        <ul className="grid gap-2 text-sm text-forest sm:grid-cols-2">
+      <section className="space-y-3 rounded-2xl border border-[#D7E9FF] bg-surface-blue p-5">
+        <div className="flex items-center gap-2 text-brand-blue-deep"><ShieldCheck className="h-5 w-5" /><h3 className="font-bold">{t.safetyTitle}</h3></div>
+        <ul className="grid gap-2 text-sm text-ink-soft sm:grid-cols-2">
           {t.safetyBullets.map((bullet, index) => (
             <li key={index}>• {bullet}</li>
           ))}
         </ul>
-        <p className="text-xs leading-5 text-forest">{t.safetyNote}</p>
+        <p className="text-xs leading-5 text-ink-soft">{t.safetyNote}</p>
       </section>
 
       {/* Next Step Navigation */}
       <div className="flex justify-end">
         <button
           onClick={onProceedToTrends}
-          className="flex items-center gap-2 rounded-full bg-action px-8 py-4 font-bold text-lg text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex items-center gap-2 rounded-full bg-action px-8 py-4 font-bold text-lg text-white transition hover:bg-action-pressed active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {t.nextTrends}
           <ArrowRight className="w-5 h-5" />

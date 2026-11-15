@@ -37,9 +37,9 @@ export default function FarmerContentPanel({ lang }: { lang: Lang }) {
   const allGuidanceExpertReviewed = allGuidance.length > 0 && !hasUnreviewedGuidance;
 
   return (
-    <section className="rounded-xl border border-divider bg-white p-5 shadow-float space-y-4">
+    <section className="rounded-xl border border-line bg-white p-5 shadow-float space-y-4">
       <div>
-        <h3 className="text-lg font-extrabold text-forest">
+        <h3 className="text-lg font-bold text-ink">
           {t.contentTitle}
         </h3>
         {hasUnreviewedGuidance && (
@@ -48,12 +48,12 @@ export default function FarmerContentPanel({ lang }: { lang: Lang }) {
           </p>
         )}
         {allGuidanceExpertReviewed && (
-          <p className="rounded-lg border border-divider bg-mint p-3 text-sm font-semibold text-forest">
+          <p className="rounded-lg border border-divider bg-surface-green p-3 text-sm font-semibold text-growth-deep">
             {t.contentReviewed}
           </p>
         )}
         {!content.fertilizer_references.length && !content.home_remedies.length && (
-          <p className="rounded-xl bg-cream p-3 text-sm text-ink-soft">
+          <p className="rounded-xl bg-soft p-3 text-sm text-ink-soft">
             {t.contentEmpty}
           </p>
         )}
@@ -68,9 +68,9 @@ export default function FarmerContentPanel({ lang }: { lang: Lang }) {
           ? item.valueMin + "–" + item.valueMax
           : String(item.valueMin ?? item.valueMax);
         return (
-          <article key={item.id} className="rounded-lg border border-divider bg-white p-4 space-y-2">
+          <article key={item.id} className="rounded-lg border border-line bg-white p-4 space-y-2">
             <h4 className="font-bold text-ink">{item.crop} · {item.nutrientOrProduct}</h4>
-            <p className="text-xl font-extrabold text-forest tnum">{bound} {item.unitAsPrinted}</p>
+            <p className="text-xl font-bold text-growth-deep tnum">{bound} {item.unitAsPrinted}</p>
             <p className="text-xs text-ink-soft tnum">
               {t.referenceOnly} · {source?.title ?? item.sourceKey}, {item.year} · {item.page}
             </p>
@@ -85,7 +85,7 @@ export default function FarmerContentPanel({ lang }: { lang: Lang }) {
               {t.contentLabelNote}
             </p>
             {source?.url && (
-              <a className="text-sm font-semibold text-forest underline hover:text-leaf" href={source.url} target="_blank" rel="noreferrer">
+              <a className="text-sm font-semibold text-brand-blue-deep underline hover:text-brand-blue" href={source.url} target="_blank" rel="noreferrer">
                 {source.authority} — {t.openSource}
               </a>
             )}
@@ -96,7 +96,7 @@ export default function FarmerContentPanel({ lang }: { lang: Lang }) {
       {content.home_remedies.map((item) => {
         const source = content.sources[item.sourceKey];
         return (
-          <article key={item.id} className="rounded-lg border border-divider bg-white p-4 space-y-2">
+          <article key={item.id} className="rounded-lg border border-line bg-white p-4 space-y-2">
             <h4 className="font-bold text-ink">{item.crop} · {item.problem}</h4>
             <p className="text-sm text-ink-soft">{item.remedyText}</p>
             {item.quantitiesAsPrinted && source?.official && (
@@ -109,7 +109,7 @@ export default function FarmerContentPanel({ lang }: { lang: Lang }) {
             <p className="text-sm text-ink-soft">{t.safetyNotesLabel} {item.safetyNotes}</p>
             <p className="text-xs text-ink-soft">{source?.title ?? item.sourceKey} · {item.evidence} · {item.reviewStatus}{item.reviewer ? " by " + item.reviewer : ""}</p>
             {source?.url && (
-              <a className="text-sm font-semibold text-forest underline hover:text-leaf" href={source.url} target="_blank" rel="noreferrer">
+              <a className="text-sm font-semibold text-brand-blue-deep underline hover:text-brand-blue" href={source.url} target="_blank" rel="noreferrer">
                 {source.authority} — {t.openSource}
               </a>
             )}

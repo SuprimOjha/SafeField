@@ -1,0 +1,4 @@
+# AGENTS.md (Safe Field Nepal)
+Project: decision support for Nepali smallholder farmers (NASA Space Apps 2026). frontend/ = Next.js 16, TypeScript strict, Tailwind 4, MapLibre, Recharts. backend/ = FastAPI, Pydantic v2, SQLite, earthaccess, xarray, shapely.
+Hard rules: never invent data, numbers, doses, sources, quotes, or test results; every number carries provenance (source, kind, valid date, resolution, NASA yes/no); fallback and cached data are never shown as live; no doses, never "safe"; every threshold is `source` or `assumption` and the UI says which; secrets only in env or repository secrets; privacy: field geometry stays on device; extend, do not rewrite; tests for every change; report real command output and "could not verify" honestly; never loosen a quality gate.
+Commands: backend `pytest`; frontend `npm run lint`, `npm run build`; content `python -m app.cli validate-content`.

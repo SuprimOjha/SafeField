@@ -15,10 +15,13 @@ import type { Feature, FeatureCollection, Geometry, Polygon, MultiPolygon } from
 import "maplibre-gl/dist/maplibre-gl.css";
 import { createMap, addSatelliteLayer, setSatellite, isSatelliteSourceError } from "@/lib/basemap";
 import { getDict, type Lang } from "@/i18n";
+import { averageFixes, type Fix } from "@/lib/gps-average";
+import { polygonSelfIntersects, pointInDistricts } from "@/lib/field-geometry";
+import { FIELD_SURVEY_CONFIG } from "@/config/field-survey";
 import {
   Navigation, Compass, ArrowRight, Pencil, Undo2, Trash2,
-  Check, Layers3, LocateFixed, MousePointer2, Search, Loader2, X, MapPin,
-  Footprints, Info,
+  Check, LocateFixed, MousePointer2, Search, Loader2, X, MapPin,
+  Footprints, Info, ChevronDown,
 } from "lucide-react";
 
 interface ScreenAHomeProps {
@@ -26,6 +29,7 @@ interface ScreenAHomeProps {
   selectedLon: number;
   onLocationSelect: (lat: number, lon: number, name: string) => void;
   onFieldPolygonSelect: (polygon: [number, number][] | null) => void;
+  onSandOverrideChange: (value: number | null) => void;
   onProceedToField: () => void;
   lang: Lang;
   fieldPolygon?: [number, number][] | null;
@@ -34,6 +38,7 @@ interface ScreenAHomeProps {
 type DrawMode = "select" | "draw";
 type WalkCorner = { lat: number; lon: number; accuracy: number };
 type WalkStatus = "idle" | "waiting" | "live" | "unavailable";
+type SurveyPointType = "corner" | "water" | "wet" | "erosion" | "soil" | "note";
 type DistrictProperties = { DISTRICT?: string; PROVINCE?: number; HQ?: string };
 type DistrictFeature = Feature<Polygon | MultiPolygon, DistrictProperties>;
 
@@ -89,6 +94,7 @@ export default function ScreenAHome({
   selectedLon,
   onLocationSelect,
   onFieldPolygonSelect,
+  onSandOverrideChange,
   onProceedToField,
   lang,
   fieldPolygon,
@@ -121,6 +127,21 @@ export default function ScreenAHome({
   // Corners feed the same draw pipeline (drawPoints/user-field layer), plus a
   // live GPS watch that shows the walking position and per-corner accuracy.
   const [walkCorners, setWalkCorners] = useState<WalkCorner[]>([]);
+  const [surveyPoints, setSurveyPoints] = useState<Array<{id:number;lat:number;lon:number;type:SurveyPointType;accuracy:number}>>([]);
+  const [surveyPointsLoaded, setSurveyPointsLoaded] = useState(false);
+  const [pendingSurveyFix, setPendingSurveyFix] = useState<{lat:number;lon:number;accuracy:number;used:number;rejected:number}|null>(null);
+  const [pendingSoilSample, setPendingSoilSample] = useState<{lat:number;lon:number;accuracy:number}|null>(null);
+  const [soilSandInput, setSoilSandInput] = useState("");
+  const [surveyCollecting, setSurveyCollecting] = useState(false);
+  const [surveyFixCount, setSurveyFixCount] = useState(0);
+  const surveyWatchRef = useRef<number|null>(null);
+  const surveyFixesRef = useRef<Fix[]>([]);
+  const surveyPointIdRef = useRef(0);
+  const surveyTriggerRef = useRef<HTMLButtonElement>(null);
+  const surveyDialogRef = useRef<HTMLElement>(null);
+  const surveyWasOpenRef = useRef(false);
+  const surveyMarkersRef = useRef<MapLibreMarker[]>([]);
+  const [gpsReceipt, setGpsReceipt] = useState<{used:number;rejected:number}|null>(null);
   const [walkRequesting, setWalkRequesting] = useState(false);
   const [walkStatus, setWalkStatus] = useState<WalkStatus>("idle");
   const [walkLiveAccuracy, setWalkLiveAccuracy] = useState<number | null>(null);
@@ -201,7 +222,79 @@ export default function ScreenAHome({
     errorGpsDenied: t.errorGpsDenied,
     errorGpsUnavailable: t.errorGpsUnavailable,
     errorGpsTimeout: t.errorGpsTimeout,
+    searchDistrictLabel: lang === "ne" ? "खोज्नुहोस् वा जिल्ला छान्नुहोस्" : "Search or choose district",
   };
+
+  // The advanced search/district section is collapsed on phones and expanded
+  // on desktop, matching the farmer-first mobile layout. DOM-driven so the
+  // user can still toggle it freely afterwards.
+  const advDetailsRef = useRef<HTMLDetailsElement | null>(null);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 640px)");
+    const apply = () => { if (advDetailsRef.current) advDetailsRef.current.open = mq.matches; };
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
+  useEffect(() => {
+    let restoredPoints: Array<{id:number;lat:number;lon:number;type:SurveyPointType;accuracy:number}> = [];
+    try {
+      const raw = window.localStorage.getItem("safefield_survey_points");
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          restoredPoints = parsed.filter((point): point is {id:number;lat:number;lon:number;type:SurveyPointType;accuracy:number} =>
+            point && Number.isSafeInteger(point.id) && Number.isFinite(point.lat) && Number.isFinite(point.lon) &&
+            Number.isFinite(point.accuracy) && ["water","wet","erosion","soil","note"].includes(point.type)
+          );
+        }
+      }
+    } catch { /* Invalid or unavailable local storage leaves survey points empty. */ }
+
+    // Restore after the effect turn and cancel if this component unmounts first.
+    const timer = window.setTimeout(() => {
+      surveyPointIdRef.current = restoredPoints.reduce((max, point) => Math.max(max, point.id), 0);
+      setSurveyPoints(restoredPoints);
+      setSurveyPointsLoaded(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!surveyPointsLoaded) return;
+    try { window.localStorage.setItem("safefield_survey_points", JSON.stringify(surveyPoints)); }
+    catch { /* Field survey remains usable when storage is unavailable or full. */ }
+  }, [surveyPoints, surveyPointsLoaded]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    surveyMarkersRef.current.forEach((marker) => marker.remove());
+    surveyMarkersRef.current = [];
+    for (const point of surveyPoints) {
+      const element = document.createElement("div");
+      element.className = "flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-brand-blue text-sm font-bold text-white shadow-float";
+      element.textContent = ({corner:"C",water:"W",wet:"L",erosion:"E",soil:"S",note:"N"} as const)[point.type];
+      surveyMarkersRef.current.push(new MapLibreMarker({element}).setLngLat([point.lon,point.lat]).addTo(map));
+    }
+  }, [surveyPoints, mapReady]);
+
+  useEffect(() => {
+    if (!pendingSurveyFix && !pendingSoilSample) { if (surveyWasOpenRef.current) { surveyWasOpenRef.current = false; surveyTriggerRef.current?.focus(); } return; }
+    surveyWasOpenRef.current = true;
+    const handleKeys = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { setPendingSurveyFix(null); setPendingSoilSample(null); return; }
+      if (event.key !== "Tab" || !surveyDialogRef.current) return;
+      const items = surveyDialogRef.current.querySelectorAll<HTMLElement>("button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex='-1'])");
+      if (!items.length) return;
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    window.addEventListener("keydown", handleKeys);
+    return () => window.removeEventListener("keydown", handleKeys);
+  }, [pendingSurveyFix, pendingSoilSample]);
 
   useEffect(() => { onLocationSelectRef.current = onLocationSelect; }, [onLocationSelect]);
   useEffect(() => { drawPointsRef.current = drawPoints; }, [drawPoints]);
@@ -209,6 +302,11 @@ export default function ScreenAHome({
 
   // Live GPS watch for the walk method: keeps a small dot on the map and the
   // accuracy pill up to date while the farmer walks between corners.
+  const stopSurveyCollection = useCallback(() => {
+    if (surveyWatchRef.current !== null && typeof navigator !== "undefined" && navigator.geolocation) navigator.geolocation.clearWatch(surveyWatchRef.current);
+    surveyWatchRef.current = null; setSurveyCollecting(false);
+  }, []);
+
   const stopWalkWatch = useCallback(() => {
     if (walkWatchRef.current !== null && typeof navigator !== "undefined" && navigator.geolocation) {
       navigator.geolocation.clearWatch(walkWatchRef.current);
@@ -409,7 +507,7 @@ export default function ScreenAHome({
     map.addControl(new NavigationControl({ visualizePitch: true }), "top-right");
     map.addControl(new ScaleControl({ unit: "metric" }), "bottom-right");
 
-    const marker = new MapLibreMarker({ color: "#2F8F4E", draggable: true })
+    const marker = new MapLibreMarker({ color: "#087BFA", draggable: true })
       .setLngLat([initialLocation.lon, initialLocation.lat]).addTo(map);
     markerRef.current = marker;
     marker.on("dragend", () => {
@@ -436,22 +534,22 @@ export default function ScreenAHome({
         });
         map.addLayer({
           id: "district-fill", type: "fill", source: "nepal-districts",
-          paint: { "fill-color": "#16a34a", "fill-opacity": 0.035 },
+          paint: { "fill-color": "#64748B", "fill-opacity": 0.05 },
         });
         map.addLayer({
           id: "district-lines", type: "line", source: "nepal-districts",
-          paint: { "line-color": "#087443", "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.7, 11, 1.6], "line-opacity": 0.85 },
+          paint: { "line-color": "#64748B", "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.7, 11, 1.6], "line-opacity": 0.35 },
         });
       }
       if (!map.getSource("user-field")) {
         map.addSource("user-field", { type: "geojson", data: EMPTY_FEATURES });
         map.addLayer({
           id: "user-field-fill", type: "fill", source: "user-field",
-          paint: { "fill-color": "#F2B93B", "fill-opacity": 0.28 },
+          paint: { "fill-color": "#39D80B", "fill-opacity": 0.18 },
         });
         map.addLayer({
           id: "user-field-outline", type: "line", source: "user-field",
-          paint: { "line-color": "#F2B93B", "line-width": 2, "line-dasharray": [2, 1] },
+          paint: { "line-color": "#079447", "line-width": 2.5 },
         });
         map.addLayer({
           id: "user-field-points", type: "circle", source: "user-field",
@@ -459,7 +557,7 @@ export default function ScreenAHome({
           paint: {
             "circle-radius": 6,
             "circle-color": "#ffffff",
-            "circle-stroke-color": "#2F8F4E",
+            "circle-stroke-color": "#079447",
             "circle-stroke-width": 3,
           },
         });
@@ -512,6 +610,9 @@ export default function ScreenAHome({
 
     return () => {
       stopWalkWatch();
+      if (surveyWatchRef.current !== null && typeof navigator !== "undefined" && navigator.geolocation) navigator.geolocation.clearWatch(surveyWatchRef.current);
+      surveyWatchRef.current = null;
+      surveyMarkersRef.current.forEach((surveyMarker)=>surveyMarker.remove()); surveyMarkersRef.current=[];
       marker.remove();
       map.remove();
       mapRef.current = null;
@@ -519,7 +620,7 @@ export default function ScreenAHome({
       setMapReady(false);
     };
   // Keep one OpenFreeMap vector map; satellite imagery is toggled as a raster overlay.
-  }, [updateDrawLayer, onFieldPolygonSelect, stopWalkWatch]);
+  }, [updateDrawLayer, onFieldPolygonSelect, stopWalkWatch, stopSurveyCollection]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -592,6 +693,10 @@ export default function ScreenAHome({
 
   const finishDrawing = () => {
     if (drawPoints.length < 3) return;
+    if (polygonSelfIntersects(drawPoints)) { setMapError(lang === "ne" ? "खेतको सीमा आफैं काटिएको छ। कुनाहरू सच्याउनुहोस्।" : "The field boundary crosses itself. Adjust the corners before finishing."); return; }
+    const geometries = districts.map((feature) => feature.geometry);
+    if (geometries.length && drawPoints.some((point) => !pointInDistricts(point, geometries))) { setMapError(lang === "ne" ? "सीमाको केही भाग नेपालका उपलब्ध जिल्ला सीमाबाहिर छ।" : "Part of this boundary falls outside the available Nepal district boundaries."); return; }
+    setMapError(null);
     const area = polygonAreaHectares(drawPoints);
     setFieldArea(area);
     drawModeRef.current = "select";
@@ -706,6 +811,68 @@ export default function ScreenAHome({
     );
   };
 
+  const startStandSurvey = () => {
+    if (!navigator.geolocation) { setMapError(copyRef.current.errorGeolocationUnsupported); return; }
+    stopSurveyCollection(); surveyFixesRef.current = []; setSurveyFixCount(0); setPendingSurveyFix(null); setSurveyCollecting(true);
+    surveyWatchRef.current = navigator.geolocation.watchPosition((position) => {
+      surveyFixesRef.current = [...surveyFixesRef.current, {lat:position.coords.latitude,lon:position.coords.longitude,accuracyM:position.coords.accuracy,timestamp:position.timestamp}];
+      setSurveyFixCount(surveyFixesRef.current.length);
+      if (surveyFixesRef.current.length < FIELD_SURVEY_CONFIG.gpsFixCount) return;
+      const result = averageFixes(surveyFixesRef.current, {
+        maxAccuracyM: FIELD_SURVEY_CONFIG.maxGpsAccuracyMeters,
+        minFixes: FIELD_SURVEY_CONFIG.minGoodGpsFixes,
+        madK: FIELD_SURVEY_CONFIG.madK,
+        madFloorM: FIELD_SURVEY_CONFIG.madFloorM,
+        goodM: FIELD_SURVEY_CONFIG.goodM,
+        fairM: FIELD_SURVEY_CONFIG.fairM,
+      });
+      stopSurveyCollection();
+      if (!result) {
+        setMapError(lang === "ne" ? "पर्याप्त राम्रो GPS फिक्स प्राप्त भएन। खुला आकाश भएको ठाउँमा पुनः प्रयास गर्नुहोस्।" : "Not enough good GPS fixes. Move to open sky and try again.");
+        return;
+      }
+      if (result.lat < 26.3 || result.lat > 30.5 || result.lon < 80 || result.lon > 88.3) {
+        setMapError(copyRef.current.errorGpsOutside);
+        return;
+      }
+      setPendingSurveyFix({
+        lat: result.lat,
+        lon: result.lon,
+        accuracy: result.estimatedErrorM,
+        used: result.usedFixes,
+        rejected: result.rejectedFixes,
+      });
+      setMapError(null);
+    }, (error) => { stopSurveyCollection(); setMapError(error.code === error.PERMISSION_DENIED ? copyRef.current.errorGpsDenied : copyRef.current.errorGpsUnavailable); }, {enableHighAccuracy:true,maximumAge:0,timeout:30000});
+  };
+  const saveSurveyPoint = (type: SurveyPointType) => {
+    if (!pendingSurveyFix) return; const point = pendingSurveyFix;
+    if (type === "corner") {
+      const next = [...drawPointsRef.current,[point.lon,point.lat] as [number,number]];
+      if (next.length > FIELD_SURVEY_CONFIG.maxPolygonVertices) { setMapError(copyRef.current.errorTooManyVertices); return; }
+      drawPointsRef.current=next; setDrawPoints(next); walkCornersRef.current=[...walkCornersRef.current,{lat:point.lat,lon:point.lon,accuracy:point.accuracy}]; setWalkCorners(walkCornersRef.current); if(mapRef.current) updateDrawLayer(mapRef.current,next);
+    } else {
+      setSurveyPoints((old)=>[...old,{id:++surveyPointIdRef.current,lat:point.lat,lon:point.lon,type,accuracy:point.accuracy}]);
+
+    }
+    setGpsReceipt({used:point.used,rejected:point.rejected});
+    if (type === "soil") { setPendingSoilSample({lat:point.lat,lon:point.lon,accuracy:point.accuracy}); setSoilSandInput(""); }
+    setPendingSurveyFix(null); markerRef.current?.setLngLat([point.lon,point.lat]); mapRef.current?.easeTo({center:[point.lon,point.lat],duration:500});
+  };
+
+  const saveSoilSample = () => {
+    if (!pendingSoilSample) return;
+    const raw = soilSandInput.trim();
+    if (raw) {
+      const value = Number(raw);
+      if (!Number.isFinite(value) || value < 0 || value > 100) return;
+      onSandOverrideChange(value);
+      try { window.localStorage.setItem("safefield_soil_sample_input", JSON.stringify({kind:"farmer_input",sand_percent:value,accuracy_m:pendingSoilSample.accuracy,recorded_at_utc:new Date().toISOString()})); }
+      catch { /* Local assessment input remains active for this session. */ }
+    }
+    setPendingSoilSample(null);
+  };
+
   const undoWalkCorner = () => {
     if (!walkCornersRef.current.length) return;
     walkCornersRef.current = walkCornersRef.current.slice(0, -1);
@@ -751,199 +918,249 @@ export default function ScreenAHome({
         : `${walkCorners.length} ${walkCorners.length === 1 ? "corner" : "corners"} marked — ready to finish the field.`;
 
   return (
+    <>
+      {pendingSoilSample && <div className="fixed inset-0 z-[120] flex items-end justify-center bg-charcoal/60 p-3 sm:items-center"><section ref={surveyDialogRef} role="dialog" aria-modal="true" aria-labelledby="soil-sample-title" className="w-full max-w-md rounded-2xl bg-white p-5 shadow-sheet">
+        <h2 id="soil-sample-title" className="text-xl font-bold text-ink">{t.surveySoilEntryTitle}</h2>
+        <p className="mt-2 text-base text-ink-soft">{t.surveySoilEntryHelp}</p>
+        <label className="mt-4 block text-base font-semibold text-ink">{t.surveySandPercent}<input type="number" min="0" max="100" step="1" inputMode="decimal" value={soilSandInput} onChange={(event)=>setSoilSandInput(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-line px-4 text-base" placeholder={t.surveySandPlaceholder}/></label>
+        <div className="mt-4 flex gap-2"><button type="button" onClick={saveSoilSample} className="min-h-12 flex-1 rounded-full bg-action px-4 text-base font-bold text-white transition active:scale-[0.98]">{t.surveySaveSoilInput}</button><button type="button" onClick={()=>setPendingSoilSample(null)} className="min-h-12 rounded-full border border-line px-4 text-base font-semibold transition active:scale-[0.98]">{t.surveyCancel}</button></div>
+      </section></div>}
+      {pendingSurveyFix && <div className="fixed inset-0 z-[120] flex items-end justify-center bg-charcoal/60 p-3 sm:items-center"><section ref={surveyDialogRef} role="dialog" aria-modal="true" aria-labelledby="survey-point-title" className="w-full max-w-md rounded-2xl bg-white p-5 shadow-sheet">
+        <h2 id="survey-point-title" className="text-xl font-bold text-ink">{t.surveyPointQuestion}</h2><p className="mt-2 text-base text-ink-soft">{t.surveyGpsAccuracy}: ±{Math.round(pendingSurveyFix.accuracy)} m</p>
+        <div className="mt-4 grid grid-cols-2 gap-2">{([["corner",t.surveyCorner],["water",t.surveyWater],["wet",t.surveyWet],["erosion",t.surveyErosion],["soil",t.surveySoil],["note",t.surveyOther]] as const).map(([type,label])=><button key={type} type="button" onClick={()=>saveSurveyPoint(type)} className="min-h-12 rounded-xl border border-line bg-soft px-3 py-3 text-left text-base font-bold text-ink-soft transition hover:border-border-strong active:scale-[0.98]">{label}</button>)}</div>
+        <button type="button" onClick={()=>setPendingSurveyFix(null)} className="mt-3 min-h-12 w-full rounded-full border border-line px-4 text-sm font-semibold text-ink-soft transition active:scale-[0.98]">{t.surveyCancel}</button>
+      </section></div>}
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-xl border border-divider bg-white shadow-float">
-        <div className="border-b border-divider bg-cream px-5 py-6 sm:px-7">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="max-w-2xl">
-              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-mint bg-mint px-3 py-1 text-[10px] font-bold uppercase tracking-[.15em] text-forest">
-                <LocateFixed className="h-3.5 w-3.5" /> {copy.fieldMappingBadge}
+      {/* Page heading (design.md 8.2) — quiet title directly on the canvas,
+          keeping the map as the visual center of the screen. */}
+      <div className="max-w-3xl">
+        <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-brand-blue-soft px-3 py-1 text-[10px] font-bold uppercase tracking-[.15em] text-brand-blue-deep">
+          <LocateFixed className="h-3.5 w-3.5" /> {copy.fieldMappingBadge}
+        </div>
+        <h2 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">{copy.title}</h2>
+        <p className="mt-2 text-sm leading-6 text-ink-soft">{copy.subtitle}</p>
+      </div>
+
+      {mapError && (
+        <div role="alert" className="rounded-xl border border-amber bg-amber-soft px-4 py-3 text-xs font-medium leading-5 text-amber-ink">
+          {mapError}
+        </div>
+      )}
+
+      {/* Map-first workspace (design.md 8.1): the map dominates the screen and
+          setup controls float above it on Liquid Glass (8.3, 8.7). */}
+      <section className="overflow-hidden rounded-2xl border border-line bg-white shadow-float">
+        <div className="relative h-[500px] sm:h-[620px]">
+          <div ref={mapContainerRef} className="h-full w-full" />
+          {!mapReady && (
+            <div className="absolute inset-0 z-[2] flex items-center justify-center bg-warm/85 text-sm font-semibold text-ink-soft backdrop-blur-[2px]">{copy.loadingMap}</div>
+          )}
+
+          {/* Floating glass setup panel — farmer-first on mobile: the location
+              actions lead, search/district live in a collapsible section that
+              opens automatically on desktop (design.md 8.3). */}
+          <div className="glass-surface absolute left-3 top-3 z-10 max-h-[calc(100%-24px)] w-[min(92%,370px)] overflow-y-auto rounded-xl p-3 sm:p-3.5">
+            <button onClick={handleUseGps} disabled={gpsLoading} className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-brand-deep px-4 text-base font-bold text-white shadow-float transition hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60">
+              <Navigation className={`h-5 w-5 shrink-0 ${gpsLoading ? "animate-pulse" : ""}`} /> {copy.gps}
+            </button>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button onClick={() => { drawModeRef.current = "select"; setDrawMode("select"); if (mapRef.current) mapRef.current.getCanvas().style.cursor = ""; }} className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border px-3 py-2 text-center text-sm font-semibold leading-tight transition active:scale-[0.98] ${drawMode === "select" ? "border-[#C7E0FF] bg-brand-blue-soft text-brand-blue-deep" : "border-line bg-white text-ink-soft hover:bg-soft"}`}>
+                <MousePointer2 className="h-4 w-4 shrink-0" /> {copy.tap}
+              </button>
+              <button onClick={beginDrawing} className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-transparent px-3 py-2 text-center text-sm font-semibold leading-tight transition hover:opacity-95 active:scale-[0.98] bg-gradient-growth text-[#102A18] shadow-card ${drawMode === "draw" ? "ring-2 ring-[#079447]/40" : ""}`}>
+                <Pencil className="h-4 w-4 shrink-0" /> {copy.draw}
+              </button>
+            </div>
+            <details ref={advDetailsRef} className="mt-2.5 rounded-xl border border-line bg-white/85">
+              <summary className="flex min-h-11 cursor-pointer select-none items-center justify-between gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wide text-ink-soft">
+                {copy.searchDistrictLabel}
+                <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
+              </summary>
+              <div className="px-3 pb-3">
+                <label className="block">
+                  <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-ink-soft">{copy.searchLabel}</span>
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted">
+                      {searchStatus === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                    </span>
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(event) => setSearchQuery(event.target.value)}
+                      placeholder={copy.searchPlaceholder}
+                      aria-label={copy.searchLabel}
+                      className="h-11 w-full rounded-full border border-line bg-white pl-9 pr-9 text-sm font-medium text-ink outline-none transition placeholder:font-normal placeholder:text-ink-muted focus:border-action focus:ring-4 focus:ring-action/15"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery("")}
+                        aria-label="Clear search"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-ink-muted transition hover:bg-soft hover:text-ink-soft active:scale-[0.98]"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                    {searchQuery.trim().length >= 3 && (searchStatus === "done" || searchStatus === "error") && (
+                      <div className="absolute inset-x-0 top-full z-30 mt-1.5 max-h-60 overflow-y-auto rounded-lg border border-divider bg-white p-1 shadow-float">
+                        {searchStatus === "error" && (
+                          <p className="px-3 py-2.5 text-xs leading-5 text-danger">{copy.searchError}</p>
+                        )}
+                        {searchStatus === "done" && searchResults.length === 0 && (
+                          <p className="px-3 py-2.5 text-xs leading-5 text-ink-muted">{copy.searchNoResults}</p>
+                        )}
+                        {searchResults.map((result) => (
+                          <button
+                            key={`${result.title}-${result.lat}-${result.lon}`}
+                            type="button"
+                            onClick={() => selectSearchResult(result)}
+                            className="flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left transition hover:bg-brand-blue-soft/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action active:scale-[0.98]"
+                          >
+                            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-action" aria-hidden="true" />
+                            <span className="min-w-0">
+                              <span className="block truncate text-sm font-bold text-ink">{result.title}</span>
+                              {result.subtitle && <span className="block truncate text-xs text-ink-muted">{result.subtitle}</span>}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </label>
+                <label className="mt-2.5 block">
+                  <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-ink-soft">{copy.district}</span>
+                  <select value={districtName} onChange={(event) => selectDistrict(event.target.value)} disabled={districtLoading || districts.length === 0}
+                    className="h-11 w-full rounded-full border border-line bg-white px-3 text-sm font-medium text-ink outline-none transition focus:border-action focus:ring-4 focus:ring-action/15">
+                    <option value="">{districtLoading ? copy.loadingDistricts : copy.chooseDistrict}</option>
+                    {[...districts].sort((a,b) => (a.properties?.DISTRICT ?? "").localeCompare(b.properties?.DISTRICT ?? "")).map((item) => (
+                      <option key={item.properties?.DISTRICT} value={item.properties?.DISTRICT}>{item.properties?.DISTRICT}</option>
+                    ))}
+                  </select>
+                </label>
               </div>
-              <h2 className="text-2xl font-extrabold tracking-tight text-forest sm:text-3xl">{copy.title}</h2>
-              <p className="mt-2 text-sm leading-6 text-ink-soft">{copy.subtitle} {copy.subtitleExtra}</p>
+            </details>
+            {/* Map layers segmented control, kept inside the panel so it never
+                collides with the map's own chrome (design.md 8.7) */}
+            <div className="mt-3 flex items-center gap-1 rounded-full border border-line bg-white/85 p-1">
+              <button type="button" onClick={() => setMapStyle("streets")} aria-pressed={mapStyle === "streets"} className={`h-9 flex-1 rounded-full px-3 text-xs font-semibold transition active:scale-[0.98] ${mapStyle === "streets" ? "bg-brand-blue-deep text-white" : "text-ink-soft hover:text-ink"}`}>{copy.streets}</button>
+              <button type="button" onClick={() => { if (satelliteAvailable) setMapStyle("satellite"); }} disabled={!satelliteAvailable} aria-pressed={mapStyle === "satellite"} title={!satelliteAvailable ? copy.satelliteUnavailableTitle : copy.satelliteTitle} className={`h-9 flex-1 rounded-full px-3 text-xs font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 ${mapStyle === "satellite" ? "bg-brand-blue-deep text-white" : "text-ink-soft hover:text-ink"}`}>{copy.satellite}</button>
             </div>
           </div>
-        </div>
 
-        <div className="grid gap-3 border-b border-divider bg-white p-4 sm:grid-cols-2 sm:items-end sm:p-5">
-          <label className="block">
-            <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-ink-muted">{copy.searchLabel}</span>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted">
-                {searchStatus === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              </span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder={copy.searchPlaceholder}
-                aria-label={copy.searchLabel}
-                className="h-12 w-full rounded-full border border-line bg-white pl-9 pr-9 text-sm font-medium text-ink outline-none transition placeholder:font-normal placeholder:text-ink-muted focus:border-action focus:ring-4 focus:ring-action/15"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  aria-label="Clear search"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-ink-muted transition hover:bg-soft hover:text-ink-soft"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-              {searchQuery.trim().length >= 3 && (searchStatus === "done" || searchStatus === "error") && (
-                <div className="absolute inset-x-0 top-full z-30 mt-1.5 max-h-72 overflow-y-auto rounded-lg border border-divider bg-white p-1 shadow-float">
-                  {searchStatus === "error" && (
-                    <p className="px-3 py-2.5 text-xs leading-5 text-danger">{copy.searchError}</p>
-                  )}
-                  {searchStatus === "done" && searchResults.length === 0 && (
-                    <p className="px-3 py-2.5 text-xs leading-5 text-ink-muted">{copy.searchNoResults}</p>
-                  )}
-                  {searchResults.map((result) => (
-                    <button
-                      key={`${result.title}-${result.lat}-${result.lon}`}
-                      type="button"
-                      onClick={() => selectSearchResult(result)}
-                      className="flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left transition hover:bg-mint/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
-                    >
-                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-leaf" aria-hidden="true" />
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-bold text-ink">{result.title}</span>
-                        {result.subtitle && <span className="block truncate text-xs text-ink-muted">{result.subtitle}</span>}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </label>
-          <label className="block">
-            <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-ink-muted">{copy.district}</span>
-            <select value={districtName} onChange={(event) => selectDistrict(event.target.value)} disabled={districtLoading || districts.length === 0}
-              className="h-12 w-full rounded-full border border-line bg-white px-3 text-sm font-medium text-ink outline-none transition focus:border-action focus:ring-4 focus:ring-action/15">
-              <option value="">{districtLoading ? copy.loadingDistricts : copy.chooseDistrict}</option>
-              {[...districts].sort((a,b) => (a.properties?.DISTRICT ?? "").localeCompare(b.properties?.DISTRICT ?? "")).map((item) => (
-                <option key={item.properties?.DISTRICT} value={item.properties?.DISTRICT}>{item.properties?.DISTRICT}</option>
-              ))}
-            </select>
-          </label>
-          <div className="flex flex-wrap gap-2">
-            <button onClick={handleUseGps} disabled={gpsLoading} className="inline-flex h-11 items-center gap-2 rounded-full bg-action px-4 text-sm font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-60">
-              <Navigation className={`h-4 w-4 ${gpsLoading ? "animate-pulse" : ""}`} /> {copy.gps}
-            </button>
-            <button onClick={() => { drawModeRef.current = "select"; setDrawMode("select"); if (mapRef.current) mapRef.current.getCanvas().style.cursor = ""; }} className={`inline-flex h-11 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition ${drawMode === "select" ? "border-forest bg-forest text-white" : "border-line bg-white text-forest hover:bg-soft"}`}>
-              <MousePointer2 className="h-4 w-4" /> {copy.tap}
-            </button>
-            <button onClick={beginDrawing} className={`inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold transition ${drawMode === "draw" ? "bg-forest text-white" : "border border-line bg-white text-forest hover:bg-soft"}`}>
-              <Pencil className="h-4 w-4" /> {copy.draw}
-            </button>
-          </div>
-        </div>
-
-        {/* Walk method: mark field corners on foot with live GPS accuracy */}
-        <div className="border-b border-divider bg-white px-4 py-4 sm:px-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="flex items-center gap-2 text-sm font-extrabold uppercase tracking-wide text-forest">
-              <Footprints className="h-4 w-4 text-leaf" aria-hidden="true" />
-              {copy.walkTitle}
-            </h3>
-            {walkStatus !== "idle" && (
-              <span aria-live="polite" className={`tnum inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${walkStatus === "unavailable" ? "bg-danger-soft text-danger" : walkStatus === "waiting" ? "bg-amber-soft text-amber-ink" : "bg-action-soft text-forest"}`}>
-                {walkStatus === "unavailable"
-                  ? copy.walkUnavailable
-                  : walkStatus === "waiting"
-                    ? copy.walkWaiting
-                    : `GPS ±${Math.round(walkLiveAccuracy ?? 0)} m`}
-              </span>
-            )}
-          </div>
-
-          <div className="mt-2.5 flex items-start gap-2 rounded-md border border-divider bg-action-soft px-3 py-2.5 text-xs leading-5 text-forest">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-leaf" aria-hidden="true" />
-            <span>{copy.walkInfo} {copy.walkPrivacy}</span>
-          </div>
-
-          <div className="mt-3 rounded-md border border-line bg-soft px-3.5 py-3 text-xs font-semibold text-ink-soft">
-            {walkStatusBox}
-          </div>
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button onClick={markWalkCorner} disabled={walkRequesting} className="inline-flex h-10 items-center gap-2 rounded-full bg-action px-4 text-xs font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-60">
-              {walkRequesting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <MapPin className="h-4 w-4" aria-hidden="true" />}
-              {copy.walkMark}
-            </button>
-            <button onClick={undoWalkCorner} disabled={!walkCorners.length} className="inline-flex h-10 items-center gap-1.5 rounded-full border border-line bg-white px-3.5 text-xs font-semibold text-forest transition hover:bg-soft disabled:cursor-not-allowed disabled:opacity-40">
-              <Undo2 className="h-4 w-4" aria-hidden="true" /> {copy.walkUndo}
-            </button>
-            <button onClick={clearWalkCorners} disabled={!walkCorners.length} className="inline-flex h-10 items-center gap-1.5 rounded-full border border-danger/30 bg-white px-3.5 text-xs font-semibold text-danger transition hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-40">
-              <Trash2 className="h-4 w-4" aria-hidden="true" /> {copy.clear}
-            </button>
-            <button onClick={finishWalkField} disabled={walkCorners.length < 3} className="inline-flex h-10 items-center gap-1.5 rounded-full bg-action px-3.5 text-xs font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-40">
-              <Check className="h-4 w-4" aria-hidden="true" /> {copy.walkFinish}
-            </button>
-          </div>
-
-          {walkCorners.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {walkCorners.map((corner, index) => (
-                <span
-                  key={`${index}-${corner.lat}-${corner.lon}`}
-                  className={`tnum inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-bold ${corner.accuracy > 15 ? "border-amber bg-amber-soft text-amber-ink" : "border-line bg-action-soft text-forest"}`}
-                >
-                  {copy.walkCorner} {index + 1} · ±{Math.round(corner.accuracy)} m
-                </span>
-              ))}
+          {/* Floating drawing-mode bar with undo/clear/finish (8.5, 8.8) */}
+          {drawMode === "draw" && (
+            <div className="glass-surface absolute inset-x-3 bottom-3 z-10 flex flex-col gap-2 rounded-xl px-3.5 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-2 text-xs leading-5 text-ink">
+                <Pencil className="mt-0.5 h-4 w-4 shrink-0 text-action" />
+                <span>{copy.instruction} <strong className="tnum">{drawPoints.length} {copy.points}</strong></span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={undoPoint} disabled={!drawPoints.length} className="inline-flex h-10 items-center gap-1.5 rounded-full border border-line bg-white px-3.5 text-xs font-semibold text-ink-soft transition hover:bg-soft active:scale-[0.98] disabled:opacity-40"><Undo2 className="h-3.5 w-3.5" />{copy.undo}</button>
+                <button onClick={clearDrawing} className="inline-flex h-10 items-center gap-1.5 rounded-full border border-line bg-white px-3.5 text-xs font-semibold text-ink-soft transition hover:bg-soft active:scale-[0.98]"><Trash2 className="h-3.5 w-3.5" />{copy.clear}</button>
+                <button onClick={finishDrawing} disabled={drawPoints.length < 3} className="inline-flex h-10 items-center gap-1.5 rounded-full bg-gradient-brand-deep px-3.5 text-xs font-semibold text-white shadow-float transition hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"><Check className="h-3.5 w-3.5" />{copy.finish}</button>
+              </div>
             </div>
           )}
-        </div>
 
-        {drawMode === "draw" && (
-          <div className="flex flex-col gap-3 border-b border-divider bg-action-soft px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-            <div className="flex items-start gap-2 text-xs leading-5 text-forest">
-              <Pencil className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{copy.instruction} <strong>{drawPoints.length} {copy.points}</strong></span>
+          {walkCorners.length > 0 && (
+            <div className="glass-surface-dark pointer-events-none absolute bottom-[76px] left-1/2 z-[5] max-w-[92%] -translate-x-1/2 rounded-full px-4 py-2 text-center text-xs font-bold text-white">{copy.walkModePill}</div>
+          )}
+
+          {/* Compact field-information overlay (8.7). Hidden while the drawing
+              bar occupies the bottom row. */}
+          {drawMode !== "draw" && (
+            <div className="glass-surface tnum absolute bottom-3 left-3 z-[5] flex max-w-[calc(100%-140px)] items-center gap-2 rounded-full px-3 py-2.5 text-xs text-ink-soft sm:max-w-[calc(100%-200px)]">
+              <Compass className="h-4 w-4 shrink-0 text-action" />
+              <span className="truncate">{copy.selectedLocation} <strong className="font-semibold text-brand-blue-deep">{locationName}</strong> · {selectedLat.toFixed(5)}°N, {selectedLon.toFixed(5)}°E{gpsAccuracy !== null ? ` · GPS ±${Math.round(gpsAccuracy)} m` : ""} · {copy.dragPin}</span>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button onClick={undoPoint} disabled={!drawPoints.length} className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line bg-white px-3 text-xs font-semibold text-forest transition hover:bg-soft disabled:opacity-40"><Undo2 className="h-3.5 w-3.5" />{copy.undo}</button>
-              <button onClick={clearDrawing} className="inline-flex h-9 items-center gap-1.5 rounded-full border border-danger/30 bg-white px-3 text-xs font-semibold text-danger transition hover:bg-danger-soft"><Trash2 className="h-3.5 w-3.5" />{copy.clear}</button>
-              <button onClick={finishDrawing} disabled={drawPoints.length < 3} className="inline-flex h-9 items-center gap-1.5 rounded-full bg-action px-3 text-xs font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-40"><Check className="h-3.5 w-3.5" />{copy.finish}</button>
-            </div>
-          </div>
-        )}
+          )}
 
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-white px-4 py-3 sm:px-5">
-          <div className="flex items-center gap-2 text-xs font-bold text-ink-soft"><Layers3 className="h-4 w-4 text-leaf" /> {copy.mapLayers}</div>
-          <div className="inline-flex rounded-full border border-line bg-canvas p-1">
-            <button type="button" onClick={() => setMapStyle("streets")} aria-pressed={mapStyle === "streets"} className={`rounded-full px-4 py-2 text-xs font-semibold transition ${mapStyle === "streets" ? "bg-forest text-white" : "text-ink-soft hover:text-ink"}`}>{copy.streets}</button>
-            <button type="button" onClick={() => { if (satelliteAvailable) setMapStyle("satellite"); }} disabled={!satelliteAvailable} aria-pressed={mapStyle === "satellite"} title={!satelliteAvailable ? copy.satelliteUnavailableTitle : copy.satelliteTitle} className={`rounded-full px-4 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${mapStyle === "satellite" ? "bg-forest text-white" : "text-ink-soft hover:text-ink"}`}>{copy.satellite}</button>
-          </div>
-        </div>
-
-        <div className="relative mx-3 mb-3 h-[440px] overflow-hidden rounded-lg border border-line bg-canvas sm:mx-5 sm:h-[560px]">
-          <div ref={mapContainerRef} className="h-full w-full" />
-          {!mapReady && <div className="absolute inset-0 z-[2] flex items-center justify-center bg-warm/85 text-sm font-semibold text-forest backdrop-blur-[2px]">{copy.loadingMap}</div>}
-          {mapError && <div role="alert" className="absolute left-3 right-3 top-3 z-10 rounded-lg border border-amber bg-amber-soft/95 px-4 py-3 text-xs font-medium leading-5 text-amber-ink shadow-float">{mapError}</div>}
-          {drawMode === "draw" && <div className="pointer-events-none absolute left-1/2 top-3 z-[5] -translate-x-1/2 rounded-full bg-charcoal/90 px-4 py-2 text-xs font-bold text-white shadow-float">{copy.drawingMode}</div>}
-          {walkCorners.length > 0 && <div className="pointer-events-none absolute left-1/2 top-3 z-[5] -translate-x-1/2 rounded-full bg-charcoal/90 px-4 py-2 text-xs font-bold text-white shadow-float">{copy.walkModePill}</div>}
-          <div className="tnum absolute bottom-3 left-3 z-[5] flex max-w-[calc(100%-24px)] items-center gap-2 rounded-full border border-divider bg-white/95 px-3 py-2.5 text-xs text-ink-soft shadow-float backdrop-blur sm:max-w-[calc(100%-180px)]">
-            <Compass className="h-4 w-4 shrink-0 text-leaf" />
-            <span className="truncate">{copy.selectedLocation} <strong className="font-semibold text-forest">{locationName}</strong> · {selectedLat.toFixed(5)}°N, {selectedLon.toFixed(5)}°E{gpsAccuracy !== null ? ` · GPS ±${Math.round(gpsAccuracy)} m` : ""} · {copy.dragPin}</span>
-          </div>
-          <div className="absolute bottom-16 right-3 z-[5] max-w-[85%] rounded-full bg-white/92 px-3 py-2 text-[10px] font-semibold text-ink-muted">
+          {/* Map attribution stays visible and unobstructed (8.6); it rises
+              above the drawing bar while that bar is open. */}
+          <div className={`tnum absolute right-3 z-[5] max-w-[85%] rounded-full bg-white/92 px-3 py-2 text-[10px] font-semibold text-ink-muted ${drawMode === "draw" ? "bottom-[88px]" : "bottom-16"}`}>
             {mapStyle === "satellite" ? copy.attributionSatellite : copy.attributionStreets}
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 px-4 pb-5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        {/* Review and finish area (8.8) */}
+        <div className="flex flex-col gap-3 border-t border-divider bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-ink-soft">
-            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-5 rounded-xs border border-[#087443] bg-[#16a34a]/30" /> {copy.districtBoundaries}</span>
-            {fieldArea !== null && <span className="tnum font-bold text-forest">{copy.area}: {fieldArea.toFixed(3)} ha</span>}
+            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-5 rounded-xs border border-[#64748B] bg-[#64748B]/15" /> {copy.districtBoundaries}</span>
+            {fieldArea !== null && <span className="tnum font-bold text-ink">{copy.area}: {fieldArea.toFixed(3)} ha</span>}{fieldArea !== null && <p className="w-full text-base text-ink-soft">{t.surveyAreaCaveat}</p>}
             <span>{districts.length || 0} {districts.length === 1 ? (lang === "ne" ? "जिल्ला" : "district") : (lang === "ne" ? "जिल्ला" : "districts")} {districtLoading ? copy.districtsLoading : copy.districtsAvailable}</span>
           </div>
-          <button onClick={onProceedToField} className="inline-flex min-h-12 items-center justify-center gap-3 rounded-full bg-action px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-50">
+          <button onClick={onProceedToField} className="inline-flex min-h-12 items-center justify-center gap-3 rounded-full bg-action px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-action-pressed active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50">
             {copy.nextField} <ArrowRight className="h-4 w-4" />
           </button>
         </div>
       </section>
+
+      {/* Walk method and stand survey — dense forms stay on solid, readable
+          surfaces below the map (design.md: never glass-blur dense forms) */}
+      <section className="rounded-2xl border border-line bg-white p-4 shadow-float sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-ink">
+            <Footprints className="h-4 w-4 text-action" aria-hidden="true" />
+            {copy.walkTitle}
+          </h3>
+          {walkStatus !== "idle" && (
+            <span aria-live="polite" className={`tnum inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${walkStatus === "unavailable" ? "bg-danger-soft text-danger" : walkStatus === "waiting" ? "bg-amber-soft text-amber-ink" : "bg-success-soft text-success"}`}>
+              {walkStatus === "unavailable"
+                ? copy.walkUnavailable
+                : walkStatus === "waiting"
+                  ? copy.walkWaiting
+                  : `GPS ±${Math.round(walkLiveAccuracy ?? 0)} m`}
+            </span>
+          )}
+        </div>
+
+        {/* GPS accuracy + privacy notice: informational blue (8.4) */}
+        <div className="mt-2.5 flex items-start gap-2 rounded-lg border border-info/30 bg-info-soft px-3 py-2.5 text-xs leading-5 text-ink">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-info" aria-hidden="true" />
+          <span>{copy.walkInfo} {copy.walkPrivacy}</span>
+        </div>
+
+        <div className="mt-3 rounded-lg border border-line bg-soft px-3.5 py-3 text-xs font-semibold text-ink-soft">
+          {walkStatusBox}
+        </div>
+
+        <div className="mt-3 rounded-xl border border-line bg-soft p-3.5">
+          <p className="text-sm font-bold text-ink">{t.surveyStandTitle}</p>
+          <p className="mt-1 text-sm text-ink-soft">{t.surveyStandHelp}</p>
+          <button ref={surveyTriggerRef} type="button" onClick={startStandSurvey} disabled={surveyCollecting} className="mt-3 inline-flex min-h-12 items-center gap-2 rounded-full bg-action px-5 text-sm font-bold text-white transition active:scale-[0.98] disabled:opacity-50">{surveyCollecting ? <Loader2 className="h-4 w-4 animate-spin"/> : <LocateFixed className="h-4 w-4"/>}{surveyCollecting ? `${t.surveyCollecting} ${surveyFixCount}/${FIELD_SURVEY_CONFIG.gpsFixCount}` : t.surveyStartCapture}</button>
+          {surveyPoints.length>0 && <div className="mt-2 space-y-1 text-base text-ink-soft"><p className="font-semibold">{t.surveyOtherPoints}: {surveyPoints.length}</p>{surveyPoints.map((point)=><p key={point.id}>{({corner:copy.walkCorner,water:t.surveyWater,wet:t.surveyWet,erosion:t.surveyErosion,soil:t.surveySoil,note:t.surveyOther} as const)[point.type]} · {t.surveyPointQuality}: ±{Math.round(point.accuracy)} m</p>)}</div>}
+          {gpsReceipt && <details className="mt-2 text-sm text-ink-soft"><summary className="min-h-12 cursor-pointer py-3 font-semibold">{t.surveyGpsReceipt}</summary><p>{t.surveyFixesUsed}: {gpsReceipt.used} · {t.surveyFixesRejected}: {gpsReceipt.rejected}</p></details>}
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button onClick={markWalkCorner} disabled={walkRequesting} className="inline-flex h-10 items-center gap-2 rounded-full bg-action px-4 text-xs font-semibold text-white transition hover:bg-action-pressed active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60">
+            {walkRequesting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <MapPin className="h-4 w-4" aria-hidden="true" />}
+            {copy.walkMark}
+          </button>
+          <button onClick={undoWalkCorner} disabled={!walkCorners.length} className="inline-flex h-10 items-center gap-1.5 rounded-full border border-line bg-white px-3.5 text-xs font-semibold text-ink-soft transition hover:bg-soft active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40">
+            <Undo2 className="h-4 w-4" aria-hidden="true" /> {copy.walkUndo}
+          </button>
+          <button onClick={clearWalkCorners} disabled={!walkCorners.length} className="inline-flex h-10 items-center gap-1.5 rounded-full border border-danger/30 bg-white px-3.5 text-xs font-semibold text-danger transition hover:bg-danger-soft active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40">
+            <Trash2 className="h-4 w-4" aria-hidden="true" /> {copy.clear}
+          </button>
+          <button onClick={finishWalkField} disabled={walkCorners.length < 3} className="inline-flex h-10 items-center gap-1.5 rounded-full bg-action px-3.5 text-xs font-semibold text-white transition hover:bg-action-pressed active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40">
+            <Check className="h-4 w-4" aria-hidden="true" /> {copy.walkFinish}
+          </button>
+        </div>
+
+        {walkCorners.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {walkCorners.map((corner, index) => (
+              <span
+                key={`${index}-${corner.lat}-${corner.lon}`}
+                className={`tnum inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-bold ${corner.accuracy > 15 ? "border-amber bg-amber-soft text-amber-ink" : "border-line bg-success-soft text-success"}`}
+              >
+                {copy.walkCorner} {index + 1} · ±{Math.round(corner.accuracy)} m
+              </span>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
+    </>
   );
 }

@@ -23,10 +23,10 @@ export default function ScreenEMethods({ data, lang }: ScreenEMethodsProps) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-divider bg-white p-6 shadow-float space-y-4">
+      <div className="rounded-2xl border border-line bg-white p-6 shadow-card space-y-4">
         <div className="flex items-center gap-2.5">
-          <Database className="w-6 h-6 text-leaf" />
-          <h2 className="text-2xl font-bold text-forest">{t.methodsTitle}</h2>
+          <Database className="w-6 h-6 text-info" />
+          <h2 className="text-2xl font-bold tracking-tight text-ink">{t.methodsTitle}</h2>
         </div>
 
         <p className="text-sm text-ink-soft leading-relaxed">{t.methodsIntro}</p>
@@ -34,15 +34,15 @@ export default function ScreenEMethods({ data, lang }: ScreenEMethodsProps) {
         {/* Methodology Highlights */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
           <div className="rounded-lg border border-divider bg-soft p-4">
-            <h3 className="font-bold text-forest text-sm mb-1">{t.method1Title}</h3>
+            <h3 className="font-bold text-ink text-sm mb-1">{t.method1Title}</h3>
             <p className="text-xs text-ink-soft leading-relaxed">{t.method1Body}</p>
           </div>
           <div className="rounded-lg border border-divider bg-soft p-4">
-            <h3 className="font-bold text-forest text-sm mb-1">{t.method2Title}</h3>
+            <h3 className="font-bold text-ink text-sm mb-1">{t.method2Title}</h3>
             <p className="text-xs text-ink-soft leading-relaxed">{t.method2Body}</p>
           </div>
           <div className="rounded-lg border border-divider bg-soft p-4">
-            <h3 className="font-bold text-forest text-sm mb-1">{t.method3Title}</h3>
+            <h3 className="font-bold text-ink text-sm mb-1">{t.method3Title}</h3>
             <p className="text-xs text-ink-soft leading-relaxed">{t.method3Body}</p>
           </div>
         </div>
@@ -50,12 +50,12 @@ export default function ScreenEMethods({ data, lang }: ScreenEMethodsProps) {
 
       {/* Live Source Provenance Cards */}
       <div className="space-y-4">
-        <h3 className="text-lg font-bold text-forest px-1">{t.provenanceTitle}</h3>
+        <h3 className="text-lg font-bold text-ink px-1">{t.provenanceTitle}</h3>
 
         {sources.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {sources.map((src, idx) => (
-              <div key={idx} className="rounded-lg border border-divider bg-white p-5 shadow-float flex flex-col justify-between space-y-3">
+              <div key={idx} className="rounded-2xl border border-line bg-white p-5 shadow-card flex flex-col justify-between space-y-3">
                 <div>
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                     <span
@@ -71,7 +71,7 @@ export default function ScreenEMethods({ data, lang }: ScreenEMethodsProps) {
                     <span
                       className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                         src.status === "LIVE"
-                          ? "bg-action-soft text-forest"
+                          ? "bg-action-soft text-brand-blue-deep"
                           : "bg-amber-soft text-amber-ink"
                       }`}
                     >
@@ -109,7 +109,7 @@ export default function ScreenEMethods({ data, lang }: ScreenEMethodsProps) {
                     href={src.docs_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-forest hover:text-leaf"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-brand-blue-deep hover:text-brand-blue"
                   >
                     {t.officialDocs} <ExternalLink className="w-3.5 h-3.5" />
                   </a>
@@ -118,7 +118,7 @@ export default function ScreenEMethods({ data, lang }: ScreenEMethodsProps) {
             ))}
           </div>
         ) : (
-          <div className="rounded-xl border border-divider bg-white p-6 text-sm text-ink-soft shadow-float">
+          <div className="rounded-2xl border border-line bg-white p-6 text-sm text-ink-soft shadow-card">
             {t.provenanceEmpty}
           </div>
         )}
@@ -126,8 +126,8 @@ export default function ScreenEMethods({ data, lang }: ScreenEMethodsProps) {
 
 
       {data?.rainfall_observation.provenance && (
-        <div className="rounded-xl border border-info/30 bg-info-soft p-5 space-y-2">
-          <h3 className="font-bold text-forest">{t.rainfallProvenanceTitle}</h3>
+        <div className="rounded-2xl border border-info/30 bg-info-soft p-5 space-y-2">
+          <h3 className="font-bold text-info">{t.rainfallProvenanceTitle}</h3>
           <p className="text-sm text-ink-soft">{data.rainfall_observation.provenance.source_name} · {data.rainfall_observation.provenance.kind}</p>
           <p className="text-xs text-ink-soft tnum">{t.observed} {data.rainfall_observation.provenance.observed_start_utc} – {data.rainfall_observation.provenance.observed_end_utc}</p>
           <p className="text-xs text-ink-soft tnum">{t.fetched} {data.rainfall_observation.provenance.fetched_at_utc} · {data.rainfall_observation.provenance.spatial_resolution ?? t.resolutionNotSupplied}</p>

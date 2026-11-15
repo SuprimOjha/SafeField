@@ -12,6 +12,41 @@ export class UpstreamError extends Error {
   }
 }
 
+/**
+ * Farmers never see raw upstream error dumps. This strips URLs, rate-limit
+ * headers and other technical noise from an upstream error so caveats and
+ * unavailable-reasons stay honest but readable. The full exception is still
+ * logged server-side by the API route when relevant.
+ */
+export function sanitizeUpstreamError(error: unknown): string {
+  const raw = String(error);
+  const cleaned = raw
+    .replace(/https?:\/\/\S+/g, "an upstream data service")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned.length > 220 ? `${cleaned.slice(0, 217)}...` : cleaned;
+}
+
+/**
+ * Hard deadline for a provider promise, including its internal retries.
+ * Upstream services occasionally hang (e.g. SoilGrids during maintenance);
+ * without this cap one slow provider can hold the whole assessment route
+ * past the client timeout and take the entire pipeline down. The rejection
+ * surfaces as an UpstreamError so each provider's existing catch block
+ * degrades to its UNAVAILABLE / cached-fallback response.
+ */
+export async function withHardDeadline<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new UpstreamError(`${label} did not respond within ${Math.round(timeoutMs / 1000)} s; giving up rather than blocking the assessment.`, 408)), timeoutMs);
+  });
+  try {
+    return await Promise.race([promise, deadline]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
 export type QueryParams = Record<string, string | number | (string | number)[]>;
 
 export function buildUrl(base: string, params: QueryParams = {}): string {
