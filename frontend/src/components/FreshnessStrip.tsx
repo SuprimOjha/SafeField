@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Clock3, CloudRain } from "lucide-react";
 import type { RainfallObservation } from "@/types/safefield";
 import { getDict, type Lang } from "@/i18n";
@@ -13,10 +14,18 @@ export default function FreshnessStrip({ rainfall, lang }: FreshnessStripProps) 
   const start = provenance?.observed_start_utc?.slice(0, 10);
   const end = provenance?.observed_end_utc?.slice(0, 10);
   const dateLabel = start && end ? (start === end ? start : start + " – " + end) : null;
-  const validEnd = provenance?.observed_end_utc ? Date.parse(provenance.observed_end_utc) : Number.NaN;
-  const ageHours = Number.isFinite(validEnd)
-    ? Math.max(0, Math.round((Date.now() - validEnd) / 3_600_000))
-    : null;
+  const [ageHours, setAgeHours] = useState<number | null>(null);
+
+  useEffect(() => {
+    const observedEnd = provenance?.observed_end_utc;
+    const timer = window.setTimeout(() => {
+      const validEnd = observedEnd ? Date.parse(observedEnd) : Number.NaN;
+      setAgeHours(Number.isFinite(validEnd)
+        ? Math.max(0, Math.round((Date.now() - validEnd) / 3_600_000))
+        : null);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [provenance?.observed_end_utc]);
   return <div role="status" className="flex flex-col gap-2 rounded-xl border border-info/30 bg-info-soft px-4 py-3 text-base text-ink sm:flex-row sm:items-center">
     <div className="flex items-center gap-2 font-bold"><CloudRain aria-hidden="true" className="h-5 w-5 shrink-0 text-info" /><span>{t.rainDataFreshness}</span></div>
     {rainfall.status === "AVAILABLE" && provenance && dateLabel
