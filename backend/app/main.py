@@ -85,6 +85,8 @@ def create_app() -> FastAPI:
             "status": "ok",
             "service": "safe-field-nepal-backend",
             "environment": settings.app_env,
+            # Render injects the deployed SHA, so the live build is verifiable.
+            "commit": os.environ.get("RENDER_GIT_COMMIT", "")[:40],
         }
 
     return app

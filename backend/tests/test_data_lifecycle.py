@@ -197,3 +197,16 @@ def test_data_storage_endpoint_reports_initialized_resources():
     assert body["storage"]["recent_days"] >= 1
     assert body["retention_windows"]["signal_retention_days"] >= 1
     assert body["retention_windows"]["supabase_recent_days"] >= 1
+
+
+def test_health_reports_the_deployed_commit(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from app.main import create_app
+
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "27a74cf")
+
+    body = TestClient(create_app()).get("/api/health").json()
+
+    assert body["status"] == "ok"
+    assert body["commit"] == "27a74cf"
