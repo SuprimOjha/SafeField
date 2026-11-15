@@ -15,6 +15,8 @@ import type { Feature, FeatureCollection, Geometry, Polygon, MultiPolygon } from
 import "maplibre-gl/dist/maplibre-gl.css";
 import { createMap, addSatelliteLayer, setSatellite, isSatelliteSourceError } from "@/lib/basemap";
 import { getDict, type Lang } from "@/i18n";
+import { averageFixes, type GpsFix } from "@/lib/gps-average";
+import { polygonSelfIntersects, pointInDistricts } from "@/lib/field-geometry";
 import {
   Navigation, Compass, ArrowRight, Pencil, Undo2, Trash2,
   Check, Layers3, LocateFixed, MousePointer2, Search, Loader2, X, MapPin,
@@ -34,6 +36,7 @@ interface ScreenAHomeProps {
 type DrawMode = "select" | "draw";
 type WalkCorner = { lat: number; lon: number; accuracy: number };
 type WalkStatus = "idle" | "waiting" | "live" | "unavailable";
+type SurveyPointType = "corner" | "water" | "wet" | "erosion" | "soil" | "note";
 type DistrictProperties = { DISTRICT?: string; PROVINCE?: number; HQ?: string };
 type DistrictFeature = Feature<Polygon | MultiPolygon, DistrictProperties>;
 
@@ -121,6 +124,12 @@ export default function ScreenAHome({
   // Corners feed the same draw pipeline (drawPoints/user-field layer), plus a
   // live GPS watch that shows the walking position and per-corner accuracy.
   const [walkCorners, setWalkCorners] = useState<WalkCorner[]>([]);
+  const [surveyPoints, setSurveyPoints] = useState<Array<{id:number;lat:number;lon:number;type:SurveyPointType;accuracy:number}>>([]);
+  const [pendingSurveyFix, setPendingSurveyFix] = useState<{lat:number;lon:number;accuracy:number;used:number;rejected:number}|null>(null);
+  const [surveyCollecting, setSurveyCollecting] = useState(false);
+  const surveyWatchRef = useRef<number|null>(null);
+  const surveyFixesRef = useRef<GpsFix[]>([]);
+  const surveyPointIdRef = useRef(0);
   const [walkRequesting, setWalkRequesting] = useState(false);
   const [walkStatus, setWalkStatus] = useState<WalkStatus>("idle");
   const [walkLiveAccuracy, setWalkLiveAccuracy] = useState<number | null>(null);
@@ -209,6 +218,11 @@ export default function ScreenAHome({
 
   // Live GPS watch for the walk method: keeps a small dot on the map and the
   // accuracy pill up to date while the farmer walks between corners.
+  const stopSurveyCollection = useCallback(() => {
+    if (surveyWatchRef.current !== null && navigator.geolocation) navigator.geolocation.clearWatch(surveyWatchRef.current);
+    surveyWatchRef.current = null; setSurveyCollecting(false);
+  }, []);
+
   const stopWalkWatch = useCallback(() => {
     if (walkWatchRef.current !== null && typeof navigator !== "undefined" && navigator.geolocation) {
       navigator.geolocation.clearWatch(walkWatchRef.current);
@@ -512,6 +526,7 @@ export default function ScreenAHome({
 
     return () => {
       stopWalkWatch();
+      stopSurveyCollection();
       marker.remove();
       map.remove();
       mapRef.current = null;
@@ -519,7 +534,7 @@ export default function ScreenAHome({
       setMapReady(false);
     };
   // Keep one OpenFreeMap vector map; satellite imagery is toggled as a raster overlay.
-  }, [updateDrawLayer, onFieldPolygonSelect, stopWalkWatch]);
+  }, [updateDrawLayer, onFieldPolygonSelect, stopWalkWatch, stopSurveyCollection]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -592,6 +607,10 @@ export default function ScreenAHome({
 
   const finishDrawing = () => {
     if (drawPoints.length < 3) return;
+    if (polygonSelfIntersects(drawPoints)) { setMapError(lang === "ne" ? "खेतको सीमा आफैं काटिएको छ। कुनाहरू सच्याउनुहोस्।" : "The field boundary crosses itself. Adjust the corners before finishing."); return; }
+    const geometries = districts.map((feature) => feature.geometry);
+    if (geometries.length && drawPoints.some((point) => !pointInDistricts(point, geometries))) { setMapError(lang === "ne" ? "सीमाको केही भाग नेपालका उपलब्ध जिल्ला सीमाबाहिर छ।" : "Part of this boundary falls outside the available Nepal district boundaries."); return; }
+    setMapError(null);
     const area = polygonAreaHectares(drawPoints);
     setFieldArea(area);
     drawModeRef.current = "select";
@@ -706,6 +725,31 @@ export default function ScreenAHome({
     );
   };
 
+  const startStandSurvey = () => {
+    if (!navigator.geolocation) { setMapError(copyRef.current.errorGeolocationUnsupported); return; }
+    stopSurveyCollection(); surveyFixesRef.current = []; setPendingSurveyFix(null); setSurveyCollecting(true);
+    surveyWatchRef.current = navigator.geolocation.watchPosition((position) => {
+      surveyFixesRef.current = [...surveyFixesRef.current, {latitude:position.coords.latitude,longitude:position.coords.longitude,accuracy:position.coords.accuracy,timestamp:position.timestamp}];
+      if (surveyFixesRef.current.length < 5) return;
+      const result = averageFixes(surveyFixesRef.current,{maxAccuracyMeters:15}); stopSurveyCollection();
+      if (result.latitude === null || result.longitude === null || result.accuracy === null) { setMapError(lang === "ne" ? "GPS कमजोर छ। खुला आकाश भएको ठाउँमा पुनः प्रयास गर्नुहोस्।" : "Weak GPS signal. Move to open sky and try again."); return; }
+      if (result.latitude < 26.3 || result.latitude > 30.5 || result.longitude < 80 || result.longitude > 88.3) { setMapError(copyRef.current.errorGpsOutside); return; }
+      setPendingSurveyFix({lat:result.latitude,lon:result.longitude,accuracy:result.accuracy,used:result.usedCount,rejected:result.rejectedCount}); setMapError(null);
+    }, (error) => { stopSurveyCollection(); setMapError(error.code === error.PERMISSION_DENIED ? copyRef.current.errorGpsDenied : copyRef.current.errorGpsUnavailable); }, {enableHighAccuracy:true,maximumAge:0,timeout:30000});
+  };
+  const saveSurveyPoint = (type: SurveyPointType) => {
+    if (!pendingSurveyFix) return; const point = pendingSurveyFix;
+    if (type === "corner") {
+      const next = [...drawPointsRef.current,[point.lon,point.lat] as [number,number]];
+      if (next.length > 200) { setMapError(copyRef.current.errorTooManyVertices); return; }
+      drawPointsRef.current=next; setDrawPoints(next); setWalkCorners((old)=>[...old,{lat:point.lat,lon:point.lon,accuracy:point.accuracy}]); if(mapRef.current) updateDrawLayer(mapRef.current,next);
+    } else {
+      setSurveyPoints((old)=>[...old,{id:++surveyPointIdRef.current,lat:point.lat,lon:point.lon,type,accuracy:point.accuracy}]);
+      if(mapRef.current){const el=document.createElement("div");el.className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-forest text-sm font-bold text-white shadow-float";el.textContent=({water:"W",wet:"L",erosion:"E",soil:"S",note:"N"} as const)[type];new MapLibreMarker({element:el}).setLngLat([point.lon,point.lat]).addTo(mapRef.current);}
+    }
+    setPendingSurveyFix(null); markerRef.current?.setLngLat([point.lon,point.lat]); mapRef.current?.easeTo({center:[point.lon,point.lat],duration:500});
+  };
+
   const undoWalkCorner = () => {
     if (!walkCornersRef.current.length) return;
     walkCornersRef.current = walkCornersRef.current.slice(0, -1);
@@ -751,6 +795,11 @@ export default function ScreenAHome({
         : `${walkCorners.length} ${walkCorners.length === 1 ? "corner" : "corners"} marked — ready to finish the field.`;
 
   return (
+      {pendingSurveyFix && <div className="fixed inset-0 z-[120] flex items-end justify-center bg-charcoal/60 p-3 sm:items-center"><section role="dialog" aria-modal="true" aria-labelledby="survey-point-title" className="w-full max-w-md rounded-2xl bg-white p-5 shadow-sheet">
+        <h2 id="survey-point-title" className="text-xl font-extrabold text-forest">{lang === "ne" ? "यो बिन्दु कुन प्रकारको हो?" : "What type of point is this?"}</h2><p className="mt-2 text-base text-ink-soft">{lang === "ne" ? "GPS सटीकता" : "GPS accuracy"}: ±{Math.round(pendingSurveyFix.accuracy)} m</p>
+        <div className="mt-4 grid grid-cols-2 gap-2">{([["corner","Corner","कुना"],["water","Water source","पानीको स्रोत"],["wet","Low / wet spot","होचो वा ओसिलो ठाउँ"],["erosion","Eroding spot","कटान भएको ठाउँ"],["soil","Soil sample","माटो नमुना"],["note","Other note","अन्य"]] as const).map(([type,en,ne])=><button key={type} type="button" onClick={()=>saveSurveyPoint(type)} className="min-h-12 rounded-xl border border-line bg-soft px-3 py-3 text-left text-sm font-bold text-forest">{lang === "ne" ? ne : en}</button>)}</div>
+        <button type="button" onClick={()=>setPendingSurveyFix(null)} className="mt-3 min-h-12 w-full rounded-full border border-line px-4 text-sm font-semibold text-ink-soft">{lang === "ne" ? "रद्द गर्नुहोस्" : "Cancel"}</button>
+      </section></div>}
     <div className="space-y-5">
       <section className="overflow-hidden rounded-xl border border-divider bg-white shadow-float">
         <div className="border-b border-divider bg-cream px-5 py-6 sm:px-7">
@@ -866,6 +915,12 @@ export default function ScreenAHome({
             {walkStatusBox}
           </div>
 
+          <div className="mt-3 rounded-xl border border-divider bg-white p-3">
+            <p className="text-sm font-bold text-forest">{lang === "ne" ? "उभिएर बिन्दु मार्क गर्नुहोस्" : "Stand and mark"}</p>
+            <p className="mt-1 text-sm text-ink-soft">{lang === "ne" ? "स्थिर उभिनुहोस्। पाँच GPS फिक्स सङ्कलन गरिन्छ; १५ मिटरभन्दा कमजोर फिक्स हटाइन्छ।" : "Stand still. Five GPS fixes are collected; fixes worse than 15 m accuracy are rejected."}</p>
+            <button type="button" onClick={startStandSurvey} disabled={surveyCollecting} className="mt-3 inline-flex min-h-12 items-center gap-2 rounded-full bg-action px-5 text-sm font-bold text-white disabled:opacity-50">{surveyCollecting ? <Loader2 className="h-4 w-4 animate-spin"/> : <LocateFixed className="h-4 w-4"/>}{surveyCollecting ? (lang === "ne" ? "GPS फिक्स सङ्कलन हुँदैछ…" : "Collecting GPS fixes…") : (lang === "ne" ? "बिन्दु सङ्कलन सुरु गर्नुहोस्" : "Start point capture")}</button>
+            {surveyPoints.length>0 && <p className="mt-2 text-sm text-ink-soft">{lang === "ne" ? "अन्य सर्वेक्षण बिन्दु" : "Other survey points"}: {surveyPoints.length}</p>}
+          </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <button onClick={markWalkCorner} disabled={walkRequesting} className="inline-flex h-10 items-center gap-2 rounded-full bg-action px-4 text-xs font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-60">
               {walkRequesting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <MapPin className="h-4 w-4" aria-hidden="true" />}
