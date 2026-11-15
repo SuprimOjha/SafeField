@@ -104,6 +104,7 @@ export const en = {
   receiptYes: "Yes",
   receiptNo: "No",
   receiptNotProvided: "Not provided by the API",
+  receiptNotExposed: "Not exposed by the current API response",
   receiptStatus: "Availability",
   receiptLatestDate: "Latest valid date",
   receiptFetched: "Retrieved (UTC)",
