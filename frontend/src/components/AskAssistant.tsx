@@ -388,7 +388,7 @@ export default function AskAssistant({ lang, context }: AskAssistantProps) {
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={t.askOpenAria}
-        className="fixed bottom-[calc(env(safe-area-inset-bottom)+96px)] right-4 z-[65] flex h-14 items-center gap-2 rounded-full bg-forest px-5 text-white shadow-float transition hover:bg-leaf focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 lg:bottom-6 lg:right-6"
+        className="fixed bottom-[calc(env(safe-area-inset-bottom)+96px)] right-4 z-[65] flex h-14 items-center gap-2 rounded-full bg-forest px-5 text-white shadow-float transition hover:bg-action-pressed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 lg:bottom-6 lg:right-6"
       >
         <MessageCircleQuestion className="h-5 w-5" aria-hidden="true" />
         <span className="text-sm font-semibold">{t.askOpen}</span>

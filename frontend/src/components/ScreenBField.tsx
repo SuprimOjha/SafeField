@@ -107,7 +107,7 @@ export default function ScreenBField({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Local rainfall observation */}
-        <div className="flex flex-col justify-between rounded-md bg-soft p-3.5">
+        <div className="flex flex-col justify-between rounded-xl border border-line bg-white p-4 shadow-card">
           <div className="flex items-center justify-between mb-3">
             <span className="text-[11px] font-medium text-ink-soft">{t.localRainfall}</span>
             <CloudRain className="w-6 h-6 text-info" />
@@ -134,7 +134,7 @@ export default function ScreenBField({
               : t.noRainfallObservation}
           </p>
           {hasRegionalPowerEstimate && (
-            <div className="mt-3 rounded-lg border border-line bg-white p-3">
+            <div className="mt-3 rounded-lg border border-line bg-soft p-3">
               <p className="text-xs font-semibold text-ink-soft">{t.regionalEstimateOnly}</p>
               <p className="tnum mt-1 text-xs leading-5 text-ink-soft">
                 {power_summary.rain_last_72h_mm} {t.regionalEstimateBody.replace("{dates}", regionalPowerDates)}{" "}
@@ -145,7 +145,7 @@ export default function ScreenBField({
         </div>
 
         {/* Soil Wetness */}
-        <div className="flex flex-col justify-between rounded-md bg-soft p-3.5">
+        <div className="flex flex-col justify-between rounded-xl border border-line bg-white p-4 shadow-card">
           <div className="flex items-center justify-between mb-3">
             <span className="text-[11px] font-medium text-ink-soft">{t.wetnessCard}</span>
             <Droplets className="w-6 h-6 text-leaf" />
@@ -160,7 +160,7 @@ export default function ScreenBField({
         </div>
 
         {/* Temperature */}
-        <div className="flex flex-col justify-between rounded-md bg-soft p-3.5">
+        <div className="flex flex-col justify-between rounded-xl border border-line bg-white p-4 shadow-card">
           <div className="flex items-center justify-between mb-3">
             <span className="text-[11px] font-medium text-ink-soft">{t.temperatureCard}</span>
             <Thermometer className="w-6 h-6 text-amber" />
@@ -173,7 +173,7 @@ export default function ScreenBField({
         </div>
 
         {/* Slope & Terrain */}
-        <div className="flex flex-col justify-between rounded-md bg-soft p-3.5">
+        <div className="flex flex-col justify-between rounded-xl border border-line bg-white p-4 shadow-card">
           <div className="flex items-center justify-between mb-3">
             <span className="text-[11px] font-medium text-ink-soft">{t.terrainCard}</span>
             <Mountain className="w-6 h-6 text-ink-soft" />

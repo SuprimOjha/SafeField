@@ -20,7 +20,7 @@ import { polygonSelfIntersects, pointInDistricts } from "@/lib/field-geometry";
 import { FIELD_SURVEY_CONFIG } from "@/config/field-survey";
 import {
   Navigation, Compass, ArrowRight, Pencil, Undo2, Trash2,
-  Check, Layers3, LocateFixed, MousePointer2, Search, Loader2, X, MapPin,
+  Check, LocateFixed, MousePointer2, Search, Loader2, X, MapPin,
   Footprints, Info,
 } from "lucide-react";
 
@@ -494,7 +494,7 @@ export default function ScreenAHome({
     map.addControl(new NavigationControl({ visualizePitch: true }), "top-right");
     map.addControl(new ScaleControl({ unit: "metric" }), "bottom-right");
 
-    const marker = new MapLibreMarker({ color: "#2F8F4E", draggable: true })
+    const marker = new MapLibreMarker({ color: "#238B50", draggable: true })
       .setLngLat([initialLocation.lon, initialLocation.lat]).addTo(map);
     markerRef.current = marker;
     marker.on("dragend", () => {
@@ -521,22 +521,22 @@ export default function ScreenAHome({
         });
         map.addLayer({
           id: "district-fill", type: "fill", source: "nepal-districts",
-          paint: { "fill-color": "#16a34a", "fill-opacity": 0.035 },
+          paint: { "fill-color": "#238B50", "fill-opacity": 0.04 },
         });
         map.addLayer({
           id: "district-lines", type: "line", source: "nepal-districts",
-          paint: { "line-color": "#087443", "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.7, 11, 1.6], "line-opacity": 0.85 },
+          paint: { "line-color": "#174B35", "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.7, 11, 1.6], "line-opacity": 0.5 },
         });
       }
       if (!map.getSource("user-field")) {
         map.addSource("user-field", { type: "geojson", data: EMPTY_FEATURES });
         map.addLayer({
           id: "user-field-fill", type: "fill", source: "user-field",
-          paint: { "fill-color": "#F2B93B", "fill-opacity": 0.28 },
+          paint: { "fill-color": "#F2C65D", "fill-opacity": 0.3 },
         });
         map.addLayer({
           id: "user-field-outline", type: "line", source: "user-field",
-          paint: { "line-color": "#F2B93B", "line-width": 2, "line-dasharray": [2, 1] },
+          paint: { "line-color": "#F2C65D", "line-width": 2.5 },
         });
         map.addLayer({
           id: "user-field-points", type: "circle", source: "user-field",
@@ -544,7 +544,7 @@ export default function ScreenAHome({
           paint: {
             "circle-radius": 6,
             "circle-color": "#ffffff",
-            "circle-stroke-color": "#2F8F4E",
+            "circle-stroke-color": "#238B50",
             "circle-stroke-width": 3,
           },
         });
@@ -918,197 +918,153 @@ export default function ScreenAHome({
         <button type="button" onClick={()=>setPendingSurveyFix(null)} className="mt-3 min-h-12 w-full rounded-full border border-line px-4 text-sm font-semibold text-ink-soft">{t.surveyCancel}</button>
       </section></div>}
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-xl border border-divider bg-white shadow-float">
-        <div className="border-b border-divider bg-cream px-5 py-6 sm:px-7">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="max-w-2xl">
-              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-mint bg-mint px-3 py-1 text-[10px] font-bold uppercase tracking-[.15em] text-forest">
-                <LocateFixed className="h-3.5 w-3.5" /> {copy.fieldMappingBadge}
-              </div>
-              <h2 className="text-2xl font-extrabold tracking-tight text-forest sm:text-3xl">{copy.title}</h2>
-              <p className="mt-2 text-sm leading-6 text-ink-soft">{copy.subtitle} {copy.subtitleExtra}</p>
-            </div>
-          </div>
+      {/* Page heading (design.md 8.2) — quiet title directly on the canvas,
+          keeping the map as the visual center of the screen. */}
+      <div className="max-w-3xl">
+        <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-mint px-3 py-1 text-[10px] font-bold uppercase tracking-[.15em] text-forest">
+          <LocateFixed className="h-3.5 w-3.5" /> {copy.fieldMappingBadge}
         </div>
+        <h2 className="text-2xl font-extrabold tracking-tight text-forest sm:text-3xl">{copy.title}</h2>
+        <p className="mt-2 text-sm leading-6 text-ink-soft">{copy.subtitle} {copy.subtitleExtra}</p>
+      </div>
 
-        <div className="grid gap-3 border-b border-divider bg-white p-4 sm:grid-cols-2 sm:items-end sm:p-5">
-          <label className="block">
-            <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-ink-muted">{copy.searchLabel}</span>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted">
-                {searchStatus === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              </span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder={copy.searchPlaceholder}
-                aria-label={copy.searchLabel}
-                className="h-12 w-full rounded-full border border-line bg-white pl-9 pr-9 text-sm font-medium text-ink outline-none transition placeholder:font-normal placeholder:text-ink-muted focus:border-action focus:ring-4 focus:ring-action/15"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  aria-label="Clear search"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-ink-muted transition hover:bg-soft hover:text-ink-soft"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-              {searchQuery.trim().length >= 3 && (searchStatus === "done" || searchStatus === "error") && (
-                <div className="absolute inset-x-0 top-full z-30 mt-1.5 max-h-72 overflow-y-auto rounded-lg border border-divider bg-white p-1 shadow-float">
-                  {searchStatus === "error" && (
-                    <p className="px-3 py-2.5 text-xs leading-5 text-danger">{copy.searchError}</p>
-                  )}
-                  {searchStatus === "done" && searchResults.length === 0 && (
-                    <p className="px-3 py-2.5 text-xs leading-5 text-ink-muted">{copy.searchNoResults}</p>
-                  )}
-                  {searchResults.map((result) => (
-                    <button
-                      key={`${result.title}-${result.lat}-${result.lon}`}
-                      type="button"
-                      onClick={() => selectSearchResult(result)}
-                      className="flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left transition hover:bg-mint/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
-                    >
-                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-leaf" aria-hidden="true" />
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-bold text-ink">{result.title}</span>
-                        {result.subtitle && <span className="block truncate text-xs text-ink-muted">{result.subtitle}</span>}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </label>
-          <label className="block">
-            <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-ink-muted">{copy.district}</span>
-            <select value={districtName} onChange={(event) => selectDistrict(event.target.value)} disabled={districtLoading || districts.length === 0}
-              className="h-12 w-full rounded-full border border-line bg-white px-3 text-sm font-medium text-ink outline-none transition focus:border-action focus:ring-4 focus:ring-action/15">
-              <option value="">{districtLoading ? copy.loadingDistricts : copy.chooseDistrict}</option>
-              {[...districts].sort((a,b) => (a.properties?.DISTRICT ?? "").localeCompare(b.properties?.DISTRICT ?? "")).map((item) => (
-                <option key={item.properties?.DISTRICT} value={item.properties?.DISTRICT}>{item.properties?.DISTRICT}</option>
-              ))}
-            </select>
-          </label>
-          <div className="flex flex-wrap gap-2">
-            <button onClick={handleUseGps} disabled={gpsLoading} className="inline-flex h-11 items-center gap-2 rounded-full bg-action px-4 text-sm font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-60">
-              <Navigation className={`h-4 w-4 ${gpsLoading ? "animate-pulse" : ""}`} /> {copy.gps}
-            </button>
-            <button onClick={() => { drawModeRef.current = "select"; setDrawMode("select"); if (mapRef.current) mapRef.current.getCanvas().style.cursor = ""; }} className={`inline-flex h-11 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition ${drawMode === "select" ? "border-forest bg-forest text-white" : "border-line bg-white text-forest hover:bg-soft"}`}>
-              <MousePointer2 className="h-4 w-4" /> {copy.tap}
-            </button>
-            <button onClick={beginDrawing} className={`inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold transition ${drawMode === "draw" ? "bg-forest text-white" : "border border-line bg-white text-forest hover:bg-soft"}`}>
-              <Pencil className="h-4 w-4" /> {copy.draw}
-            </button>
-          </div>
+      {mapError && (
+        <div role="alert" className="rounded-xl border border-amber bg-amber-soft px-4 py-3 text-xs font-medium leading-5 text-amber-ink">
+          {mapError}
         </div>
+      )}
 
-        {/* Walk method: mark field corners on foot with live GPS accuracy */}
-        <div className="border-b border-divider bg-white px-4 py-4 sm:px-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="flex items-center gap-2 text-sm font-extrabold uppercase tracking-wide text-forest">
-              <Footprints className="h-4 w-4 text-leaf" aria-hidden="true" />
-              {copy.walkTitle}
-            </h3>
-            {walkStatus !== "idle" && (
-              <span aria-live="polite" className={`tnum inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${walkStatus === "unavailable" ? "bg-danger-soft text-danger" : walkStatus === "waiting" ? "bg-amber-soft text-amber-ink" : "bg-action-soft text-forest"}`}>
-                {walkStatus === "unavailable"
-                  ? copy.walkUnavailable
-                  : walkStatus === "waiting"
-                    ? copy.walkWaiting
-                    : `GPS ±${Math.round(walkLiveAccuracy ?? 0)} m`}
-              </span>
-            )}
-          </div>
+      {/* Map-first workspace (design.md 8.1): the map dominates the screen and
+          setup controls float above it on Liquid Glass (8.3, 8.7). */}
+      <section className="overflow-hidden rounded-2xl border border-line bg-white shadow-float">
+        <div className="relative h-[500px] sm:h-[620px]">
+          <div ref={mapContainerRef} className="h-full w-full" />
+          {!mapReady && (
+            <div className="absolute inset-0 z-[2] flex items-center justify-center bg-warm/85 text-sm font-semibold text-forest backdrop-blur-[2px]">{copy.loadingMap}</div>
+          )}
 
-          <div className="mt-2.5 flex items-start gap-2 rounded-md border border-divider bg-action-soft px-3 py-2.5 text-xs leading-5 text-forest">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-leaf" aria-hidden="true" />
-            <span>{copy.walkInfo} {copy.walkPrivacy}</span>
-          </div>
-
-          <div className="mt-3 rounded-md border border-line bg-soft px-3.5 py-3 text-xs font-semibold text-ink-soft">
-            {walkStatusBox}
-          </div>
-
-          <div className="mt-3 rounded-xl border border-divider bg-white p-3">
-            <p className="text-sm font-bold text-forest">{t.surveyStandTitle}</p>
-            <p className="mt-1 text-sm text-ink-soft">{t.surveyStandHelp}</p>
-            <button ref={surveyTriggerRef} type="button" onClick={startStandSurvey} disabled={surveyCollecting} className="mt-3 inline-flex min-h-12 items-center gap-2 rounded-full bg-action px-5 text-sm font-bold text-white disabled:opacity-50">{surveyCollecting ? <Loader2 className="h-4 w-4 animate-spin"/> : <LocateFixed className="h-4 w-4"/>}{surveyCollecting ? `${t.surveyCollecting} ${surveyFixCount}/${FIELD_SURVEY_CONFIG.gpsFixCount}` : t.surveyStartCapture}</button>
-            {surveyPoints.length>0 && <div className="mt-2 space-y-1 text-base text-ink-soft"><p className="font-semibold">{t.surveyOtherPoints}: {surveyPoints.length}</p>{surveyPoints.map((point)=><p key={point.id}>{({corner:copy.walkCorner,water:t.surveyWater,wet:t.surveyWet,erosion:t.surveyErosion,soil:t.surveySoil,note:t.surveyOther} as const)[point.type]} · {t.surveyPointQuality}: ±{Math.round(point.accuracy)} m</p>)}</div>}
-            {gpsReceipt && <details className="mt-2 text-sm text-ink-soft"><summary className="min-h-12 cursor-pointer py-3 font-semibold">{t.surveyGpsReceipt}</summary><p>{t.surveyFixesUsed}: {gpsReceipt.used} · {t.surveyFixesRejected}: {gpsReceipt.rejected}</p></details>}
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button onClick={markWalkCorner} disabled={walkRequesting} className="inline-flex h-10 items-center gap-2 rounded-full bg-action px-4 text-xs font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-60">
-              {walkRequesting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <MapPin className="h-4 w-4" aria-hidden="true" />}
-              {copy.walkMark}
-            </button>
-            <button onClick={undoWalkCorner} disabled={!walkCorners.length} className="inline-flex h-10 items-center gap-1.5 rounded-full border border-line bg-white px-3.5 text-xs font-semibold text-forest transition hover:bg-soft disabled:cursor-not-allowed disabled:opacity-40">
-              <Undo2 className="h-4 w-4" aria-hidden="true" /> {copy.walkUndo}
-            </button>
-            <button onClick={clearWalkCorners} disabled={!walkCorners.length} className="inline-flex h-10 items-center gap-1.5 rounded-full border border-danger/30 bg-white px-3.5 text-xs font-semibold text-danger transition hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-40">
-              <Trash2 className="h-4 w-4" aria-hidden="true" /> {copy.clear}
-            </button>
-            <button onClick={finishWalkField} disabled={walkCorners.length < 3} className="inline-flex h-10 items-center gap-1.5 rounded-full bg-action px-3.5 text-xs font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-40">
-              <Check className="h-4 w-4" aria-hidden="true" /> {copy.walkFinish}
-            </button>
-          </div>
-
-          {walkCorners.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {walkCorners.map((corner, index) => (
-                <span
-                  key={`${index}-${corner.lat}-${corner.lon}`}
-                  className={`tnum inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-bold ${corner.accuracy > 15 ? "border-amber bg-amber-soft text-amber-ink" : "border-line bg-action-soft text-forest"}`}
-                >
-                  {copy.walkCorner} {index + 1} · ±{Math.round(corner.accuracy)} m
+          {/* Floating glass setup panel: search, district, location actions */}
+          <div className="glass-surface absolute left-3 top-3 z-10 max-h-[calc(100%-24px)] w-[min(92%,370px)] overflow-y-auto rounded-xl p-3 sm:p-3.5">
+            <label className="block">
+              <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-ink-soft">{copy.searchLabel}</span>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted">
+                  {searchStatus === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                 </span>
-              ))}
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder={copy.searchPlaceholder}
+                  aria-label={copy.searchLabel}
+                  className="h-11 w-full rounded-full border border-line bg-white pl-9 pr-9 text-sm font-medium text-ink outline-none transition placeholder:font-normal placeholder:text-ink-muted focus:border-action focus:ring-4 focus:ring-action/15"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    aria-label="Clear search"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-ink-muted transition hover:bg-soft hover:text-ink-soft"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+                {searchQuery.trim().length >= 3 && (searchStatus === "done" || searchStatus === "error") && (
+                  <div className="absolute inset-x-0 top-full z-30 mt-1.5 max-h-60 overflow-y-auto rounded-lg border border-divider bg-white p-1 shadow-float">
+                    {searchStatus === "error" && (
+                      <p className="px-3 py-2.5 text-xs leading-5 text-danger">{copy.searchError}</p>
+                    )}
+                    {searchStatus === "done" && searchResults.length === 0 && (
+                      <p className="px-3 py-2.5 text-xs leading-5 text-ink-muted">{copy.searchNoResults}</p>
+                    )}
+                    {searchResults.map((result) => (
+                      <button
+                        key={`${result.title}-${result.lat}-${result.lon}`}
+                        type="button"
+                        onClick={() => selectSearchResult(result)}
+                        className="flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left transition hover:bg-mint/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+                      >
+                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-action" aria-hidden="true" />
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-bold text-ink">{result.title}</span>
+                          {result.subtitle && <span className="block truncate text-xs text-ink-muted">{result.subtitle}</span>}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </label>
+            <label className="mt-2.5 block">
+              <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-ink-soft">{copy.district}</span>
+              <select value={districtName} onChange={(event) => selectDistrict(event.target.value)} disabled={districtLoading || districts.length === 0}
+                className="h-11 w-full rounded-full border border-line bg-white px-3 text-sm font-medium text-ink outline-none transition focus:border-action focus:ring-4 focus:ring-action/15">
+                <option value="">{districtLoading ? copy.loadingDistricts : copy.chooseDistrict}</option>
+                {[...districts].sort((a,b) => (a.properties?.DISTRICT ?? "").localeCompare(b.properties?.DISTRICT ?? "")).map((item) => (
+                  <option key={item.properties?.DISTRICT} value={item.properties?.DISTRICT}>{item.properties?.DISTRICT}</option>
+                ))}
+              </select>
+            </label>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {/* GPS uses the informational blue; drawing is the green primary
+                  action (design.md 8.3 color roles). */}
+              <button onClick={handleUseGps} disabled={gpsLoading} className="inline-flex h-11 items-center gap-2 rounded-full bg-info px-4 text-sm font-semibold text-white transition hover:bg-info/90 disabled:cursor-not-allowed disabled:opacity-60">
+                <Navigation className={`h-4 w-4 ${gpsLoading ? "animate-pulse" : ""}`} /> {copy.gps}
+              </button>
+              <button onClick={() => { drawModeRef.current = "select"; setDrawMode("select"); if (mapRef.current) mapRef.current.getCanvas().style.cursor = ""; }} className={`inline-flex h-11 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition ${drawMode === "select" ? "border-forest bg-forest text-white" : "border-line bg-white text-forest hover:bg-soft"}`}>
+                <MousePointer2 className="h-4 w-4" /> {copy.tap}
+              </button>
+              <button onClick={beginDrawing} className={`inline-flex h-11 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition ${drawMode === "draw" ? "border-forest bg-forest text-white" : "border-action bg-action text-white hover:bg-action-pressed"}`}>
+                <Pencil className="h-4 w-4" /> {copy.draw}
+              </button>
+            </div>
+            {/* Map layers segmented control, kept inside the panel so it never
+                collides with the map's own chrome (design.md 8.7) */}
+            <div className="mt-3 flex items-center gap-1 rounded-full border border-line bg-white/85 p-1">
+              <button type="button" onClick={() => setMapStyle("streets")} aria-pressed={mapStyle === "streets"} className={`h-9 flex-1 rounded-full px-3 text-xs font-semibold transition ${mapStyle === "streets" ? "bg-forest text-white" : "text-ink-soft hover:text-ink"}`}>{copy.streets}</button>
+              <button type="button" onClick={() => { if (satelliteAvailable) setMapStyle("satellite"); }} disabled={!satelliteAvailable} aria-pressed={mapStyle === "satellite"} title={!satelliteAvailable ? copy.satelliteUnavailableTitle : copy.satelliteTitle} className={`h-9 flex-1 rounded-full px-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${mapStyle === "satellite" ? "bg-forest text-white" : "text-ink-soft hover:text-ink"}`}>{copy.satellite}</button>
+            </div>
+          </div>
+
+          {/* Floating drawing-mode bar with undo/clear/finish (8.5, 8.8) */}
+          {drawMode === "draw" && (
+            <div className="glass-surface absolute inset-x-3 bottom-3 z-10 flex flex-col gap-2 rounded-xl px-3.5 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-2 text-xs leading-5 text-ink">
+                <Pencil className="mt-0.5 h-4 w-4 shrink-0 text-action" />
+                <span>{copy.instruction} <strong className="tnum">{drawPoints.length} {copy.points}</strong></span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={undoPoint} disabled={!drawPoints.length} className="inline-flex h-10 items-center gap-1.5 rounded-full border border-line bg-white px-3.5 text-xs font-semibold text-forest transition hover:bg-soft disabled:opacity-40"><Undo2 className="h-3.5 w-3.5" />{copy.undo}</button>
+                <button onClick={clearDrawing} className="inline-flex h-10 items-center gap-1.5 rounded-full border border-danger/30 bg-white px-3.5 text-xs font-semibold text-danger transition hover:bg-danger-soft"><Trash2 className="h-3.5 w-3.5" />{copy.clear}</button>
+                <button onClick={finishDrawing} disabled={drawPoints.length < 3} className="inline-flex h-10 items-center gap-1.5 rounded-full bg-action px-3.5 text-xs font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-40"><Check className="h-3.5 w-3.5" />{copy.finish}</button>
+              </div>
             </div>
           )}
-        </div>
 
-        {drawMode === "draw" && (
-          <div className="flex flex-col gap-3 border-b border-divider bg-action-soft px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-            <div className="flex items-start gap-2 text-xs leading-5 text-forest">
-              <Pencil className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{copy.instruction} <strong>{drawPoints.length} {copy.points}</strong></span>
+          {walkCorners.length > 0 && (
+            <div className="glass-surface-dark pointer-events-none absolute bottom-[76px] left-1/2 z-[5] max-w-[92%] -translate-x-1/2 rounded-full px-4 py-2 text-center text-xs font-bold text-white">{copy.walkModePill}</div>
+          )}
+
+          {/* Compact field-information overlay (8.7). Hidden while the drawing
+              bar occupies the bottom row. */}
+          {drawMode !== "draw" && (
+            <div className="glass-surface tnum absolute bottom-3 left-3 z-[5] flex max-w-[calc(100%-140px)] items-center gap-2 rounded-full px-3 py-2.5 text-xs text-ink-soft sm:max-w-[calc(100%-200px)]">
+              <Compass className="h-4 w-4 shrink-0 text-action" />
+              <span className="truncate">{copy.selectedLocation} <strong className="font-semibold text-forest">{locationName}</strong> · {selectedLat.toFixed(5)}°N, {selectedLon.toFixed(5)}°E{gpsAccuracy !== null ? ` · GPS ±${Math.round(gpsAccuracy)} m` : ""} · {copy.dragPin}</span>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button onClick={undoPoint} disabled={!drawPoints.length} className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line bg-white px-3 text-xs font-semibold text-forest transition hover:bg-soft disabled:opacity-40"><Undo2 className="h-3.5 w-3.5" />{copy.undo}</button>
-              <button onClick={clearDrawing} className="inline-flex h-9 items-center gap-1.5 rounded-full border border-danger/30 bg-white px-3 text-xs font-semibold text-danger transition hover:bg-danger-soft"><Trash2 className="h-3.5 w-3.5" />{copy.clear}</button>
-              <button onClick={finishDrawing} disabled={drawPoints.length < 3} className="inline-flex h-9 items-center gap-1.5 rounded-full bg-action px-3 text-xs font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-40"><Check className="h-3.5 w-3.5" />{copy.finish}</button>
-            </div>
-          </div>
-        )}
+          )}
 
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-white px-4 py-3 sm:px-5">
-          <div className="flex items-center gap-2 text-xs font-bold text-ink-soft"><Layers3 className="h-4 w-4 text-leaf" /> {copy.mapLayers}</div>
-          <div className="inline-flex rounded-full border border-line bg-canvas p-1">
-            <button type="button" onClick={() => setMapStyle("streets")} aria-pressed={mapStyle === "streets"} className={`rounded-full px-4 py-2 text-xs font-semibold transition ${mapStyle === "streets" ? "bg-forest text-white" : "text-ink-soft hover:text-ink"}`}>{copy.streets}</button>
-            <button type="button" onClick={() => { if (satelliteAvailable) setMapStyle("satellite"); }} disabled={!satelliteAvailable} aria-pressed={mapStyle === "satellite"} title={!satelliteAvailable ? copy.satelliteUnavailableTitle : copy.satelliteTitle} className={`rounded-full px-4 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${mapStyle === "satellite" ? "bg-forest text-white" : "text-ink-soft hover:text-ink"}`}>{copy.satellite}</button>
-          </div>
-        </div>
-
-        <div className="relative mx-3 mb-3 h-[440px] overflow-hidden rounded-lg border border-line bg-canvas sm:mx-5 sm:h-[560px]">
-          <div ref={mapContainerRef} className="h-full w-full" />
-          {!mapReady && <div className="absolute inset-0 z-[2] flex items-center justify-center bg-warm/85 text-sm font-semibold text-forest backdrop-blur-[2px]">{copy.loadingMap}</div>}
-          {mapError && <div role="alert" className="absolute left-3 right-3 top-3 z-10 rounded-lg border border-amber bg-amber-soft/95 px-4 py-3 text-xs font-medium leading-5 text-amber-ink shadow-float">{mapError}</div>}
-          {drawMode === "draw" && <div className="pointer-events-none absolute left-1/2 top-3 z-[5] -translate-x-1/2 rounded-full bg-charcoal/90 px-4 py-2 text-xs font-bold text-white shadow-float">{copy.drawingMode}</div>}
-          {walkCorners.length > 0 && <div className="pointer-events-none absolute left-1/2 top-3 z-[5] -translate-x-1/2 rounded-full bg-charcoal/90 px-4 py-2 text-xs font-bold text-white shadow-float">{copy.walkModePill}</div>}
-          <div className="tnum absolute bottom-3 left-3 z-[5] flex max-w-[calc(100%-24px)] items-center gap-2 rounded-full border border-divider bg-white/95 px-3 py-2.5 text-xs text-ink-soft shadow-float backdrop-blur sm:max-w-[calc(100%-180px)]">
-            <Compass className="h-4 w-4 shrink-0 text-leaf" />
-            <span className="truncate">{copy.selectedLocation} <strong className="font-semibold text-forest">{locationName}</strong> · {selectedLat.toFixed(5)}°N, {selectedLon.toFixed(5)}°E{gpsAccuracy !== null ? ` · GPS ±${Math.round(gpsAccuracy)} m` : ""} · {copy.dragPin}</span>
-          </div>
-          <div className="absolute bottom-16 right-3 z-[5] max-w-[85%] rounded-full bg-white/92 px-3 py-2 text-[10px] font-semibold text-ink-muted">
+          {/* Map attribution stays visible and unobstructed (8.6); it rises
+              above the drawing bar while that bar is open. */}
+          <div className={`tnum absolute right-3 z-[5] max-w-[85%] rounded-full bg-white/92 px-3 py-2 text-[10px] font-semibold text-ink-muted ${drawMode === "draw" ? "bottom-[88px]" : "bottom-16"}`}>
             {mapStyle === "satellite" ? copy.attributionSatellite : copy.attributionStreets}
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 px-4 pb-5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        {/* Review and finish area (8.8) */}
+        <div className="flex flex-col gap-3 border-t border-divider bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-ink-soft">
-            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-5 rounded-xs border border-[#087443] bg-[#16a34a]/30" /> {copy.districtBoundaries}</span>
+            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-5 rounded-xs border border-forest bg-leaf/25" /> {copy.districtBoundaries}</span>
             {fieldArea !== null && <span className="tnum font-bold text-forest">{copy.area}: {fieldArea.toFixed(3)} ha</span>}{fieldArea !== null && <p className="w-full text-base text-ink-soft">{t.surveyAreaCaveat}</p>}
             <span>{districts.length || 0} {districts.length === 1 ? (lang === "ne" ? "जिल्ला" : "district") : (lang === "ne" ? "जिल्ला" : "districts")} {districtLoading ? copy.districtsLoading : copy.districtsAvailable}</span>
           </div>
@@ -1116,6 +1072,72 @@ export default function ScreenAHome({
             {copy.nextField} <ArrowRight className="h-4 w-4" />
           </button>
         </div>
+      </section>
+
+      {/* Walk method and stand survey — dense forms stay on solid, readable
+          surfaces below the map (design.md: never glass-blur dense forms) */}
+      <section className="rounded-2xl border border-line bg-white p-4 shadow-float sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="flex items-center gap-2 text-sm font-extrabold uppercase tracking-wide text-forest">
+            <Footprints className="h-4 w-4 text-action" aria-hidden="true" />
+            {copy.walkTitle}
+          </h3>
+          {walkStatus !== "idle" && (
+            <span aria-live="polite" className={`tnum inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${walkStatus === "unavailable" ? "bg-danger-soft text-danger" : walkStatus === "waiting" ? "bg-amber-soft text-amber-ink" : "bg-action-soft text-forest"}`}>
+              {walkStatus === "unavailable"
+                ? copy.walkUnavailable
+                : walkStatus === "waiting"
+                  ? copy.walkWaiting
+                  : `GPS ±${Math.round(walkLiveAccuracy ?? 0)} m`}
+            </span>
+          )}
+        </div>
+
+        {/* GPS accuracy + privacy notice: informational blue (8.4) */}
+        <div className="mt-2.5 flex items-start gap-2 rounded-lg border border-info/30 bg-info-soft px-3 py-2.5 text-xs leading-5 text-ink">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-info" aria-hidden="true" />
+          <span>{copy.walkInfo} {copy.walkPrivacy}</span>
+        </div>
+
+        <div className="mt-3 rounded-lg border border-line bg-soft px-3.5 py-3 text-xs font-semibold text-ink-soft">
+          {walkStatusBox}
+        </div>
+
+        <div className="mt-3 rounded-xl border border-line bg-soft p-3.5">
+          <p className="text-sm font-bold text-forest">{t.surveyStandTitle}</p>
+          <p className="mt-1 text-sm text-ink-soft">{t.surveyStandHelp}</p>
+          <button ref={surveyTriggerRef} type="button" onClick={startStandSurvey} disabled={surveyCollecting} className="mt-3 inline-flex min-h-12 items-center gap-2 rounded-full bg-action px-5 text-sm font-bold text-white disabled:opacity-50">{surveyCollecting ? <Loader2 className="h-4 w-4 animate-spin"/> : <LocateFixed className="h-4 w-4"/>}{surveyCollecting ? `${t.surveyCollecting} ${surveyFixCount}/${FIELD_SURVEY_CONFIG.gpsFixCount}` : t.surveyStartCapture}</button>
+          {surveyPoints.length>0 && <div className="mt-2 space-y-1 text-base text-ink-soft"><p className="font-semibold">{t.surveyOtherPoints}: {surveyPoints.length}</p>{surveyPoints.map((point)=><p key={point.id}>{({corner:copy.walkCorner,water:t.surveyWater,wet:t.surveyWet,erosion:t.surveyErosion,soil:t.surveySoil,note:t.surveyOther} as const)[point.type]} · {t.surveyPointQuality}: ±{Math.round(point.accuracy)} m</p>)}</div>}
+          {gpsReceipt && <details className="mt-2 text-sm text-ink-soft"><summary className="min-h-12 cursor-pointer py-3 font-semibold">{t.surveyGpsReceipt}</summary><p>{t.surveyFixesUsed}: {gpsReceipt.used} · {t.surveyFixesRejected}: {gpsReceipt.rejected}</p></details>}
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button onClick={markWalkCorner} disabled={walkRequesting} className="inline-flex h-10 items-center gap-2 rounded-full bg-action px-4 text-xs font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-60">
+            {walkRequesting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <MapPin className="h-4 w-4" aria-hidden="true" />}
+            {copy.walkMark}
+          </button>
+          <button onClick={undoWalkCorner} disabled={!walkCorners.length} className="inline-flex h-10 items-center gap-1.5 rounded-full border border-line bg-white px-3.5 text-xs font-semibold text-forest transition hover:bg-soft disabled:cursor-not-allowed disabled:opacity-40">
+            <Undo2 className="h-4 w-4" aria-hidden="true" /> {copy.walkUndo}
+          </button>
+          <button onClick={clearWalkCorners} disabled={!walkCorners.length} className="inline-flex h-10 items-center gap-1.5 rounded-full border border-danger/30 bg-white px-3.5 text-xs font-semibold text-danger transition hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-40">
+            <Trash2 className="h-4 w-4" aria-hidden="true" /> {copy.clear}
+          </button>
+          <button onClick={finishWalkField} disabled={walkCorners.length < 3} className="inline-flex h-10 items-center gap-1.5 rounded-full bg-action px-3.5 text-xs font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-40">
+            <Check className="h-4 w-4" aria-hidden="true" /> {copy.walkFinish}
+          </button>
+        </div>
+
+        {walkCorners.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {walkCorners.map((corner, index) => (
+              <span
+                key={`${index}-${corner.lat}-${corner.lon}`}
+                className={`tnum inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-bold ${corner.accuracy > 15 ? "border-amber bg-amber-soft text-amber-ink" : "border-line bg-action-soft text-forest"}`}
+              >
+                {copy.walkCorner} {index + 1} · ±{Math.round(corner.accuracy)} m
+              </span>
+            ))}
+          </div>
+        )}
       </section>
     </div>
     </>

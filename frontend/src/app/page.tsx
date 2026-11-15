@@ -387,10 +387,10 @@ export default function SafeFieldNepalApp() {
                   type="button"
                   onClick={() => selectTab(item.id)}
                   aria-current={isActive ? "page" : undefined}
-                  className={`flex min-h-[46px] items-center gap-3 rounded-md px-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+                  className={`flex min-h-[46px] items-center gap-3 rounded-lg px-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
                     isActive
-                      ? "bg-mint text-forest shadow-[inset_0_0_0_2px_var(--color-leaf)]"
-                      : "text-ink-soft hover:bg-canvas hover:text-ink"
+                      ? "bg-mint text-forest"
+                      : "text-ink-soft hover:bg-soft hover:text-ink"
                   }`}
                 >
                   <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${isActive ? "bg-action text-white" : "bg-soft text-ink-muted"}`}>
@@ -408,8 +408,8 @@ export default function SafeFieldNepalApp() {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* Mobile top header */}
-          <header className="sticky top-0 z-50 border-b border-divider bg-white/95 backdrop-blur-xl lg:hidden">
+          {/* Mobile top header — light glass over scrolling content */}
+          <header className="glass-surface sticky top-0 z-50 border-x-0 border-t-0 lg:hidden">
             <div className="flex min-h-[64px] items-center justify-between gap-3 px-4">
               <button
                 type="button"
@@ -431,7 +431,7 @@ export default function SafeFieldNepalApp() {
             </div>
           </header>
 
-          <section className="flex w-full flex-1 flex-col px-3 pb-28 pt-5 sm:px-6 sm:pb-32 sm:pt-7 lg:px-8 lg:pb-8 lg:pt-7">
+          <section className="flex w-full flex-1 flex-col px-3 pb-28 pt-5 sm:px-6 sm:pb-32 sm:pt-7 lg:px-8 lg:pb-24 lg:pt-7">
             {activeTab === "home" && (
               <ScreenAHome
                 selectedLat={selectedLat}
@@ -485,11 +485,13 @@ export default function SafeFieldNepalApp() {
         </div>
       </div>
 
+        {/* Floating bottom navigation capsule — restrained dark-green glass,
+            per the mobile reference and design.md section 7.2 */}
       <nav
         aria-label="Mobile navigation"
         className="fixed inset-x-0 bottom-0 z-[60] flex justify-center px-4 pb-[max(env(safe-area-inset-bottom),12px)] lg:hidden"
       >
-        <div className="grid w-full max-w-md grid-cols-5 gap-0.5 rounded-full bg-charcoal p-1.5 shadow-[0_8px_28px_rgba(24,44,30,0.32)]">
+        <div className="glass-surface-dark grid w-full max-w-md grid-cols-5 gap-0.5 rounded-full p-1.5">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -500,7 +502,7 @@ export default function SafeFieldNepalApp() {
                 onClick={() => selectTab(item.id)}
                 aria-current={isActive ? "page" : undefined}
                 className={`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-full px-1 py-1.5 text-[11px] leading-tight font-semibold transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
-                  isActive ? "text-white" : "text-white/55 hover:text-white"
+                  isActive ? "text-white" : "text-white/60 hover:text-white"
                 }`}
               >
                 <span

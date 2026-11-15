@@ -76,7 +76,7 @@ export default function ScreenCDecision({
                 return (
                   <div
                     key={day.date}
-                    className={`rounded-md border p-3.5 ${isWet ? "border-info/30 bg-info-soft" : "border-line bg-soft"}`}
+                    className={`rounded-lg border p-3.5 ${isWet ? "border-info/30 bg-info-soft" : "border-line bg-soft"}`}
                   >
                     <div className="tnum text-[11px] font-medium text-ink-soft">{day.date}</div>
                     <div className={`tnum mt-1 text-xl font-bold ${isWet ? "text-info" : "text-ink"}`}>

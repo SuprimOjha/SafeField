@@ -156,7 +156,7 @@ export default function ScreenDTrends({
           <div className="w-full h-[340px]">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={annualSeries} margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E4E9E2" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E9E2" />
                 <XAxis dataKey="year" tick={{ fontSize: 12, fill: "#657168" }} />
                 <YAxis
                   tick={{ fontSize: 12, fill: "#657168" }}
@@ -165,7 +165,7 @@ export default function ScreenDTrends({
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#ffffff",
-                    borderColor: "#E4E9E2",
+                    borderColor: "#E2E9E2",
                     borderRadius: "18px",
                     boxShadow: "0 4px 18px rgba(24, 44, 30, 0.1)",
                     fontSize: "13px",
@@ -175,14 +175,14 @@ export default function ScreenDTrends({
                 <Bar
                   dataKey="heavyRainDays"
                   name={t.legendHeavyDays}
-                  fill="#2F8F4E"
+                  fill="#238B50"
                   radius={[6, 6, 0, 0]}
                 />
                 <Line
                   type="monotone"
                   dataKey="trendLine"
                   name={t.legendTrend}
-                  stroke="#F2B93B"
+                  stroke="#B7791F"
                   strokeWidth={3}
                   dot={false}
                 />

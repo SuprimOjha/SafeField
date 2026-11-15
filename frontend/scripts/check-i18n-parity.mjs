@@ -8,7 +8,7 @@ const files = {
 };
 
 function keys(source) {
-  return [...source.matchAll(/^  ([A-Za-z_$][\\w$]*):/gm)].map((match) => match[1]);
+  return [...source.matchAll(/^  ([A-Za-z_$][\w$]*):/gm)].map((match) => match[1]);
 }
 
 const enKeys = keys(files.en);
