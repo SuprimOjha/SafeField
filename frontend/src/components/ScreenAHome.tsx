@@ -18,19 +18,34 @@ import { getDict, type Lang } from "@/i18n";
 import { averageFixes, type Fix } from "@/lib/gps-average";
 import { polygonSelfIntersects, pointInDistricts } from "@/lib/field-geometry";
 import { FIELD_SURVEY_CONFIG } from "@/config/field-survey";
+import type { FieldAssessmentResponse } from "@/types/safefield";
+import {
+  WeatherCard,
+  VegetationCard,
+  SoilMoistureCard,
+  FieldSummaryCard,
+  SignalCoverageCard,
+  RainImpactCard,
+  StressCard,
+  AskCard,
+} from "@/components/HomeDashboardCards";
 import {
   Navigation, Compass, ArrowRight, Pencil, Undo2, Trash2,
   Check, LocateFixed, MousePointer2, Search, Loader2, X, MapPin,
-  Footprints, Info, ChevronDown,
+  Footprints, Info, ChevronDown, CalendarDays, Sprout, Layers3,
 } from "lucide-react";
 
 interface ScreenAHomeProps {
   selectedLat: number;
   selectedLon: number;
+  data: FieldAssessmentResponse | null;
+  loading: boolean;
+  error: string | null;
   onLocationSelect: (lat: number, lon: number, name: string) => void;
   onFieldPolygonSelect: (polygon: [number, number][] | null) => void;
   onSandOverrideChange: (value: number | null) => void;
-  onProceedToField: () => void;
+  onRunAssessment: () => void;
+  onOpenField: () => void;
   lang: Lang;
   fieldPolygon?: [number, number][] | null;
 }
@@ -92,10 +107,14 @@ function polygonAreaHectares(points: [number, number][]) {
 export default function ScreenAHome({
   selectedLat,
   selectedLon,
+  data,
+  loading,
+  error,
   onLocationSelect,
   onFieldPolygonSelect,
   onSandOverrideChange,
-  onProceedToField,
+  onRunAssessment,
+  onOpenField,
   lang,
   fieldPolygon,
 }: ScreenAHomeProps) {
@@ -122,6 +141,8 @@ export default function ScreenAHome({
   const [satelliteAvailable, setSatelliteAvailable] = useState(true);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const [todayLabel, setTodayLabel] = useState("");
 
   // Walk method state: the farmer stands on each field corner and marks it.
   // Corners feed the same draw pipeline (drawPoints/user-field layer), plus a
@@ -236,6 +257,17 @@ export default function ScreenAHome({
     mq.addEventListener("change", apply);
     return () => mq.removeEventListener("change", apply);
   }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setTodayLabel(new Intl.DateTimeFormat(lang === "ne" ? "ne-NP" : "en-GB", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      }).format(new Date()));
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [lang]);
 
   useEffect(() => {
     let restoredPoints: Array<{id:number;lat:number;lon:number;type:SurveyPointType;accuracy:number}> = [];
