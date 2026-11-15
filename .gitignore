@@ -13,6 +13,11 @@ backend/app/cache/*.db-journal
 backend/data/imerg/raw/
 backend/data/imerg/processed/
 
+# Generated signal snapshots and status.json are persisted to the data branch,
+# never committed as application code.
+backend/data/signals/
+backend/data/status.json
+
 # Node / Next.js
 frontend/node_modules/
 frontend/.next/
