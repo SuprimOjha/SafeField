@@ -1,12 +1,13 @@
 """Mirror recent data files to Supabase Storage and restore them on startup.
 
 The backend keeps writing to the local data directories. Supabase Storage is a
-live cache for the most recent days only: snapshots, staged raw JSON, downloaded
-IMERG granules and ``status.json`` are uploaded after a refresh, and everything
-older than ``supabase_recent_days`` is deleted remotely. That keeps a free-tier
-bucket from filling up. The long timeline is published to the git ``data``
-branch by the data-publish workflow instead, and local disk keeps the longer
-retention windows.
+live cache for the most recent days only: snapshots keep the newest
+``supabase_recent_days`` days per source (NASA latency can exceed 72 hours),
+IMERG granules keep the last calendar days, and ``status.json`` is always
+mirrored. Older remote objects are deleted after each refresh. That keeps a
+free-tier bucket from filling up. The long timeline is published to the git
+``data`` branch by the data-publish workflow instead, and local disk keeps the
+longer retention windows.
 
 No field geometry is mirrored; these directories contain satellite and
 provider data only.
@@ -90,14 +91,27 @@ def upload_directory(
     *,
     force: bool = False,
     keep_after: date | None = None,
+    keep_newest: int | None = None,
     parse_date: Callable[[str], date | None] | None = None,
 ) -> None:
     files = _iter_files(local_dir)
     if not files:
         return
+    keys = {path: f"{prefix}/{path.relative_to(local_dir).as_posix()}" for path in files}
+    allowed: set[Path] | None = None
+    if keep_newest is not None:
+        dated = [
+            (day, path)
+            for path in files
+            if (day := parse_date(keys[path]) if parse_date else None) is not None
+        ]
+        dated.sort(key=lambda item: item[0], reverse=True)
+        allowed = {path for _, path in dated[:keep_newest]}
     remote = storage.list_names(prefix)
     for path in files:
-        key = f"{prefix}/{path.relative_to(local_dir).as_posix()}"
+        if allowed is not None and path not in allowed:
+            continue
+        key = keys[path]
         if keep_after is not None:
             day = parse_date(key) if parse_date else None
             if day is None or day < keep_after:
@@ -219,6 +233,31 @@ def delete_remote_before(
         report.deleted_files += storage.delete_objects(victims)
 
 
+def delete_remote_beyond_newest(
+    storage: SupabaseStorage,
+    prefix: str,
+    keep_newest: int,
+    report: StorageSyncReport,
+    *,
+    parse_date: Callable[[str], date | None],
+) -> None:
+    """Keep the newest dated objects in a prefix, delete the rest.
+
+    Snapshot products have multi-day NASA latency, so a calendar cutoff would
+    delete the newest available day. Keeping the latest N days guarantees the
+    live app can always restore each source.
+    """
+    dated = [
+        (day, key)
+        for key in storage.list_names(prefix)
+        if (day := parse_date(key)) is not None
+    ]
+    dated.sort(key=lambda item: item[0], reverse=True)
+    victims = [key for _, key in dated[keep_newest:]]
+    if victims:
+        report.deleted_files += storage.delete_objects(victims)
+
+
 def _run(
     action: Callable[[SupabaseStorage, StorageSyncReport], None],
     settings: Settings,
@@ -250,9 +289,11 @@ def sync_up(
     storage: SupabaseStorage | None = None,
     today: date | None = None,
     recent_cutoff: date | None = None,
+    keep_snapshots: int | None = None,
 ) -> StorageSyncReport:
     resolved = settings or get_settings()
     cutoff = recent_cutoff or recent_window_start(resolved, today)
+    newest = keep_snapshots if keep_snapshots is not None else resolved.supabase_recent_days
 
     def action(client: SupabaseStorage, report: StorageSyncReport) -> None:
         for source in SNAPSHOT_SOURCES:
@@ -262,7 +303,7 @@ def sync_up(
                 f"signals/{source}",
                 report,
                 force=force,
-                keep_after=cutoff,
+                keep_newest=newest,
                 parse_date=_date_from_json_key,
             )
             upload_directory(
@@ -271,7 +312,7 @@ def sync_up(
                 f"incoming/{source}",
                 report,
                 force=force,
-                keep_after=cutoff,
+                keep_newest=newest,
                 parse_date=_date_from_json_key,
             )
         upload_directory(
@@ -311,24 +352,34 @@ def prune_remote(
     signal_cutoff: date,
     imerg_cutoff: date,
     recent_cutoff: date | None = None,
+    keep_snapshots: int | None = None,
     storage: SupabaseStorage | None = None,
 ) -> StorageSyncReport:
     """Delete remote objects outside the live window.
 
-    ``recent_cutoff`` caps the bucket to the Supabase live window; local
-    retention windows are longer because the git ``data`` branch archives them.
+    Snapshot JSON keeps the newest ``keep_snapshots`` days per source because
+    NASA latency can exceed a 72-hour calendar window. IMERG granules use the
+    calendar cutoff because they are published daily.
     """
 
     def action(client: SupabaseStorage, report: StorageSyncReport) -> None:
-        signal_day = recent_cutoff or signal_cutoff
         imerg_day = recent_cutoff or imerg_cutoff
+        newest = keep_snapshots
         for source in SNAPSHOT_SOURCES:
-            delete_remote_before(
-                client, f"signals/{source}", signal_day, report, parse_date=_date_from_json_key
-            )
-            delete_remote_before(
-                client, f"incoming/{source}", signal_day, report, parse_date=_date_from_json_key
-            )
+            if newest is not None:
+                delete_remote_beyond_newest(
+                    client, f"signals/{source}", newest, report, parse_date=_date_from_json_key
+                )
+                delete_remote_beyond_newest(
+                    client, f"incoming/{source}", newest, report, parse_date=_date_from_json_key
+                )
+            else:
+                delete_remote_before(
+                    client, f"signals/{source}", signal_cutoff, report, parse_date=_date_from_json_key
+                )
+                delete_remote_before(
+                    client, f"incoming/{source}", signal_cutoff, report, parse_date=_date_from_json_key
+                )
         delete_remote_before(
             client, "imerg/raw", imerg_day, report, parse_date=_date_from_granule_key
         )
@@ -349,6 +400,7 @@ __all__ = [
     "STATUS_OBJECT",
     "StorageSyncReport",
     "delete_remote_before",
+    "delete_remote_beyond_newest",
     "default_raw_dir",
     "get_storage",
     "prune_remote",

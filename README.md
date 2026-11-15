@@ -176,7 +176,7 @@ Never commit credentials, paste them into issues, or place them in source files.
 | `IMERG_RETENTION_DAYS` | 30 | IMERG grid cells and raw granules older than this |
 | `API_CACHE_RETENTION_DAYS` | 30 | Cached live API responses older than this |
 | `SIGNAL_RETENTION_DAYS` | 120 | Installed satellite snapshots and staged raw files older than this |
-| `SUPABASE_RECENT_DAYS` | 3 | Files older than this are deleted from Supabase Storage (never from local disk) |
+| `SUPABASE_RECENT_DAYS` | 3 | Keeps the newest 3 snapshot days per source and deletes IMERG granules older than 3 days from Supabase Storage (never from local disk) |
 
 The pruning runs in the same job as the install, so old data is replaced gradually instead of accumulating. Data inside the window is kept; nothing is deleted before new data has been written.
 
@@ -228,7 +228,7 @@ Behaviour:
 - Tables live in a separate `safefield` schema, not `public`. Supabase's PostgREST API exposes only `public`, so the anon key cannot read the cache.
 - On startup the backend creates the tables and bucket if needed, restores missing files, and reports readiness at `GET /api/integrations/data-storage`. Startup still succeeds if Supabase is temporarily unreachable; the next refresh retries.
 - The local disk is still the fast read/write path. After a refresh, files inside the recent window are mirrored up; on startup, missing snapshots, staged JSON and `status.json` are restored from Storage (`SUPABASE_RESTORE_ON_STARTUP=false` disables the file restore). Raw IMERG granules are mirrored but not auto-restored because they can be re-downloaded.
-- Storage is a **live cache, not the archive**. Only files newer than `SUPABASE_RECENT_DAYS` (default 3) are uploaded, and older remote objects are deleted on every refresh, so a free-tier bucket cannot fill up. Local disk keeps the longer `SIGNAL_RETENTION_DAYS` and `IMERG_RETENTION_DAYS` windows; the long timeline is archived to git (next section).
+- Storage is a **live cache, not the archive**. It keeps the newest `SUPABASE_RECENT_DAYS` snapshot days per source (SMAP and VNP21A1D have multi-day NASA latency, so a strict 72-hour calendar window would delete the newest available day) and IMERG granules inside the last `SUPABASE_RECENT_DAYS` days; all other remote objects are deleted on every refresh, so a free-tier bucket cannot fill up. Local disk keeps the longer `SIGNAL_RETENTION_DAYS` and `IMERG_RETENTION_DAYS` windows; the long timeline is archived to git (next section).
 - Storage failures are reported as `status: error` in the automation status and turn the run `partial`; they never hide a successful install. Error messages include the HTTP status and object path, never the key.
 - Field boundaries are still never uploaded. Only provider/satellite data is stored.
 

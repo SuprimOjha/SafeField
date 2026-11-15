@@ -531,6 +531,7 @@ def _run_storage_sync(
     signal_cutoff: date,
     imerg_cutoff: date,
     recent_cutoff: date,
+    keep_snapshots: int,
     storage: Any | None = None,
 ) -> StorageSection:
     """Mirror the recent window to Supabase Storage and delete older objects.
@@ -549,6 +550,7 @@ def _run_storage_sync(
                 root=root,
                 raw_dir=raw_dir,
                 recent_cutoff=recent_cutoff,
+                keep_snapshots=keep_snapshots,
                 storage=client,
             ),
             prune_remote(
@@ -556,6 +558,7 @@ def _run_storage_sync(
                 signal_cutoff=signal_cutoff,
                 imerg_cutoff=imerg_cutoff,
                 recent_cutoff=recent_cutoff,
+                keep_snapshots=keep_snapshots,
                 storage=client,
             ),
         ]
@@ -680,6 +683,7 @@ def run_data_refresh(
             signal_cutoff=today - timedelta(days=signal_keep),
             imerg_cutoff=today - timedelta(days=imerg_keep),
             recent_cutoff=today - timedelta(days=max(recent_days - 1, 0)),
+            keep_snapshots=recent_days,
             storage=storage,
         )
 

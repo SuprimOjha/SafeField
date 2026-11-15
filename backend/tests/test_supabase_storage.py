@@ -437,7 +437,9 @@ def test_sync_up_uploads_only_the_live_window(tmp_path, monkeypatch):
     incoming = tmp_path / "incoming"
     raw = tmp_path / "raw"
     for directory, name in (
+        (signals / "smap", "2026-11-08.json"),
         (signals / "smap", "2026-11-10.json"),
+        (signals / "smap", "2026-11-12.json"),
         (signals / "smap", "2026-11-14.json"),
         (incoming / "lst", "2026-11-14.json"),
         (raw, "3B-DAY-L.MS.MRG.3IMERG.20261101-S000000-E235959.V07C.nc4"),
@@ -452,9 +454,13 @@ def test_sync_up_uploads_only_the_live_window(tmp_path, monkeypatch):
     report = sync_up(settings, root=signals, raw_dir=raw, storage=storage, today=TODAY)
 
     assert report.status == "ok"
-    assert "signals/smap/2026-11-14.json" in storage.objects
+    assert report.uploaded_files == 5
+    # Snapshots keep the newest three days even when NASA latency makes them
+    # older than the calendar window.
+    for day in ("2026-11-10", "2026-11-12", "2026-11-14"):
+        assert f"signals/smap/{day}.json" in storage.objects
+    assert "signals/smap/2026-11-08.json" not in storage.objects
     assert "incoming/lst/2026-11-14.json" in storage.objects
-    assert "signals/smap/2026-11-10.json" not in storage.objects
     assert (
         "imerg/raw/3B-DAY-L.MS.MRG.3IMERG.20261114-S000000-E235959.V07C.nc4"
         in storage.objects
@@ -469,9 +475,13 @@ def test_prune_remote_caps_the_bucket_to_the_live_window():
     storage = FakeStorage(
         {
             "signals/smap/2026-11-01.json": 2,
+            "signals/smap/2026-11-10.json": 2,
+            "signals/smap/2026-11-12.json": 2,
             "signals/smap/2026-11-13.json": 2,
             "signals/smap/2026-11-14.json": 2,
             "incoming/lst/2026-11-01.json": 2,
+            "incoming/lst/2026-11-05.json": 2,
+            "incoming/lst/2026-11-10.json": 2,
             "incoming/lst/2026-11-14.json": 2,
             "imerg/raw/3B-DAY-L.MS.MRG.3IMERG.20261101-S000000-E235959.V07C.nc4": 2,
             "imerg/raw/3B-DAY-L.MS.MRG.3IMERG.20261114-S000000-E235959.V07C.nc4": 2,
@@ -483,6 +493,7 @@ def test_prune_remote_caps_the_bucket_to_the_live_window():
         signal_cutoff=date(2026, 8, 1),
         imerg_cutoff=date(2026, 8, 1),
         recent_cutoff=date(2026, 11, 13),
+        keep_snapshots=3,
         storage=storage,
     )
 
@@ -490,9 +501,12 @@ def test_prune_remote_caps_the_bucket_to_the_live_window():
         "imerg/raw/3B-DAY-L.MS.MRG.3IMERG.20261101-S000000-E235959.V07C.nc4",
         "incoming/lst/2026-11-01.json",
         "signals/smap/2026-11-01.json",
+        "signals/smap/2026-11-10.json",
     ]
     assert "signals/smap/2026-11-14.json" in storage.objects
-    assert "signals/smap/2026-11-13.json" in storage.objects
+    assert "signals/smap/2026-11-12.json" in storage.objects
+    assert "incoming/lst/2026-11-05.json" in storage.objects
+    assert "incoming/lst/2026-11-14.json" in storage.objects
 
 
 def test_restore_down_restores_only_missing_json(tmp_path, monkeypatch):
@@ -534,6 +548,9 @@ def test_refresh_reports_storage_upload_and_prune(tmp_path, monkeypatch):
     storage = FakeStorage(
         {
             "signals/smap/2026-09-01.json": 2,
+            "signals/smap/2026-11-01.json": 2,
+            "signals/smap/2026-11-05.json": 2,
+            "signals/smap/2026-11-08.json": 2,
             "signals/smap/2026-11-10.json": 2,
         }
     )
@@ -561,9 +578,12 @@ def test_refresh_reports_storage_upload_and_prune(tmp_path, monkeypatch):
     assert report.windows["supabase_recent_days"] == 3
     assert report.storage.status == "ok"
     assert report.storage.uploaded_files == 1  # only the retained snapshot is left
-    assert report.storage.deleted_files == 2  # both remote snapshots are outside the 3-day window
+    assert report.storage.deleted_files == 3  # newest three days kept, incl. the upload
     assert "signals/smap/2026-09-01.json" in storage.deletes
-    assert "signals/smap/2026-11-10.json" in storage.deletes
+    assert "signals/smap/2026-11-01.json" in storage.deletes
+    assert "signals/smap/2026-11-05.json" in storage.deletes
+    assert "signals/smap/2026-11-10.json" in storage.objects
+    assert "signals/smap/2026-11-14.json" in storage.objects
 
 
 def test_storage_failure_does_not_hide_installed_data(tmp_path):
