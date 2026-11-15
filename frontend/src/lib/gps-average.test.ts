@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { averageFixes, type Fix, type AverageConfig } from './gps-average';
+import { averageFixes, type Fix, type AverageConfig } from './gps-average.ts';
 
 // Arbitrary TEST thresholds, not recommended product values.
 const cfg: AverageConfig = { maxAccuracyM: 50, minFixes: 3, madK: 3, madFloorM: 2, goodM: 5, fairM: 15 };
