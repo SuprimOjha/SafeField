@@ -132,6 +132,8 @@ export default function ScreenAHome({
   const surveyWatchRef = useRef<number|null>(null);
   const surveyFixesRef = useRef<GpsFix[]>([]);
   const surveyPointIdRef = useRef(0);
+  const surveyTriggerRef = useRef<HTMLButtonElement>(null);
+  const surveyDialogRef = useRef<HTMLElement>(null);
   const surveyMarkersRef = useRef<MapLibreMarker[]>([]);
   const [gpsReceipt, setGpsReceipt] = useState<{used:number;rejected:number}|null>(null);
   const [walkRequesting, setWalkRequesting] = useState(false);
@@ -252,6 +254,21 @@ export default function ScreenAHome({
       surveyMarkersRef.current.push(new MapLibreMarker({element}).setLngLat([point.lon,point.lat]).addTo(map));
     }
   }, [surveyPoints, mapReady]);
+
+  useEffect(() => {
+    if (!pendingSurveyFix) { surveyTriggerRef.current?.focus(); return; }
+    const handleKeys = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { setPendingSurveyFix(null); return; }
+      if (event.key !== "Tab" || !surveyDialogRef.current) return;
+      const items = surveyDialogRef.current.querySelectorAll<HTMLElement>("button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex='-1'])");
+      if (!items.length) return;
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    window.addEventListener("keydown", handleKeys);
+    return () => window.removeEventListener("keydown", handleKeys);
+  }, [pendingSurveyFix]);
 
   useEffect(() => { onLocationSelectRef.current = onLocationSelect; }, [onLocationSelect]);
   useEffect(() => { drawPointsRef.current = drawPoints; }, [drawPoints]);
@@ -838,7 +855,7 @@ export default function ScreenAHome({
         : `${walkCorners.length} ${walkCorners.length === 1 ? "corner" : "corners"} marked — ready to finish the field.`;
 
   return (
-      {pendingSurveyFix && <div className="fixed inset-0 z-[120] flex items-end justify-center bg-charcoal/60 p-3 sm:items-center"><section role="dialog" aria-modal="true" aria-labelledby="survey-point-title" className="w-full max-w-md rounded-2xl bg-white p-5 shadow-sheet">
+      {pendingSurveyFix && <div className="fixed inset-0 z-[120] flex items-end justify-center bg-charcoal/60 p-3 sm:items-center"><section ref={surveyDialogRef} role="dialog" aria-modal="true" aria-labelledby="survey-point-title" className="w-full max-w-md rounded-2xl bg-white p-5 shadow-sheet">
         <h2 id="survey-point-title" className="text-xl font-extrabold text-forest">{t.surveyPointQuestion}</h2><p className="mt-2 text-base text-ink-soft">{t.surveyGpsAccuracy}: ±{Math.round(pendingSurveyFix.accuracy)} m</p>
         <div className="mt-4 grid grid-cols-2 gap-2">{([["corner",t.surveyCorner],["water",t.surveyWater],["wet",t.surveyWet],["erosion",t.surveyErosion],["soil",t.surveySoil],["note",t.surveyOther]] as const).map(([type,label])=><button key={type} type="button" onClick={()=>saveSurveyPoint(type)} className="min-h-12 rounded-xl border border-line bg-soft px-3 py-3 text-left text-base font-bold text-forest">{label}</button>)}</div>
         <button type="button" onClick={()=>setPendingSurveyFix(null)} className="mt-3 min-h-12 w-full rounded-full border border-line px-4 text-sm font-semibold text-ink-soft">{t.surveyCancel}</button>
@@ -961,7 +978,7 @@ export default function ScreenAHome({
           <div className="mt-3 rounded-xl border border-divider bg-white p-3">
             <p className="text-sm font-bold text-forest">{t.surveyStandTitle}</p>
             <p className="mt-1 text-sm text-ink-soft">{t.surveyStandHelp}</p>
-            <button type="button" onClick={startStandSurvey} disabled={surveyCollecting} className="mt-3 inline-flex min-h-12 items-center gap-2 rounded-full bg-action px-5 text-sm font-bold text-white disabled:opacity-50">{surveyCollecting ? <Loader2 className="h-4 w-4 animate-spin"/> : <LocateFixed className="h-4 w-4"/>}{surveyCollecting ? t.surveyCollecting : t.surveyStartCapture}</button>
+            <button ref={surveyTriggerRef} type="button" onClick={startStandSurvey} disabled={surveyCollecting} className="mt-3 inline-flex min-h-12 items-center gap-2 rounded-full bg-action px-5 text-sm font-bold text-white disabled:opacity-50">{surveyCollecting ? <Loader2 className="h-4 w-4 animate-spin"/> : <LocateFixed className="h-4 w-4"/>}{surveyCollecting ? t.surveyCollecting : t.surveyStartCapture}</button>
             {surveyPoints.length>0 && <p className="mt-2 text-base text-ink-soft">{t.surveyOtherPoints}: {surveyPoints.length}</p>}
             {gpsReceipt && <details className="mt-2 text-sm text-ink-soft"><summary className="min-h-12 cursor-pointer py-3 font-semibold">{t.surveyGpsReceipt}</summary><p>{t.surveyFixesUsed}: {gpsReceipt.used} · {t.surveyFixesRejected}: {gpsReceipt.rejected}</p></details>}
           </div>
