@@ -130,6 +130,8 @@ export default function ScreenAHome({
   const surveyWatchRef = useRef<number|null>(null);
   const surveyFixesRef = useRef<GpsFix[]>([]);
   const surveyPointIdRef = useRef(0);
+  const surveyMarkersRef = useRef<MapLibreMarker[]>([]);
+  const [gpsReceipt, setGpsReceipt] = useState<{used:number;rejected:number}|null>(null);
   const [walkRequesting, setWalkRequesting] = useState(false);
   const [walkStatus, setWalkStatus] = useState<WalkStatus>("idle");
   const [walkLiveAccuracy, setWalkLiveAccuracy] = useState<number | null>(null);
@@ -527,6 +529,7 @@ export default function ScreenAHome({
     return () => {
       stopWalkWatch();
       stopSurveyCollection();
+      surveyMarkersRef.current.forEach((surveyMarker)=>surveyMarker.remove()); surveyMarkersRef.current=[];
       marker.remove();
       map.remove();
       mapRef.current = null;
@@ -745,8 +748,9 @@ export default function ScreenAHome({
       drawPointsRef.current=next; setDrawPoints(next); setWalkCorners((old)=>[...old,{lat:point.lat,lon:point.lon,accuracy:point.accuracy}]); if(mapRef.current) updateDrawLayer(mapRef.current,next);
     } else {
       setSurveyPoints((old)=>[...old,{id:++surveyPointIdRef.current,lat:point.lat,lon:point.lon,type,accuracy:point.accuracy}]);
-      if(mapRef.current){const el=document.createElement("div");el.className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-forest text-sm font-bold text-white shadow-float";el.textContent=({water:"W",wet:"L",erosion:"E",soil:"S",note:"N"} as const)[type];new MapLibreMarker({element:el}).setLngLat([point.lon,point.lat]).addTo(mapRef.current);}
+      if(mapRef.current){const el=document.createElement("div");el.className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-forest text-sm font-bold text-white shadow-float";el.textContent=({water:"W",wet:"L",erosion:"E",soil:"S",note:"N"} as const)[type];surveyMarkersRef.current.push(new MapLibreMarker({element:el}).setLngLat([point.lon,point.lat]).addTo(mapRef.current));}
     }
+    setGpsReceipt({used:point.used,rejected:point.rejected});
     setPendingSurveyFix(null); markerRef.current?.setLngLat([point.lon,point.lat]); mapRef.current?.easeTo({center:[point.lon,point.lat],duration:500});
   };
 
@@ -919,7 +923,8 @@ export default function ScreenAHome({
             <p className="text-sm font-bold text-forest">{lang === "ne" ? "उभिएर बिन्दु मार्क गर्नुहोस्" : "Stand and mark"}</p>
             <p className="mt-1 text-sm text-ink-soft">{lang === "ne" ? "स्थिर उभिनुहोस्। पाँच GPS फिक्स सङ्कलन गरिन्छ; १५ मिटरभन्दा कमजोर फिक्स हटाइन्छ।" : "Stand still. Five GPS fixes are collected; fixes worse than 15 m accuracy are rejected."}</p>
             <button type="button" onClick={startStandSurvey} disabled={surveyCollecting} className="mt-3 inline-flex min-h-12 items-center gap-2 rounded-full bg-action px-5 text-sm font-bold text-white disabled:opacity-50">{surveyCollecting ? <Loader2 className="h-4 w-4 animate-spin"/> : <LocateFixed className="h-4 w-4"/>}{surveyCollecting ? (lang === "ne" ? "GPS फिक्स सङ्कलन हुँदैछ…" : "Collecting GPS fixes…") : (lang === "ne" ? "बिन्दु सङ्कलन सुरु गर्नुहोस्" : "Start point capture")}</button>
-            {surveyPoints.length>0 && <p className="mt-2 text-sm text-ink-soft">{lang === "ne" ? "अन्य सर्वेक्षण बिन्दु" : "Other survey points"}: {surveyPoints.length}</p>}
+            {surveyPoints.length>0 && <p className="mt-2 text-base text-ink-soft">{lang === "ne" ? "अन्य सर्वेक्षण बिन्दु" : "Other survey points"}: {surveyPoints.length}</p>}
+            {gpsReceipt && <details className="mt-2 text-sm text-ink-soft"><summary className="min-h-12 cursor-pointer py-3 font-semibold">{lang === "ne" ? "GPS डेटा विवरण" : "GPS data receipt"}</summary><p>{lang === "ne" ? "प्रयोग गरिएका फिक्स" : "Fixes used"}: {gpsReceipt.used} · {lang === "ne" ? "अस्वीकृत फिक्स" : "Rejected fixes"}: {gpsReceipt.rejected}</p></details>}
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <button onClick={markWalkCorner} disabled={walkRequesting} className="inline-flex h-10 items-center gap-2 rounded-full bg-action px-4 text-xs font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-60">
