@@ -1,6 +1,6 @@
 import json
 import time
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import httpx
@@ -527,6 +527,51 @@ def test_restore_down_restores_only_missing_json(tmp_path, monkeypatch):
     assert report.downloaded_files == 2
     assert (signals / "smap" / "2026-11-14.json").exists()
     assert (incoming / "lst" / "2026-11-14.json").exists()
+
+
+def test_restore_directory_skips_days_before_the_cutoff(tmp_path):
+    local = tmp_path / "signals" / "lst"
+    local.mkdir(parents=True)
+    storage = FakeStorage(
+        {
+            "signals/lst/2026-01-01.json": 5,
+            "signals/lst/2026-01-14.json": 5,
+            "signals/lst/2026-01-20.json": 5,
+        }
+    )
+    report = StorageSyncReport()
+
+    restore_directory(storage, local, "signals/lst", report, skip_before=date(2026, 1, 14))
+
+    assert report.downloaded_files == 2
+    assert (local / "2026-01-14.json").exists()
+    assert (local / "2026-01-20.json").exists()
+    assert not (local / "2026-01-01.json").exists()
+
+
+def test_restore_down_skips_days_outside_the_live_window(tmp_path, monkeypatch):
+    signals = tmp_path / "signals"
+    incoming = tmp_path / "incoming"
+    (signals / "lst").mkdir(parents=True)
+    monkeypatch.setenv("SAFEFIELD_INCOMING_DIR", str(incoming))
+    old = (date.today() - timedelta(days=10)).isoformat()
+    recent = (date.today() - timedelta(days=1)).isoformat()
+    storage = FakeStorage(
+        {
+            f"signals/lst/{old}.json": 4,
+            f"incoming/lst/{old}.json": 4,
+            f"signals/smap/{recent}.json": 4,
+        }
+    )
+    settings = bare_settings(tmp_path)
+
+    report = restore_down(settings, root=signals, storage=storage)
+
+    assert report.status == "ok"
+    assert report.downloaded_files == 1
+    assert not (signals / "lst" / f"{old}.json").exists()
+    assert not (incoming / "lst" / f"{old}.json").exists()
+    assert (signals / "smap" / f"{recent}.json").exists()
 
 
 def test_refresh_reports_storage_upload_and_prune(tmp_path, monkeypatch):

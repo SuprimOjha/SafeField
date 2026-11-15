@@ -83,6 +83,8 @@ def recent_window_start(settings: Settings, today: date | None = None) -> date:
     return day - timedelta(days=max(settings.supabase_recent_days - 1, 0))
 
 
+
+
 def upload_directory(
     storage: SupabaseStorage,
     local_dir: Path,
@@ -171,12 +173,20 @@ def restore_directory(
     local_dir: Path,
     prefix: str,
     report: StorageSyncReport,
+    *,
+    skip_before: date | None = None,
 ) -> None:
     remote = storage.list_names(prefix)
     for key in remote:
         relative = key[len(prefix) + 1 :] if key.startswith(prefix + "/") else key
         if not relative or relative.endswith("/"):
             continue
+        if skip_before is not None:
+            day = _date_from_json_key(relative)
+            if day is not None and day < skip_before:
+                # Older than the baseline shipped in the repository: restoring it
+                # would shadow a fresher baseline and resurrect superseded days.
+                continue
         target = local_dir / relative
         if target.exists():
             continue
@@ -338,9 +348,25 @@ def restore_down(
     """Restore snapshot and staged JSON files that are missing locally."""
 
     def action(client: SupabaseStorage, report: StorageSyncReport) -> None:
+        # The bucket is a live cache of the most recent days, so anything older
+        # than that window is a superseded day, not new data. Restoring it would
+        # shadow the baseline shipped in the repository.
+        window_start = recent_window_start(settings or get_settings())
         for source in SNAPSHOT_SOURCES:
-            restore_directory(client, source_dir(source, root), f"signals/{source}", report)
-            restore_directory(client, incoming_dir(source), f"incoming/{source}", report)
+            restore_directory(
+                client,
+                source_dir(source, root),
+                f"signals/{source}",
+                report,
+                skip_before=window_start,
+            )
+            restore_directory(
+                client,
+                incoming_dir(source),
+                f"incoming/{source}",
+                report,
+                skip_before=window_start,
+            )
         restore_file(client, status_path(), STATUS_OBJECT, report)
 
     return _run(action, settings or get_settings(), storage)
