@@ -19,7 +19,7 @@
 
 **Safe Field Nepal** is a location-aware agricultural research prototype designed to make environmental information easier to understand at field level. It brings together rainfall information, NASA climate data, soil-texture estimates, terrain context and short-term weather outlooks, then presents the available evidence with its source, date, freshness and limitations.
 
-The project is designed around Nepal's agricultural context. A farmer can select a location using the map, GPS or a district workflow, review the available field conditions, and see a transparent screening result rather than an unexplained recommendation.
+The project is designed around Nepal's agricultural context. A farmer can select a location using the map, GPS or a district workflow, review the available field conditions and see a transparent screening result rather than an unexplained recommendation.
 
 > - **Live prototype:** https://safefieldnp.netlify.app
 > - **Canva presentation:** https://canva.link/oef8hx002ollo33
