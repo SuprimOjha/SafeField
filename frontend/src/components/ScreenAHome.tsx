@@ -126,6 +126,7 @@ export default function ScreenAHome({
   // live GPS watch that shows the walking position and per-corner accuracy.
   const [walkCorners, setWalkCorners] = useState<WalkCorner[]>([]);
   const [surveyPoints, setSurveyPoints] = useState<Array<{id:number;lat:number;lon:number;type:SurveyPointType;accuracy:number}>>([]);
+  const [surveyPointsLoaded, setSurveyPointsLoaded] = useState(false);
   const [pendingSurveyFix, setPendingSurveyFix] = useState<{lat:number;lon:number;accuracy:number;used:number;rejected:number}|null>(null);
   const [surveyCollecting, setSurveyCollecting] = useState(false);
   const surveyWatchRef = useRef<number|null>(null);
@@ -215,6 +216,43 @@ export default function ScreenAHome({
     errorGpsTimeout: t.errorGpsTimeout,
   };
 
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem("safefield_survey_points");
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const valid = parsed.filter((point): point is {id:number;lat:number;lon:number;type:SurveyPointType;accuracy:number} =>
+            point && Number.isSafeInteger(point.id) && Number.isFinite(point.lat) && Number.isFinite(point.lon) &&
+            Number.isFinite(point.accuracy) && ["water","wet","erosion","soil","note"].includes(point.type)
+          );
+          setSurveyPoints(valid);
+          surveyPointIdRef.current = valid.reduce((max, point) => Math.max(max, point.id), 0);
+        }
+      }
+    } catch { /* Invalid or unavailable local storage leaves survey points empty. */ }
+    setSurveyPointsLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!surveyPointsLoaded) return;
+    try { window.localStorage.setItem("safefield_survey_points", JSON.stringify(surveyPoints)); }
+    catch { /* Field survey remains usable when storage is unavailable or full. */ }
+  }, [surveyPoints, surveyPointsLoaded]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    surveyMarkersRef.current.forEach((marker) => marker.remove());
+    surveyMarkersRef.current = [];
+    for (const point of surveyPoints) {
+      const element = document.createElement("div");
+      element.className = "flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-forest text-sm font-bold text-white shadow-float";
+      element.textContent = ({water:"W",wet:"L",erosion:"E",soil:"S",note:"N"} as const)[point.type];
+      surveyMarkersRef.current.push(new MapLibreMarker({element}).setLngLat([point.lon,point.lat]).addTo(map));
+    }
+  }, [surveyPoints, mapReady]);
+
   useEffect(() => { onLocationSelectRef.current = onLocationSelect; }, [onLocationSelect]);
   useEffect(() => { drawPointsRef.current = drawPoints; }, [drawPoints]);
   useEffect(() => { districtsRef.current = districts; }, [districts]);
@@ -222,7 +260,7 @@ export default function ScreenAHome({
   // Live GPS watch for the walk method: keeps a small dot on the map and the
   // accuracy pill up to date while the farmer walks between corners.
   const stopSurveyCollection = useCallback(() => {
-    if (surveyWatchRef.current !== null && navigator.geolocation) navigator.geolocation.clearWatch(surveyWatchRef.current);
+    if (surveyWatchRef.current !== null && typeof navigator !== "undefined" && navigator.geolocation) navigator.geolocation.clearWatch(surveyWatchRef.current);
     surveyWatchRef.current = null; setSurveyCollecting(false);
   }, []);
 
@@ -749,7 +787,7 @@ export default function ScreenAHome({
       drawPointsRef.current=next; setDrawPoints(next); walkCornersRef.current=[...walkCornersRef.current,{lat:point.lat,lon:point.lon,accuracy:point.accuracy}]; setWalkCorners(walkCornersRef.current); if(mapRef.current) updateDrawLayer(mapRef.current,next);
     } else {
       setSurveyPoints((old)=>[...old,{id:++surveyPointIdRef.current,lat:point.lat,lon:point.lon,type,accuracy:point.accuracy}]);
-      if(mapRef.current){const el=document.createElement("div");el.className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-forest text-sm font-bold text-white shadow-float";el.textContent=({water:"W",wet:"L",erosion:"E",soil:"S",note:"N"} as const)[type];surveyMarkersRef.current.push(new MapLibreMarker({element:el}).setLngLat([point.lon,point.lat]).addTo(mapRef.current));}
+
     }
     setGpsReceipt({used:point.used,rejected:point.rejected});
     setPendingSurveyFix(null); markerRef.current?.setLngLat([point.lon,point.lat]); mapRef.current?.easeTo({center:[point.lon,point.lat],duration:500});
