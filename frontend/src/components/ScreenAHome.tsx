@@ -30,7 +30,7 @@ import {
   AskCard,
 } from "@/components/HomeDashboardCards";
 import {
-  Navigation, Compass, ArrowRight, Pencil, Undo2, Trash2,
+  Navigation, Compass, Pencil, Undo2, Trash2,
   Check, LocateFixed, MousePointer2, Search, Loader2, X, MapPin,
   Footprints, Info, ChevronDown, CalendarDays, Sprout, Layers3,
 } from "lucide-react";
@@ -963,121 +963,180 @@ export default function ScreenAHome({
         <button type="button" onClick={()=>setPendingSurveyFix(null)} className="mt-3 min-h-12 w-full rounded-full border border-line px-4 text-sm font-semibold text-ink-soft transition active:scale-[0.98]">{t.surveyCancel}</button>
       </section></div>}
     <div className="space-y-5">
-      {/* Page heading (design.md 8.2) — quiet title directly on the canvas,
-          keeping the map as the visual center of the screen. */}
-      <div className="max-w-3xl">
-        <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-brand-blue-soft px-3 py-1 text-[10px] font-bold uppercase tracking-[.15em] text-brand-blue-deep">
-          <LocateFixed className="h-3.5 w-3.5" /> {copy.fieldMappingBadge}
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="inline-flex items-center gap-2 rounded-full bg-brand-blue-soft px-3 py-1 text-[10px] font-bold uppercase tracking-[.15em] text-brand-blue-deep">
+            <LocateFixed className="h-3.5 w-3.5" aria-hidden="true" /> {copy.fieldMappingBadge}
+          </div>
+          <h2 className="mt-2 text-3xl font-bold tracking-tight text-ink sm:text-4xl">{t.homeGreeting}</h2>
+          <p className="mt-1.5 max-w-2xl text-sm leading-6 text-ink-soft">{t.homeSubtitle}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink-soft shadow-card">
+              <MapPin className="h-3.5 w-3.5 text-action" aria-hidden="true" />
+              {locationName}
+            </span>
+            {todayLabel ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink-soft shadow-card">
+                <CalendarDays className="h-3.5 w-3.5 text-info" aria-hidden="true" />
+                {todayLabel}
+              </span>
+            ) : null}
+          </div>
         </div>
-        <h2 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">{copy.title}</h2>
-        <p className="mt-2 text-sm leading-6 text-ink-soft">{copy.subtitle}</p>
-      </div>
+        <div className="flex shrink-0 items-center gap-3 self-start rounded-2xl border border-line bg-white px-3 py-2.5 shadow-card">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-growth text-[#102A18]">
+            <Sprout className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-sm font-bold text-ink">{t.homeProfileName}</span>
+            <span className="block text-[11px] text-ink-muted">{t.homeProfileRole}</span>
+          </span>
+        </div>
+      </header>
 
-      {mapError && (
+      {(mapError || error) && (
         <div role="alert" className="rounded-xl border border-amber bg-amber-soft px-4 py-3 text-xs font-medium leading-5 text-amber-ink">
-          {mapError}
+          {mapError || error}
         </div>
       )}
 
-      {/* Map-first workspace (design.md 8.1): the map dominates the screen and
-          setup controls float above it on Liquid Glass (8.3, 8.7). */}
-      <section className="overflow-hidden rounded-2xl border border-line bg-white shadow-float">
-        <div className="relative h-[500px] sm:h-[620px]">
-          <div ref={mapContainerRef} className="h-full w-full" />
-          {!mapReady && (
-            <div className="absolute inset-0 z-[2] flex items-center justify-center bg-warm/85 text-sm font-semibold text-ink-soft backdrop-blur-[2px]">{copy.loadingMap}</div>
-          )}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,300px)_minmax(0,1fr)_minmax(0,320px)]">
+        <div className="order-2 space-y-4 xl:order-1">
+          <WeatherCard data={data} loading={loading} t={t} />
+          <VegetationCard data={data} t={t} />
+          <SoilMoistureCard data={data} t={t} />
+        </div>
 
-          {/* Floating glass setup panel — farmer-first on mobile: the location
-              actions lead, search/district live in a collapsible section that
-              opens automatically on desktop (design.md 8.3). */}
-          <div className="glass-surface absolute left-3 top-3 z-10 max-h-[calc(100%-24px)] w-[min(92%,370px)] overflow-y-auto rounded-xl p-3 sm:p-3.5">
-            <button onClick={handleUseGps} disabled={gpsLoading} className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-brand-deep px-4 text-base font-bold text-white shadow-float transition hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60">
-              <Navigation className={`h-5 w-5 shrink-0 ${gpsLoading ? "animate-pulse" : ""}`} /> {copy.gps}
-            </button>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <button onClick={() => { drawModeRef.current = "select"; setDrawMode("select"); if (mapRef.current) mapRef.current.getCanvas().style.cursor = ""; }} className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border px-3 py-2 text-center text-sm font-semibold leading-tight transition active:scale-[0.98] ${drawMode === "select" ? "border-[#C7E0FF] bg-brand-blue-soft text-brand-blue-deep" : "border-line bg-white text-ink-soft hover:bg-soft"}`}>
-                <MousePointer2 className="h-4 w-4 shrink-0" /> {copy.tap}
-              </button>
-              <button onClick={beginDrawing} className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-transparent px-3 py-2 text-center text-sm font-semibold leading-tight transition hover:opacity-95 active:scale-[0.98] bg-gradient-growth text-[#102A18] shadow-card ${drawMode === "draw" ? "ring-2 ring-[#079447]/40" : ""}`}>
-                <Pencil className="h-4 w-4 shrink-0" /> {copy.draw}
-              </button>
-            </div>
-            <details ref={advDetailsRef} className="mt-2.5 rounded-xl border border-line bg-white/85">
-              <summary className="flex min-h-11 cursor-pointer select-none items-center justify-between gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wide text-ink-soft">
-                {copy.searchDistrictLabel}
-                <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
-              </summary>
-              <div className="px-3 pb-3">
-                <label className="block">
-                  <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-ink-soft">{copy.searchLabel}</span>
-                  <div className="relative">
-                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted">
-                      {searchStatus === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                    </span>
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(event) => setSearchQuery(event.target.value)}
-                      placeholder={copy.searchPlaceholder}
-                      aria-label={copy.searchLabel}
-                      className="h-11 w-full rounded-full border border-line bg-white pl-9 pr-9 text-sm font-medium text-ink outline-none transition placeholder:font-normal placeholder:text-ink-muted focus:border-action focus:ring-4 focus:ring-action/15"
-                    />
-                    {searchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => setSearchQuery("")}
-                        aria-label="Clear search"
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-ink-muted transition hover:bg-soft hover:text-ink-soft active:scale-[0.98]"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    )}
-                    {searchQuery.trim().length >= 3 && (searchStatus === "done" || searchStatus === "error") && (
-                      <div className="absolute inset-x-0 top-full z-30 mt-1.5 max-h-60 overflow-y-auto rounded-lg border border-divider bg-white p-1 shadow-float">
-                        {searchStatus === "error" && (
-                          <p className="px-3 py-2.5 text-xs leading-5 text-danger">{copy.searchError}</p>
-                        )}
-                        {searchStatus === "done" && searchResults.length === 0 && (
-                          <p className="px-3 py-2.5 text-xs leading-5 text-ink-muted">{copy.searchNoResults}</p>
-                        )}
-                        {searchResults.map((result) => (
-                          <button
-                            key={`${result.title}-${result.lat}-${result.lon}`}
-                            type="button"
-                            onClick={() => selectSearchResult(result)}
-                            className="flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left transition hover:bg-brand-blue-soft/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action active:scale-[0.98]"
-                          >
-                            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-action" aria-hidden="true" />
-                            <span className="min-w-0">
-                              <span className="block truncate text-sm font-bold text-ink">{result.title}</span>
-                              {result.subtitle && <span className="block truncate text-xs text-ink-muted">{result.subtitle}</span>}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </label>
-                <label className="mt-2.5 block">
-                  <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-ink-soft">{copy.district}</span>
-                  <select value={districtName} onChange={(event) => selectDistrict(event.target.value)} disabled={districtLoading || districts.length === 0}
-                    className="h-11 w-full rounded-full border border-line bg-white px-3 text-sm font-medium text-ink outline-none transition focus:border-action focus:ring-4 focus:ring-action/15">
-                    <option value="">{districtLoading ? copy.loadingDistricts : copy.chooseDistrict}</option>
-                    {[...districts].sort((a,b) => (a.properties?.DISTRICT ?? "").localeCompare(b.properties?.DISTRICT ?? "")).map((item) => (
-                      <option key={item.properties?.DISTRICT} value={item.properties?.DISTRICT}>{item.properties?.DISTRICT}</option>
-                    ))}
-                  </select>
-                </label>
+        <div className="order-1 space-y-4 xl:order-2">
+          <FieldSummaryCard
+            data={data}
+            loading={loading}
+            fieldArea={fieldArea}
+            locationName={locationName}
+            onRunAssessment={onRunAssessment}
+            onOpenField={onOpenField}
+            t={t}
+          />
+
+          <section className="overflow-hidden rounded-2xl border border-line bg-white shadow-card">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-divider px-4 py-3">
+              <h3 className="flex items-center gap-2 text-sm font-bold text-ink">
+                <MapPin className="h-4 w-4 text-action" aria-hidden="true" />
+                {t.homeMapTitle}
+              </h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1 rounded-full border border-line bg-soft p-1">
+                  <button type="button" onClick={() => setMapStyle("streets")} aria-pressed={mapStyle === "streets"} className={`min-h-9 rounded-full px-3 text-xs font-semibold transition active:scale-[0.98] ${mapStyle === "streets" ? "bg-brand-blue-deep text-white" : "text-ink-soft hover:text-ink"}`}>{copy.streets}</button>
+                  <button type="button" onClick={() => { if (satelliteAvailable) setMapStyle("satellite"); }} disabled={!satelliteAvailable} aria-pressed={mapStyle === "satellite"} title={!satelliteAvailable ? copy.satelliteUnavailableTitle : copy.satelliteTitle} className={`min-h-9 rounded-full px-3 text-xs font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 ${mapStyle === "satellite" ? "bg-brand-blue-deep text-white" : "text-ink-soft hover:text-ink"}`}>{copy.satellite}</button>
+                </div>
+                <button type="button" onClick={() => setSetupOpen((open) => !open)} aria-expanded={setupOpen} className={`inline-flex min-h-9 items-center gap-2 rounded-full border px-3 text-xs font-bold transition active:scale-[0.98] ${setupOpen ? "border-[#C7E0FF] bg-brand-blue-soft text-brand-blue-deep" : "border-line bg-white text-ink-soft hover:bg-soft"}`}>
+                  <Layers3 className="h-4 w-4" aria-hidden="true" />
+                  {setupOpen ? t.homeMapSetupClose : t.homeMapSetupOpen}
+                </button>
               </div>
-            </details>
-            {/* Map layers segmented control, kept inside the panel so it never
-                collides with the map's own chrome (design.md 8.7) */}
-            <div className="mt-3 flex items-center gap-1 rounded-full border border-line bg-white/85 p-1">
-              <button type="button" onClick={() => setMapStyle("streets")} aria-pressed={mapStyle === "streets"} className={`h-9 flex-1 rounded-full px-3 text-xs font-semibold transition active:scale-[0.98] ${mapStyle === "streets" ? "bg-brand-blue-deep text-white" : "text-ink-soft hover:text-ink"}`}>{copy.streets}</button>
-              <button type="button" onClick={() => { if (satelliteAvailable) setMapStyle("satellite"); }} disabled={!satelliteAvailable} aria-pressed={mapStyle === "satellite"} title={!satelliteAvailable ? copy.satelliteUnavailableTitle : copy.satelliteTitle} className={`h-9 flex-1 rounded-full px-3 text-xs font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 ${mapStyle === "satellite" ? "bg-brand-blue-deep text-white" : "text-ink-soft hover:text-ink"}`}>{copy.satellite}</button>
             </div>
-          </div>
+            <div className="relative h-[380px] sm:h-[520px]">
+              <div ref={mapContainerRef} className="h-full w-full" />
+              {!mapReady && (
+                <div className="absolute inset-0 z-[2] flex items-center justify-center bg-warm/85 text-sm font-semibold text-ink-soft backdrop-blur-[2px]">{copy.loadingMap}</div>
+              )}
+
+              {setupOpen && (
+                <div className="glass-surface absolute left-3 top-3 z-10 max-h-[calc(100%-24px)] w-[min(92%,370px)] overflow-y-auto rounded-xl p-3 sm:p-3.5">
+                  <button onClick={handleUseGps} disabled={gpsLoading} className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-brand-deep px-4 text-base font-bold text-white shadow-float transition hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60">
+                    <Navigation className={`h-5 w-5 shrink-0 ${gpsLoading ? "animate-pulse" : ""}`} /> {copy.gps}
+                  </button>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <button onClick={() => { drawModeRef.current = "select"; setDrawMode("select"); if (mapRef.current) mapRef.current.getCanvas().style.cursor = ""; }} className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border px-3 py-2 text-center text-sm font-semibold leading-tight transition active:scale-[0.98] ${drawMode === "select" ? "border-[#C7E0FF] bg-brand-blue-soft text-brand-blue-deep" : "border-line bg-white text-ink-soft hover:bg-soft"}`}>
+                      <MousePointer2 className="h-4 w-4 shrink-0" /> {copy.tap}
+                    </button>
+                    <button onClick={beginDrawing} className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-transparent px-3 py-2 text-center text-sm font-semibold leading-tight transition hover:opacity-95 active:scale-[0.98] bg-gradient-growth text-[#102A18] shadow-card ${drawMode === "draw" ? "ring-2 ring-[#079447]/40" : ""}`}>
+                      <Pencil className="h-4 w-4 shrink-0" /> {copy.draw}
+                    </button>
+                  </div>
+                  <details ref={advDetailsRef} className="mt-2.5 rounded-xl border border-line bg-white/85">
+                    <summary className="flex min-h-11 cursor-pointer select-none items-center justify-between gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wide text-ink-soft">
+                      {copy.searchDistrictLabel}
+                      <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    </summary>
+                    <div className="px-3 pb-3">
+                      <label className="block">
+                        <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-ink-soft">{copy.searchLabel}</span>
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted">
+                            {searchStatus === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                          </span>
+                          <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(event) => setSearchQuery(event.target.value)}
+                            placeholder={copy.searchPlaceholder}
+                            aria-label={copy.searchLabel}
+                            className="h-11 w-full rounded-full border border-line bg-white pl-9 pr-9 text-sm font-medium text-ink outline-none transition placeholder:font-normal placeholder:text-ink-muted focus:border-action focus:ring-4 focus:ring-action/15"
+                          />
+                          {searchQuery && (
+                            <button
+                              type="button"
+                              onClick={() => setSearchQuery("")}
+                              aria-label="Clear search"
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-ink-muted transition hover:bg-soft hover:text-ink-soft active:scale-[0.98]"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                          {searchQuery.trim().length >= 3 && (searchStatus === "done" || searchStatus === "error") && (
+                            <div className="absolute inset-x-0 top-full z-30 mt-1.5 max-h-60 overflow-y-auto rounded-lg border border-divider bg-white p-1 shadow-float">
+                              {searchStatus === "error" && (
+                                <p className="px-3 py-2.5 text-xs leading-5 text-danger">{copy.searchError}</p>
+                              )}
+                              {searchStatus === "done" && searchResults.length === 0 && (
+                                <p className="px-3 py-2.5 text-xs leading-5 text-ink-muted">{copy.searchNoResults}</p>
+                              )}
+                              {searchResults.map((result) => (
+                                <button
+                                  key={`${result.title}-${result.lat}-${result.lon}`}
+                                  type="button"
+                                  onClick={() => selectSearchResult(result)}
+                                  className="flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left transition hover:bg-brand-blue-soft/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action active:scale-[0.98]"
+                                >
+                                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-action" aria-hidden="true" />
+                                  <span className="min-w-0">
+                                    <span className="block truncate text-sm font-bold text-ink">{result.title}</span>
+                                    {result.subtitle && <span className="block truncate text-xs text-ink-muted">{result.subtitle}</span>}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                      <label className="mt-2.5 block">
+                        <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-ink-soft">{copy.district}</span>
+                        <select value={districtName} onChange={(event) => selectDistrict(event.target.value)} disabled={districtLoading || districts.length === 0}
+                          className="h-11 w-full rounded-full border border-line bg-white px-3 text-sm font-medium text-ink outline-none transition focus:border-action focus:ring-4 focus:ring-action/15">
+                          <option value="">{districtLoading ? copy.loadingDistricts : copy.chooseDistrict}</option>
+                          {[...districts].sort((a,b) => (a.properties?.DISTRICT ?? "").localeCompare(b.properties?.DISTRICT ?? "")).map((item) => (
+                            <option key={item.properties?.DISTRICT} value={item.properties?.DISTRICT}>{item.properties?.DISTRICT}</option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                  </details>
+                </div>
+              )}
+
+              <div className="glass-surface-dark pointer-events-none absolute right-3 top-3 z-[6] hidden w-[210px] rounded-xl p-3 text-white md:block">
+                <p className="text-[10px] font-bold uppercase tracking-[.15em] text-white/60">{t.homeMapOverlay}</p>
+                <p className="mt-1 truncate text-sm font-bold">{locationName}</p>
+                <dl className="mt-2 space-y-1.5 text-[11px]">
+                  <div className="flex items-center justify-between gap-2"><dt className="text-white/60">{t.homeFieldArea}</dt><dd className="tnum font-semibold">{fieldArea === null ? t.homeFieldNoArea : `${fieldArea.toFixed(2)} ha`}</dd></div>
+                  <div className="flex items-center justify-between gap-2"><dt className="text-white/60">{t.homeFieldSlope}</dt><dd className="tnum font-semibold">{data?.elevation.slope_percent !== null && data?.elevation.slope_percent !== undefined ? `${data.elevation.slope_percent.toFixed(1)}%` : "—"}</dd></div>
+                  <div className="flex items-center justify-between gap-2"><dt className="text-white/60">{t.homeFieldElevation}</dt><dd className="tnum font-semibold">{data?.elevation.elevation_meters !== null && data?.elevation.elevation_meters !== undefined ? `${Math.round(data.elevation.elevation_meters)} m` : "—"}</dd></div>
+                  <div className="flex items-center justify-between gap-2"><dt className="text-white/60">{t.homeWetness}</dt><dd className="tnum font-semibold">{data?.power_summary.latest_surface_wetness !== null && data?.power_summary.latest_surface_wetness !== undefined ? `${Math.round(data.power_summary.latest_surface_wetness * 100)}%` : "—"}</dd></div>
+                </dl>
+                {!data ? <p className="mt-2 text-[10px] leading-4 text-white/70">{t.homeMapNoData}</p> : null}
+                <p className="mt-2 border-t border-white/15 pt-1.5 text-[9px] leading-3 text-white/60">{t.homeMapAreaNote}</p>
+              </div>
 
           {/* Floating drawing-mode bar with undo/clear/finish (8.5, 8.8) */}
           {drawMode === "draw" && (
@@ -1101,7 +1160,7 @@ export default function ScreenAHome({
           {/* Compact field-information overlay (8.7). Hidden while the drawing
               bar occupies the bottom row. */}
           {drawMode !== "draw" && (
-            <div className="glass-surface tnum absolute bottom-3 left-3 z-[5] flex max-w-[calc(100%-140px)] items-center gap-2 rounded-full px-3 py-2.5 text-xs text-ink-soft sm:max-w-[calc(100%-200px)]">
+            <div className="glass-surface tnum absolute bottom-3 left-3 z-[5] hidden max-w-[calc(100%-200px)] items-center gap-2 rounded-full px-3 py-2.5 text-xs text-ink-soft sm:flex">
               <Compass className="h-4 w-4 shrink-0 text-action" />
               <span className="truncate">{copy.selectedLocation} <strong className="font-semibold text-brand-blue-deep">{locationName}</strong> · {selectedLat.toFixed(5)}°N, {selectedLon.toFixed(5)}°E{gpsAccuracy !== null ? ` · GPS ±${Math.round(gpsAccuracy)} m` : ""} · {copy.dragPin}</span>
             </div>
@@ -1114,18 +1173,25 @@ export default function ScreenAHome({
           </div>
         </div>
 
-        {/* Review and finish area (8.8) */}
-        <div className="flex flex-col gap-3 border-t border-divider bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-ink-soft">
-            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-5 rounded-xs border border-[#64748B] bg-[#64748B]/15" /> {copy.districtBoundaries}</span>
-            {fieldArea !== null && <span className="tnum font-bold text-ink">{copy.area}: {fieldArea.toFixed(3)} ha</span>}{fieldArea !== null && <p className="w-full text-base text-ink-soft">{t.surveyAreaCaveat}</p>}
-            <span>{districts.length || 0} {districts.length === 1 ? (lang === "ne" ? "जिल्ला" : "district") : (lang === "ne" ? "जिल्ला" : "districts")} {districtLoading ? copy.districtsLoading : copy.districtsAvailable}</span>
-          </div>
-          <button onClick={onProceedToField} className="inline-flex min-h-12 items-center justify-center gap-3 rounded-full bg-action px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-action-pressed active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50">
-            {copy.nextField} <ArrowRight className="h-4 w-4" />
-          </button>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-divider bg-white px-4 py-3 text-[11px] text-ink-soft">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span className="inline-flex items-center gap-2"><span className="h-2.5 w-5 rounded-xs border border-[#64748B] bg-[#64748B]/15" /> {copy.districtBoundaries}</span>
+                <span>{districts.length || 0} {districtLoading ? copy.districtsLoading : t.homeDistrictsAvailable}</span>
+                {fieldArea !== null && <span className="tnum font-bold text-ink">{copy.area}: {fieldArea.toFixed(2)} ha</span>}
+              </div>
+            </div>
+            {fieldArea !== null && <p className="border-t border-divider bg-white px-4 py-2 text-[11px] leading-4 text-ink-muted">{t.surveyAreaCaveat}</p>}
+          </section>
+
+          <SignalCoverageCard data={data} t={t} />
         </div>
-      </section>
+
+        <div className="order-3 space-y-4">
+          <StressCard data={data} onOpenField={onOpenField} t={t} />
+          <RainImpactCard data={data} t={t} />
+          <AskCard t={t} />
+        </div>
+      </div>
 
       {/* Walk method and stand survey — dense forms stay on solid, readable
           surfaces below the map (design.md: never glass-blur dense forms) */}

@@ -17,6 +17,7 @@ import {
   TrendingUp,
   WifiOff,
   MessageCircleQuestion,
+  Sprout,
 } from "lucide-react";
 import { getDict, type Lang } from "@/i18n";
 
@@ -336,7 +337,11 @@ export default function SafeFieldNepalApp() {
     setLatState(lat);
     setLonState(lon);
     setPolygonState(null);
-    updateSession({ lat, lon, polygon: null });
+    // A stored assessment belongs to the previous field; clear it so the new
+    // location never shows another field's numbers.
+    setAssessmentState(null);
+    setAssessmentError(null);
+    updateSession({ lat, lon, polygon: null, assessment: null });
   }, [updateSession]);
 
   const handlePolygonChange = useCallback((polygon: [number, number][] | null) => {
@@ -400,14 +405,9 @@ export default function SafeFieldNepalApp() {
     void refreshAssessment();
   }, [refreshAssessment]);
 
-  // Assessment is intentionally started by the explicit Next action, after
-  // the user has selected the final point or drawn boundary. This prevents
-  // an early/default-location request from racing the selected field request.
-  const handleProceedToField = useCallback(() => {
-    setActiveTab("field");
-    void refreshAssessment();
-  }, [refreshAssessment]);
-
+  // Assessment is intentionally started by the explicit action on the home
+  // dashboard, after the user has selected the final point or drawn boundary.
+  // This prevents an early/default-location request from racing it.
   const selectTab = (tab: TabId) => {
     setActiveTab(tab);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -424,50 +424,45 @@ export default function SafeFieldNepalApp() {
       )}
 
       <div className="flex w-full flex-1">
-        {/* Left sidebar navigation (desktop) */}
-        <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-divider bg-white lg:flex">
+        {/* Compact icon rail (desktop), matching the dashboard reference */}
+        <aside className="sticky top-0 hidden h-screen w-[84px] shrink-0 flex-col items-center border-r border-divider bg-white py-5 lg:flex">
           <button
             type="button"
             onClick={() => selectTab("home")}
-            className="group flex px-5 pb-4 pt-6 text-left outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+            className="group flex h-11 w-11 items-center justify-center rounded-[14px] bg-gradient-growth text-[#102A18] shadow-card outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
             aria-label="Safe Field Nepal home"
+            title="Safe Field Nepal"
           >
-            <Image
-              src="/logo.png"
-              alt="Safe Field"
-              className="h-11 w-auto max-w-full object-contain object-left"
-              width={544}
-              height={160}
-              priority
-            />
+            <Sprout className="h-6 w-6" aria-hidden="true" />
           </button>
 
-          <nav aria-label="Main navigation" className="flex flex-1 flex-col gap-1 px-3 py-2">
+          <nav aria-label="Main navigation" className="mt-7 flex flex-1 flex-col items-center gap-2">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
+              const label = lang === "ne" ? item.labelNe : item.labelEn;
               return (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => selectTab(item.id)}
                   aria-current={isActive ? "page" : undefined}
-                  className={`flex min-h-[46px] items-center gap-3 rounded-lg border border-transparent px-3 text-sm font-semibold transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+                  aria-label={label}
+                  title={label}
+                  className={`relative flex h-11 w-11 items-center justify-center rounded-2xl transition active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
                     isActive
-                      ? "bg-brand-blue-soft text-brand-blue-deep border-[#C7E0FF]"
-                      : "text-ink-soft hover:bg-soft hover:text-ink"
+                      ? "bg-brand-blue-soft text-brand-blue-deep"
+                      : "text-ink-muted hover:bg-soft hover:text-ink"
                   }`}
                 >
-                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${isActive ? "bg-action text-white" : "bg-soft text-ink-muted"}`}>
-                    <Icon className="h-4 w-4" aria-hidden="true" />
-                  </span>
-                  <span className="truncate">{lang === "ne" ? item.labelNe : item.labelEn}</span>
+                  {isActive && <span className="absolute -left-[13px] h-5 w-1 rounded-full bg-brand-blue-deep" aria-hidden="true" />}
+                  <Icon className="h-5 w-5" aria-hidden="true" />
                 </button>
               );
             })}
           </nav>
 
-          <div className="border-t border-divider px-5 py-4">
+          <div className="border-t border-divider pt-4">
             <LanguageToggle lang={lang} setLang={setLang} />
           </div>
         </aside>
@@ -501,11 +496,15 @@ export default function SafeFieldNepalApp() {
               <ScreenAHome
                 selectedLat={selectedLat}
                 selectedLon={selectedLon}
+                data={assessmentData}
+                loading={loading}
+                error={assessmentError}
                 onLocationSelect={handleLocationChange}
                 onFieldPolygonSelect={handlePolygonChange}
                 onSandOverrideChange={handleSandOverrideChange}
                 fieldPolygon={selectedFieldPolygon}
-                onProceedToField={handleProceedToField}
+                onRunAssessment={handleRunAssessment}
+                onOpenField={() => selectTab("field")}
                 lang={lang}
               />
             )}

@@ -163,6 +163,9 @@ export function VegetationCard({ data, t }: { data: FieldAssessmentResponse | nu
         : signal?.status === "available"
           ? t.signalStatusAvailable
           : t.signalStatusUnavailable;
+  const notInstalledNote = signal?.status === "not_installed"
+    ? t.homeVegetationNotInstalled
+    : signal?.unavailable_reason;
 
   return (
     <Card>
@@ -170,13 +173,15 @@ export function VegetationCard({ data, t }: { data: FieldAssessmentResponse | nu
         <p className="text-[11px] font-bold uppercase tracking-[.14em] text-ink-muted">{t.homeVegetationTitle}</p>
         <Leaf className="h-5 w-5 shrink-0 text-growth-deep" aria-hidden="true" />
       </div>
-      <div className="mt-3 flex items-end gap-2">
-        <span className="tnum text-4xl font-bold tracking-tight text-ink">{available ? numberOrDash(signal?.value, 2) : "—"}</span>
-        <span className="mb-1.5 text-xs font-semibold text-ink-muted">{available ? signal?.unit || "" : ""}</span>
-      </div>
-      <span className="mt-2 inline-flex rounded-full bg-soft px-2.5 py-1 text-[11px] font-bold text-ink-soft">{statusLabel}</span>
+      {available && (
+        <div className="mt-3 flex items-end gap-2">
+          <span className="tnum text-4xl font-bold tracking-tight text-ink">{numberOrDash(signal?.value, 2)}</span>
+          <span className="mb-1.5 text-xs font-semibold text-ink-muted">{signal?.unit || ""}</span>
+        </div>
+      )}
+      <span className={`${available ? "mt-2" : "mt-3"} inline-flex rounded-full bg-soft px-2.5 py-1 text-[11px] font-bold text-ink-soft`}>{statusLabel}</span>
       {available ? <p className="mt-2 text-xs font-semibold text-ink-soft">{vsLabel(signal?.vs_normal ?? "unknown", t)}</p> : null}
-      {!available && signal?.unavailable_reason ? <p className="mt-2 text-xs leading-5 text-ink-muted">{signal.unavailable_reason}</p> : null}
+      {!available && notInstalledNote ? <p className="mt-2 text-xs leading-5 text-ink-muted">{notInstalledNote}</p> : null}
       <SourceLine>{t.homeVegetationNote}</SourceLine>
     </Card>
   );
@@ -232,14 +237,15 @@ export function FieldSummaryCard({
   onOpenField: () => void;
   t: Dict;
 }) {
-  const soil = data?.soil_texture.texture_class ?? null;
+  const soilRaw = data?.soil_texture.texture_class?.trim() ?? "";
+  const soil = soilRaw && !/^(unavailable|n\/a|unknown)$/i.test(soilRaw) ? soilRaw : null;
   const slope = data?.elevation.slope_percent ?? null;
   const elevation = data?.elevation.elevation_meters ?? null;
   const area = fieldArea === null ? null : `${fieldArea.toFixed(2)} ha`;
   const soilLabel = soil ?? t.homeUnavailable;
 
   return (
-    <Card className="flex h-full flex-col">
+    <Card className="flex flex-col">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-[.14em] text-ink-muted">{t.homeFieldTitle}</p>
@@ -323,7 +329,7 @@ export function SignalCoverageCard({ data, t }: { data: FieldAssessmentResponse 
   const circumference = 2 * Math.PI * radius;
 
   return (
-    <Card className="flex h-full flex-col">
+    <Card className="flex flex-col">
       <div className="flex items-start justify-between gap-3">
         <p className="text-[11px] font-bold uppercase tracking-[.14em] text-ink-muted">{t.homeSignalsTitle}</p>
         <Gauge className="h-5 w-5 shrink-0 text-brand-blue-deep" aria-hidden="true" />
