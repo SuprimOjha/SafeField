@@ -17,6 +17,7 @@ import { createMap, addSatelliteLayer, setSatellite, isSatelliteSourceError } fr
 import { getDict, type Lang } from "@/i18n";
 import { averageFixes, type GpsFix } from "@/lib/gps-average";
 import { polygonSelfIntersects, pointInDistricts } from "@/lib/field-geometry";
+import { FIELD_SURVEY_CONFIG } from "@/config/field-survey";
 import {
   Navigation, Compass, ArrowRight, Pencil, Undo2, Trash2,
   Check, Layers3, LocateFixed, MousePointer2, Search, Loader2, X, MapPin,
@@ -733,8 +734,8 @@ export default function ScreenAHome({
     stopSurveyCollection(); surveyFixesRef.current = []; setPendingSurveyFix(null); setSurveyCollecting(true);
     surveyWatchRef.current = navigator.geolocation.watchPosition((position) => {
       surveyFixesRef.current = [...surveyFixesRef.current, {latitude:position.coords.latitude,longitude:position.coords.longitude,accuracy:position.coords.accuracy,timestamp:position.timestamp}];
-      if (surveyFixesRef.current.length < 5) return;
-      const result = averageFixes(surveyFixesRef.current,{maxAccuracyMeters:15}); stopSurveyCollection();
+      if (surveyFixesRef.current.length < FIELD_SURVEY_CONFIG.gpsFixCount) return;
+      const result = averageFixes(surveyFixesRef.current,{maxAccuracyMeters:FIELD_SURVEY_CONFIG.maxGpsAccuracyMeters}); stopSurveyCollection();
       if (result.latitude === null || result.longitude === null || result.accuracy === null) { setMapError(lang === "ne" ? "GPS कमजोर छ। खुला आकाश भएको ठाउँमा पुनः प्रयास गर्नुहोस्।" : "Weak GPS signal. Move to open sky and try again."); return; }
       if (result.latitude < 26.3 || result.latitude > 30.5 || result.longitude < 80 || result.longitude > 88.3) { setMapError(copyRef.current.errorGpsOutside); return; }
       setPendingSurveyFix({lat:result.latitude,lon:result.longitude,accuracy:result.accuracy,used:result.usedCount,rejected:result.rejectedCount}); setMapError(null);
@@ -744,7 +745,7 @@ export default function ScreenAHome({
     if (!pendingSurveyFix) return; const point = pendingSurveyFix;
     if (type === "corner") {
       const next = [...drawPointsRef.current,[point.lon,point.lat] as [number,number]];
-      if (next.length > 200) { setMapError(copyRef.current.errorTooManyVertices); return; }
+      if (next.length > FIELD_SURVEY_CONFIG.maxPolygonVertices) { setMapError(copyRef.current.errorTooManyVertices); return; }
       drawPointsRef.current=next; setDrawPoints(next); setWalkCorners((old)=>[...old,{lat:point.lat,lon:point.lon,accuracy:point.accuracy}]); if(mapRef.current) updateDrawLayer(mapRef.current,next);
     } else {
       setSurveyPoints((old)=>[...old,{id:++surveyPointIdRef.current,lat:point.lat,lon:point.lon,type,accuracy:point.accuracy}]);
