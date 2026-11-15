@@ -316,6 +316,13 @@ export default function AskAssistant({ lang, context }: AskAssistantProps) {
     };
   }, []);
 
+  // The dedicated Ask tab can open this same accessible assistant panel.
+  useEffect(() => {
+    const openFromTab = () => setOpen(true);
+    window.addEventListener("safefield-open-ask", openFromTab);
+    return () => window.removeEventListener("safefield-open-ask", openFromTab);
+  }, []);
+
   // Move focus into the dialog when it opens.
   useEffect(() => {
     if (open) panelRef.current?.focus();
