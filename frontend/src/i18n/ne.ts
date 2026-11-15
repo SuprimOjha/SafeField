@@ -119,6 +119,7 @@ export const ne: Dictionary = {
   receiptSpatialMethod: "स्थानिक विधि",
   rainDataFreshness: "वर्षा डेटाको ताजापन",
   rainDataCovers: "वर्षा डेटाले {date} समेट्छ।",
+  rainDataAge: "करिब {hours} घण्टा पुरानो।",
   observedNotForecast: "अवलोकन गरिएको हो, पूर्वानुमान होइन।",
   dataKindLabel: "डेटाको प्रकार",
   rainFreshnessUnavailable: "वर्षा अवलोकनको मिति उपलब्ध छैन।",
