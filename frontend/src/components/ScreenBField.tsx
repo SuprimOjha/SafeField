@@ -6,6 +6,7 @@ import { CloudRain, Droplets, Thermometer, Mountain, CheckCircle2, RefreshCw, Ar
 import { getDict, type Lang } from "@/i18n";
 import FreshnessStrip from "@/components/FreshnessStrip";
 import DataReceiptDrawer from "@/components/DataReceiptDrawer";
+import FarmerLogbook from "@/components/FarmerLogbook";
 
 interface ScreenBFieldProps {
   data: FieldAssessmentResponse | null;
@@ -186,6 +187,8 @@ export default function ScreenBField({
       </div>
 
       <p className="rounded-lg border border-amber bg-amber-soft p-3 text-xs leading-5 text-amber-ink">{t.screenBCaveat}</p>
+
+      <FarmerLogbook lang={lang} rainfall={rainfall} latitude={data.latitude} longitude={data.longitude} />
 
       {/* Input Configuration Card */}
       <div className="space-y-6 rounded-xl border border-divider bg-white p-6 shadow-float">
