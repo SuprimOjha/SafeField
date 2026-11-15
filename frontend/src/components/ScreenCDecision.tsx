@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { FieldAssessmentResponse, DecisionSignal } from "@/types/safefield";
 import FarmerContentPanel from "@/components/FarmerContentPanel";
+import DecisionCard from "@/components/DecisionCard";
 import { getDict, type Lang } from "@/i18n";
 import {
   CheckCircle2,
@@ -75,33 +76,7 @@ export default function ScreenCDecision({
 
   return (
     <div className="space-y-6">
-      {/* Primary Outdoor Decision Banner */}
-      <section aria-label={t.decisionBannerLabel} aria-live="polite" className={`${theme.bg} ${theme.border} border shadow-float ${decision.signal === "CONDITIONS LOOK SUITABLE" ? "text-forest p-6 md:p-8" : "text-amber-ink p-5 md:p-6"} rounded-xl` }>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-start md:items-center gap-4">
-            {theme.icon}
-            <div>
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <span className={`text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full ${theme.badgeBg}`}>
-                  {t.confidenceLabel} {decision.confidence}
-                </span>
-                {decision.wait_days_recommended > 0 && (
-                  <span className="rounded-full bg-amber px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-ink">
-                    {t.waitDaysLabel.replace("{days}", String(decision.wait_days_recommended))}
-                  </span>
-                )}
-              </div>
-              <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-                {theme.label}
-              </h2>
-            </div>
-          </div>
-        </div>
-
-        <p className={`mt-3 text-base font-semibold ${decision.signal === "CONDITIONS LOOK SUITABLE" ? "text-forest" : "text-amber-ink"}`}>{decision.primary_reason}</p>
-        <p className={`mt-2 text-sm leading-relaxed ${decision.signal === "CONDITIONS LOOK SUITABLE" ? "text-forest/85" : "text-amber-ink"}`}>{decision.detailed_explanation}</p>
-        <p className={`mt-3 rounded-lg border p-3 text-xs leading-5 ${decision.signal === "CONDITIONS LOOK SUITABLE" ? "border-divider bg-white/70 text-forest" : "border-amber bg-white/70 text-amber-ink"}`}>{t.decisionFootnote}</p>
-      </section>
+      <DecisionCard decision={decision} lang={lang} />
 
       {/* 5-Day Non-NASA Rain Outlook Strip */}
       <div className="rounded-xl border border-line bg-white p-6 shadow-float">

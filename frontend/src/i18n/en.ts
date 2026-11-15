@@ -88,6 +88,11 @@ export const en = {
 
   // Screen C — Decision
   decisionBannerLabel: "Field assessment result",
+  fieldWorkToday: "Field work today",
+  decisionReasonUnavailable: "The assessment did not provide a plain-language reason.",
+  followProductLabel: "Follow the product label.",
+  notReviewedByAgronomist: "Not yet reviewed by a Nepali agronomist.",
+  independentNotEndorsed: "Independent project; not endorsed by NASA.",
   confidenceLabel: "Confidence:",
   waitDaysLabel: "Wait {days} Days",
   daysUnit: "day",

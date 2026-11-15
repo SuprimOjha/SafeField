@@ -90,6 +90,11 @@ export const ne: Dictionary = {
 
   // Screen C — Decision
   decisionBannerLabel: "खेतको अवस्था मूल्याङ्कन",
+  fieldWorkToday: "आज खेतमा गर्ने काम",
+  decisionReasonUnavailable: "मूल्याङ्कनले सरल कारण उपलब्ध गराएन।",
+  followProductLabel: "उत्पादनको लेबल पालना गर्नुहोस्।",
+  notReviewedByAgronomist: "नेपाली कृषि विज्ञद्वारा अझै समीक्षा गरिएको छैन।",
+  independentNotEndorsed: "स्वतन्त्र परियोजना; NASA द्वारा अनुमोदित होइन।",
   confidenceLabel: "विश्वसनीयता:",
   waitDaysLabel: "{days} दिन पर्खनुहोस्",
   daysUnit: "दिन",
