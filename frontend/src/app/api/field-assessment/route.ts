@@ -78,9 +78,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ detail: "sand_percent_override must be between 0 and 100." }, { status: 422 });
   }
 
-  let fieldPolygon: [number, number][] | null;
   try {
-    fieldPolygon = parseFieldPolygon(params.get("field_polygon"));
+    // Validate any supplied polygon, even though the current assessment is point/grid based.
+    parseFieldPolygon(params.get("field_polygon"));
   } catch (errorResponse) {
     if (errorResponse instanceof Response) return errorResponse;
     throw errorResponse;
