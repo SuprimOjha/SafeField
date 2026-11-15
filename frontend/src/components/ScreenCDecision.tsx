@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { FieldAssessmentResponse, DecisionSignal } from "@/types/safefield";
 import FarmerContentPanel from "@/components/FarmerContentPanel";
 import DecisionCard from "@/components/DecisionCard";
+import FreshnessStrip from "@/components/FreshnessStrip";
+import DataReceiptDrawer from "@/components/DataReceiptDrawer";
 import { getDict, type Lang } from "@/i18n";
 import {
   CheckCircle2,
@@ -77,6 +79,9 @@ export default function ScreenCDecision({
   return (
     <div className="space-y-6">
       <DecisionCard decision={decision} lang={lang} />
+      <FreshnessStrip rainfall={data.rainfall_observation} lang={lang} />
+      <div className="flex justify-start"><DataReceiptDrawer data={data} lang={lang} /></div>
+
 
       {/* 5-Day Non-NASA Rain Outlook Strip */}
       <div className="rounded-xl border border-line bg-white p-6 shadow-float">
