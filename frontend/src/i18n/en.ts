@@ -503,6 +503,28 @@ export const en = {
   homeMapNoData: "Run an assessment to fill the field panel.",
   homeMapAreaNote: "Grid and terrain values describe the area around the field.",
   homeDistrictsAvailable: "districts available",
+  homeNoFieldTitle: "Choose your field first",
+  homeNoFieldBody:
+    "Tap your land on the map, use GPS while standing in the field, or walk the field corners. Weather, the assessment and the Ask assistant stay off until a field is marked. Your field boundary stays on this device.",
+  homeSelectFieldCta: "Select field on map",
+  homeFieldNotSelected: "No field selected",
+  homeMapSelectHint: "Tap the map, use GPS, or walk your field corners to mark your land.",
+  homeAskNeedsField: "The assistant answers only after you mark your field. Choose it on the map first.",
+  askNeedsFieldTitle: "Select your field first",
+  askNeedsFieldBody:
+    "The assistant explains the assessment for the field you marked. Choose your land on the map, then come back to Ask.",
+  askNeedsFieldCta: "Go to the field map",
+  askReadAloudNote:
+    "Every answer can be read aloud. Open an answer, then tap “Read aloud” to hear it in the selected language.",
+  fieldNeedsFieldTitle: "No field selected yet",
+  fieldNeedsFieldBody:
+    "Go to the map and tap your land, use GPS while standing in the field, or walk the corners. The field report appears after a field is marked.",
+  fieldNeedsFieldCta: "Open the field map",
+  fieldScreenTitle: "My field",
+  fieldScreenSubtitle: "The marked field, its data sources and the inputs used for the assessment.",
+  fieldNoAssessmentTitle: "No assessment run yet",
+  fieldNoAssessmentBody:
+    "Run the assessment to load weather, soil and terrain for this field. Until then, no values are shown.",
 };
 
 export type Dictionary = typeof en;

@@ -31,13 +31,14 @@ import {
 } from "@/components/HomeDashboardCards";
 import {
   Navigation, Compass, Pencil, Undo2, Trash2,
-  Check, LocateFixed, MousePointer2, Search, Loader2, X, MapPin,
+  Check, LocateFixed, MousePointer2, Search, Loader2, X, MapPin, MapPinned,
   Footprints, Info, ChevronDown, CalendarDays, Sprout, Layers3,
 } from "lucide-react";
 
 interface ScreenAHomeProps {
-  selectedLat: number;
-  selectedLon: number;
+  selectedLat: number | null;
+  selectedLon: number | null;
+  hasField: boolean;
   data: FieldAssessmentResponse | null;
   loading: boolean;
   error: string | null;
@@ -58,6 +59,10 @@ type DistrictProperties = { DISTRICT?: string; PROVINCE?: number; HQ?: string };
 type DistrictFeature = Feature<Polygon | MultiPolygon, DistrictProperties>;
 
 const EMPTY_FEATURES: FeatureCollection<Polygon> = { type: "FeatureCollection", features: [] };
+
+// Nepal overview (no field chosen). The map deliberately opens here instead
+// of at a default town so the farmer marks their own land first.
+const NEPAL_OVERVIEW: [number, number] = [84.1, 28.4];
 function getCoordinates(geometry: DistrictFeature["geometry"]): number[][] {
   const points: number[][] = [];
   const visit = (value: unknown) => {
@@ -107,6 +112,7 @@ function polygonAreaHectares(points: [number, number][]) {
 export default function ScreenAHome({
   selectedLat,
   selectedLon,
+  hasField,
   data,
   loading,
   error,
@@ -120,17 +126,23 @@ export default function ScreenAHome({
 }: ScreenAHomeProps) {
   const t = getDict(lang);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapSectionRef = useRef<HTMLElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<MapLibreMarker | null>(null);
   const onLocationSelectRef = useRef(onLocationSelect);
+  const onFieldPolygonSelectRef = useRef(onFieldPolygonSelect);
   const drawPointsRef = useRef<[number, number][]>([]);
   const districtsRef = useRef<DistrictFeature[]>([]);
   const drawModeRef = useRef<DrawMode>("select");
-  const [locationName, setLocationName] = useState("Biratnagar, Morang");
+  const [locationName, setLocationName] = useState("");
   const [mapError, setMapError] = useState<string | null>(null);
   const [mapStyle, setMapStyle] = useState<"streets" | "satellite">("streets");
   const mapStyleRef = useRef(mapStyle);
-  const selectedCoordinatesRef = useRef({ lat: selectedLat, lon: selectedLon });
+  const selectedCoordinatesRef = useRef({
+    lat: selectedLat ?? NEPAL_OVERVIEW[1],
+    lon: selectedLon ?? NEPAL_OVERVIEW[0],
+  });
+  const hasFieldRef = useRef(hasField);
   const [drawMode, setDrawMode] = useState<DrawMode>("select");
   const [drawPoints, setDrawPoints] = useState<[number, number][]>([]);
   const [fieldArea, setFieldArea] = useState<number | null>(null);
@@ -329,6 +341,8 @@ export default function ScreenAHome({
   }, [pendingSurveyFix, pendingSoilSample]);
 
   useEffect(() => { onLocationSelectRef.current = onLocationSelect; }, [onLocationSelect]);
+  useEffect(() => { onFieldPolygonSelectRef.current = onFieldPolygonSelect; }, [onFieldPolygonSelect]);
+  useEffect(() => { hasFieldRef.current = hasField; }, [hasField]);
   useEffect(() => { drawPointsRef.current = drawPoints; }, [drawPoints]);
   useEffect(() => { districtsRef.current = districts; }, [districts]);
 
@@ -433,8 +447,8 @@ export default function ScreenAHome({
     setDistrictName("");
     setLocationName(result.title);
     onLocationSelectRef.current(result.lat, result.lon, result.title);
-    onFieldPolygonSelect(null);
-    markerRef.current?.setLngLat([result.lon, result.lat]);
+    onFieldPolygonSelectRef.current(null);
+    if (mapRef.current) ensureMarker(mapRef.current, [result.lon, result.lat]);
     mapRef.current?.flyTo({ center: [result.lon, result.lat], zoom: 14, essential: true });
   };
   useEffect(() => { drawModeRef.current = drawMode; }, [drawMode]);
@@ -443,8 +457,51 @@ export default function ScreenAHome({
   // effect dependencies stay stable across language switches.
   const copyRef = useRef(copy);
   useEffect(() => { copyRef.current = copy; });
+
+  // The pin only exists after the farmer marks a field. Every selection method
+  // (tap, search, district, GPS, walk) goes through this helper so the map
+  // never shows a marker at an unchosen default location.
+  const ensureMarker = useCallback((map: MapLibreMap, lngLat: [number, number]) => {
+    if (!markerRef.current) {
+      const marker = new MapLibreMarker({ color: "#087BFA", draggable: true })
+        .setLngLat(lngLat)
+        .addTo(map);
+      marker.on("dragend", () => {
+        const point = marker.getLngLat();
+        if (point.lng < 80.0 || point.lng > 88.3 || point.lat < 26.3 || point.lat > 30.5) {
+          marker.setLngLat([selectedCoordinatesRef.current.lon, selectedCoordinatesRef.current.lat]);
+          setMapError(copyRef.current.errorMarkerOutside);
+          return;
+        }
+        onLocationSelectRef.current(point.lat, point.lng, copyRef.current.locationManuallyAdjusted);
+        onFieldPolygonSelectRef.current(null);
+        setDistrictName("");
+        setLocationName(`${copyRef.current.locationAdjusted} · ${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}`);
+        setGpsAccuracy(null);
+      });
+      markerRef.current = marker;
+    } else {
+      markerRef.current.setLngLat(lngLat);
+    }
+    return markerRef.current;
+  }, []);
+
+  const focusFieldTools = useCallback(() => {
+    setSetupOpen(true);
+    mapSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
+  // Other screens' "select field" buttons land on Home and request the map
+  // tools directly, so the farmer does not have to hunt for them.
   useEffect(() => {
-    selectedCoordinatesRef.current = { lat: selectedLat, lon: selectedLon };
+    window.addEventListener("safefield-focus-field", focusFieldTools);
+    return () => window.removeEventListener("safefield-focus-field", focusFieldTools);
+  }, [focusFieldTools]);
+
+  useEffect(() => {
+    if (selectedLat !== null && selectedLon !== null) {
+      selectedCoordinatesRef.current = { lat: selectedLat, lon: selectedLon };
+    }
   }, [selectedLat, selectedLon]);
 
   // Remember where the map was initialized so a restored session (applied by
@@ -499,8 +556,9 @@ export default function ScreenAHome({
     source?.setData({ type: "FeatureCollection", features });
   }, []);
 
-  // One-shot session restore: shortly after mount the parent has applied the
-  // persisted coordinates, so re-center the map and redraw a stored field.
+  // One-shot session restore: if (and only if) a field was previously marked,
+  // re-center on it and redraw the stored boundary. Sessions from before the
+  // field-first flow carry no `hasField` flag, so they open on Nepal.
   useEffect(() => {
     const timer = setTimeout(() => {
       if (sessionRestoredRef.current) return;
@@ -508,12 +566,8 @@ export default function ScreenAHome({
       const map = mapRef.current;
       const initial = initialMapCenterRef.current;
       if (!map || !initial) return;
-      const restored = selectedCoordinatesRef.current;
-      const moved = Math.abs(restored.lat - initial.lat) > 1e-9 || Math.abs(restored.lon - initial.lon) > 1e-9;
-      if (moved) {
-        markerRef.current?.setLngLat([restored.lon, restored.lat]);
-        map.jumpTo({ center: [restored.lon, restored.lat], zoom: 12 });
-      }
+      ensureMarker(map, [initial.lon, initial.lat]);
+      setLocationName((current) => current || copyRef.current.locationSelected);
       const stored = fieldPolygonRef.current;
       if (Array.isArray(stored) && stored.length >= 4) {
         const closing = stored[stored.length - 1];
@@ -525,36 +579,25 @@ export default function ScreenAHome({
       }
     }, 180);
     return () => clearTimeout(timer);
-  }, [updateDrawLayer]);
+  }, [updateDrawLayer, ensureMarker]);
 
   useEffect(() => {
     const container = mapContainerRef.current;
     if (!container) return;
 
     setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
-    const initialLocation = selectedCoordinatesRef.current;
-    initialMapCenterRef.current = { lat: initialLocation.lat, lon: initialLocation.lon };
-    const map = createMap(container, [initialLocation.lon, initialLocation.lat]);
+    // Without a chosen field the map opens at the Nepal overview with no pin.
+    const initialLocation = hasFieldRef.current ? selectedCoordinatesRef.current : null;
+    initialMapCenterRef.current = initialLocation;
+    const center: [number, number] = initialLocation
+      ? [initialLocation.lon, initialLocation.lat]
+      : NEPAL_OVERVIEW;
+    const map = createMap(container, center, initialLocation ? 12 : 6.2);
     mapRef.current = map;
     map.addControl(new NavigationControl({ visualizePitch: true }), "top-right");
     map.addControl(new ScaleControl({ unit: "metric" }), "bottom-right");
 
-    const marker = new MapLibreMarker({ color: "#087BFA", draggable: true })
-      .setLngLat([initialLocation.lon, initialLocation.lat]).addTo(map);
-    markerRef.current = marker;
-    marker.on("dragend", () => {
-      const point = marker.getLngLat();
-      if (point.lng < 80.0 || point.lng > 88.3 || point.lat < 26.3 || point.lat > 30.5) {
-        marker.setLngLat([selectedCoordinatesRef.current.lon, selectedCoordinatesRef.current.lat]);
-        setMapError(copyRef.current.errorMarkerOutside);
-        return;
-      }
-      onLocationSelectRef.current(point.lat, point.lng, copyRef.current.locationManuallyAdjusted);
-      onFieldPolygonSelect(null);
-      setDistrictName("");
-      setLocationName(`${copyRef.current.locationAdjusted} · ${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}`);
-      setGpsAccuracy(null);
-    });
+    if (initialLocation) ensureMarker(map, [initialLocation.lon, initialLocation.lat]);
 
     const installLayers = () => {
       addSatelliteLayer(map);
@@ -620,12 +663,12 @@ export default function ScreenAHome({
         updateDrawLayer(map, next);
         return;
       }
-      // A normal map tap always drops a pin; district selection is handled by the picker.
+      // A normal map tap selects the farmer's field and creates the pin only now.
       onLocationSelectRef.current(lat, lng, `${copyRef.current.locationSelected} (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
-      onFieldPolygonSelect(null);
+      onFieldPolygonSelectRef.current(null);
       setDistrictName("");
       setLocationName(`${copyRef.current.locationSelected} · ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-      marker.setLngLat([lng, lat]);
+      ensureMarker(map, [lng, lat]);
     });
 
     map.on("error", (event) => {
@@ -645,14 +688,14 @@ export default function ScreenAHome({
       if (surveyWatchRef.current !== null && typeof navigator !== "undefined" && navigator.geolocation) navigator.geolocation.clearWatch(surveyWatchRef.current);
       surveyWatchRef.current = null;
       surveyMarkersRef.current.forEach((surveyMarker)=>surveyMarker.remove()); surveyMarkersRef.current=[];
-      marker.remove();
+      markerRef.current?.remove();
+      markerRef.current = null;
       map.remove();
       mapRef.current = null;
-      markerRef.current = null;
       setMapReady(false);
     };
   // Keep one OpenFreeMap vector map; satellite imagery is toggled as a raster overlay.
-  }, [updateDrawLayer, onFieldPolygonSelect, stopWalkWatch, stopSurveyCollection]);
+  }, [updateDrawLayer, ensureMarker, stopWalkWatch, stopSurveyCollection]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -662,10 +705,10 @@ export default function ScreenAHome({
   }, [mapStyle, mapReady]);
 
   useEffect(() => {
-    if (markerRef.current && mapRef.current && drawMode === "select") {
+    if (markerRef.current && mapRef.current && drawMode === "select" && selectedLat !== null && selectedLon !== null) {
       markerRef.current.setLngLat([selectedLon, selectedLat]);
     }
-  }, [selectedLat, selectedLon, drawMode, onFieldPolygonSelect]);
+  }, [selectedLat, selectedLon, drawMode]);
 
   useEffect(() => {
     if (mapRef.current) updateDrawLayer(mapRef.current, drawPoints);
@@ -688,7 +731,7 @@ export default function ScreenAHome({
     setLocationName(`${name} · ${copy.locationDistrictCentre}`);
     onLocationSelect(lat, lon, `${name} District`);
     onFieldPolygonSelect(null);
-    markerRef.current?.setLngLat([lon, lat]);
+    if (mapRef.current) ensureMarker(mapRef.current, [lon, lat]);
     mapRef.current?.fitBounds([[bounds.minLon, bounds.minLat], [bounds.maxLon, bounds.maxLat]], { padding: 55, maxZoom: 9, essential: true });
   };
 
@@ -738,7 +781,7 @@ export default function ScreenAHome({
     setLocationName(copy.locationDrawn);
     onLocationSelect(lat, lon, copy.locationDrawn);
     onFieldPolygonSelect([...drawPoints, drawPoints[0]]);
-    markerRef.current?.setLngLat([lon, lat]);
+    if (mapRef.current) ensureMarker(mapRef.current, [lon, lat]);
     mapRef.current?.fitBounds(drawPoints.reduce((bounds, point) => bounds.extend(point), new LngLatBounds(drawPoints[0], drawPoints[0])), { padding: 60, maxZoom: 16 });
   };
 
@@ -763,7 +806,7 @@ export default function ScreenAHome({
         onLocationSelect(lat, lon, copy.locationGps);
         onFieldPolygonSelect(null);
         setLocationName(`${copy.gpsFix} · ±${Math.round(position.coords.accuracy)} m`);
-        markerRef.current?.setLngLat([lon, lat]);
+        if (mapRef.current) ensureMarker(mapRef.current, [lon, lat]);
         mapRef.current?.flyTo({ center: [lon, lat], zoom: 17 });
       },
       (error) => {
@@ -889,7 +932,9 @@ export default function ScreenAHome({
     }
     setGpsReceipt({used:point.used,rejected:point.rejected});
     if (type === "soil") { setPendingSoilSample({lat:point.lat,lon:point.lon,accuracy:point.accuracy}); setSoilSandInput(""); }
-    setPendingSurveyFix(null); markerRef.current?.setLngLat([point.lon,point.lat]); mapRef.current?.easeTo({center:[point.lon,point.lat],duration:500});
+    setPendingSurveyFix(null);
+    if (mapRef.current) ensureMarker(mapRef.current, [point.lon, point.lat]);
+    mapRef.current?.easeTo({center:[point.lon,point.lat],duration:500});
   };
 
   const saveSoilSample = () => {
@@ -971,10 +1016,12 @@ export default function ScreenAHome({
           <h2 className="mt-2 text-3xl font-bold tracking-tight text-ink sm:text-4xl">{t.homeGreeting}</h2>
           <p className="mt-1.5 max-w-2xl text-sm leading-6 text-ink-soft">{t.homeSubtitle}</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink-soft shadow-card">
-              <MapPin className="h-3.5 w-3.5 text-action" aria-hidden="true" />
-              {locationName}
-            </span>
+            {hasField && locationName ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink-soft shadow-card">
+                <MapPin className="h-3.5 w-3.5 text-action" aria-hidden="true" />
+                {locationName}
+              </span>
+            ) : null}
             {todayLabel ? (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink-soft shadow-card">
                 <CalendarDays className="h-3.5 w-3.5 text-info" aria-hidden="true" />
@@ -1000,6 +1047,30 @@ export default function ScreenAHome({
         </div>
       )}
 
+      {!hasField && (
+        <section className="rounded-2xl border border-[#C7E0FF] bg-brand-blue-soft p-5 shadow-card sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-brand-blue-deep shadow-card">
+                <MapPinned className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <h3 className="text-lg font-bold text-brand-blue-deep">{t.homeNoFieldTitle}</h3>
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-ink-soft">{t.homeNoFieldBody}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={focusFieldTools}
+              className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-action px-5 text-sm font-bold text-white transition hover:bg-action-pressed active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+            >
+              <LocateFixed className="h-4 w-4" aria-hidden="true" />
+              {t.homeSelectFieldCta}
+            </button>
+          </div>
+        </section>
+      )}
+
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,300px)_minmax(0,1fr)_minmax(0,320px)]">
         <div className="order-2 space-y-4 xl:order-1">
           <WeatherCard data={data} loading={loading} t={t} />
@@ -1011,14 +1082,16 @@ export default function ScreenAHome({
           <FieldSummaryCard
             data={data}
             loading={loading}
+            hasField={hasField}
             fieldArea={fieldArea}
             locationName={locationName}
             onRunAssessment={onRunAssessment}
             onOpenField={onOpenField}
+            onSelectField={focusFieldTools}
             t={t}
           />
 
-          <section className="overflow-hidden rounded-2xl border border-line bg-white shadow-card">
+          <section ref={mapSectionRef} className="overflow-hidden rounded-2xl border border-line bg-white shadow-card">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-divider px-4 py-3">
               <h3 className="flex items-center gap-2 text-sm font-bold text-ink">
                 <MapPin className="h-4 w-4 text-action" aria-hidden="true" />
@@ -1125,9 +1198,10 @@ export default function ScreenAHome({
                 </div>
               )}
 
+              {hasField && (
               <div className="glass-surface-dark pointer-events-none absolute right-3 top-3 z-[6] hidden w-[210px] rounded-xl p-3 text-white md:block">
                 <p className="text-[10px] font-bold uppercase tracking-[.15em] text-white/60">{t.homeMapOverlay}</p>
-                <p className="mt-1 truncate text-sm font-bold">{locationName}</p>
+                <p className="mt-1 truncate text-sm font-bold">{locationName || t.locationSelected}</p>
                 <dl className="mt-2 space-y-1.5 text-[11px]">
                   <div className="flex items-center justify-between gap-2"><dt className="text-white/60">{t.homeFieldArea}</dt><dd className="tnum font-semibold">{fieldArea === null ? t.homeFieldNoArea : `${fieldArea.toFixed(2)} ha`}</dd></div>
                   <div className="flex items-center justify-between gap-2"><dt className="text-white/60">{t.homeFieldSlope}</dt><dd className="tnum font-semibold">{data?.elevation.slope_percent !== null && data?.elevation.slope_percent !== undefined ? `${data.elevation.slope_percent.toFixed(1)}%` : "—"}</dd></div>
@@ -1137,6 +1211,16 @@ export default function ScreenAHome({
                 {!data ? <p className="mt-2 text-[10px] leading-4 text-white/70">{t.homeMapNoData}</p> : null}
                 <p className="mt-2 border-t border-white/15 pt-1.5 text-[9px] leading-3 text-white/60">{t.homeMapAreaNote}</p>
               </div>
+              )}
+
+              {!hasField && (
+                <div className="pointer-events-none absolute inset-x-3 bottom-16 z-[6] flex items-center justify-center">
+                  <p className="inline-flex max-w-[92%] items-center gap-2 rounded-full bg-white/95 px-4 py-2.5 text-center text-xs font-bold text-brand-blue-deep shadow-float">
+                    <MapPinned className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    {t.homeMapSelectHint}
+                  </p>
+                </div>
+              )}
 
           {/* Floating drawing-mode bar with undo/clear/finish (8.5, 8.8) */}
           {drawMode === "draw" && (
@@ -1159,10 +1243,10 @@ export default function ScreenAHome({
 
           {/* Compact field-information overlay (8.7). Hidden while the drawing
               bar occupies the bottom row. */}
-          {drawMode !== "draw" && (
+          {drawMode !== "draw" && hasField && selectedLat !== null && selectedLon !== null && (
             <div className="glass-surface tnum absolute bottom-3 left-3 z-[5] hidden max-w-[calc(100%-200px)] items-center gap-2 rounded-full px-3 py-2.5 text-xs text-ink-soft sm:flex">
               <Compass className="h-4 w-4 shrink-0 text-action" />
-              <span className="truncate">{copy.selectedLocation} <strong className="font-semibold text-brand-blue-deep">{locationName}</strong> · {selectedLat.toFixed(5)}°N, {selectedLon.toFixed(5)}°E{gpsAccuracy !== null ? ` · GPS ±${Math.round(gpsAccuracy)} m` : ""} · {copy.dragPin}</span>
+              <span className="truncate">{copy.selectedLocation} <strong className="font-semibold text-brand-blue-deep">{locationName || t.locationSelected}</strong> · {selectedLat.toFixed(5)}°N, {selectedLon.toFixed(5)}°E{gpsAccuracy !== null ? ` · GPS ±${Math.round(gpsAccuracy)} m` : ""} · {copy.dragPin}</span>
             </div>
           )}
 
@@ -1189,7 +1273,7 @@ export default function ScreenAHome({
         <div className="order-3 space-y-4">
           <StressCard data={data} onOpenField={onOpenField} t={t} />
           <RainImpactCard data={data} t={t} />
-          <AskCard t={t} />
+          <AskCard hasField={hasField} onSelectField={focusFieldTools} t={t} />
         </div>
       </div>
 

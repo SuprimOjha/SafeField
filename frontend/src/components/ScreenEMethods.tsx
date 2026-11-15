@@ -2,7 +2,7 @@
 
 import React from "react";
 import { FieldAssessmentResponse, FreshnessBadgeData } from "@/types/safefield";
-import { Database, ExternalLink, ShieldAlert, CheckCircle2, Clock } from "lucide-react";
+import { Database, ExternalLink, ShieldAlert, CheckCircle2, Clock, Satellite, TrendingUp, FlaskConical } from "lucide-react";
 import { getDict, type Lang } from "@/i18n";
 
 interface ScreenEMethodsProps {
@@ -34,14 +34,17 @@ export default function ScreenEMethods({ data, lang }: ScreenEMethodsProps) {
         {/* Methodology Highlights */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
           <div className="rounded-lg border border-divider bg-soft p-4">
+            <span className="mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-brand-blue-deep shadow-card"><Satellite className="h-4 w-4" aria-hidden="true" /></span>
             <h3 className="font-bold text-ink text-sm mb-1">{t.method1Title}</h3>
             <p className="text-xs text-ink-soft leading-relaxed">{t.method1Body}</p>
           </div>
           <div className="rounded-lg border border-divider bg-soft p-4">
+            <span className="mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-brand-blue-deep shadow-card"><TrendingUp className="h-4 w-4" aria-hidden="true" /></span>
             <h3 className="font-bold text-ink text-sm mb-1">{t.method2Title}</h3>
             <p className="text-xs text-ink-soft leading-relaxed">{t.method2Body}</p>
           </div>
           <div className="rounded-lg border border-divider bg-soft p-4">
+            <span className="mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-brand-blue-deep shadow-card"><FlaskConical className="h-4 w-4" aria-hidden="true" /></span>
             <h3 className="font-bold text-ink text-sm mb-1">{t.method3Title}</h3>
             <p className="text-xs text-ink-soft leading-relaxed">{t.method3Body}</p>
           </div>

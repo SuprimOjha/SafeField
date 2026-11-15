@@ -2,7 +2,7 @@
 
 import React from "react";
 import { FieldAssessmentResponse } from "@/types/safefield";
-import { CloudRain, Droplets, Thermometer, Mountain, CheckCircle2, RefreshCw, ArrowRight } from "lucide-react";
+import { CloudRain, Droplets, Thermometer, Mountain, CheckCircle2, RefreshCw, ArrowRight, MapPinned } from "lucide-react";
 import { getDict, type Lang } from "@/i18n";
 import FreshnessStrip from "@/components/FreshnessStrip";
 import DataReceiptDrawer from "@/components/DataReceiptDrawer";
@@ -13,6 +13,8 @@ import StressWatchBanner from "@/components/StressWatchBanner";
 import DataClock from "@/components/DataClock";
 
 interface ScreenBFieldProps {
+  hasField: boolean;
+  onSelectField: () => void;
   data: FieldAssessmentResponse | null;
   loading: boolean;
   error: string | null;
@@ -28,6 +30,8 @@ interface ScreenBFieldProps {
 }
 
 export default function ScreenBField({
+  hasField,
+  onSelectField,
   data,
   loading,
   error,
@@ -43,6 +47,26 @@ export default function ScreenBField({
 }: ScreenBFieldProps) {
   const t = getDict(lang);
 
+  if (!hasField) {
+    return (
+      <section className="mx-auto w-full max-w-2xl rounded-2xl border border-[#C7E0FF] bg-brand-blue-soft p-6 shadow-card sm:p-8" aria-labelledby="field-gate-title">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-brand-blue-deep shadow-card">
+          <MapPinned className="h-6 w-6" aria-hidden="true" />
+        </span>
+        <h2 id="field-gate-title" className="mt-3 text-2xl font-bold tracking-tight text-brand-blue-deep">{t.fieldNeedsFieldTitle}</h2>
+        <p className="mt-2 text-sm leading-6 text-ink-soft">{t.fieldNeedsFieldBody}</p>
+        <button
+          type="button"
+          onClick={onSelectField}
+          className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-action px-5 text-sm font-bold text-white transition hover:bg-action-pressed active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 sm:w-auto"
+        >
+          <MapPinned className="h-4 w-4" aria-hidden="true" />
+          {t.fieldNeedsFieldCta}
+        </button>
+      </section>
+    );
+  }
+
   if (loading) {
     return (
       <div role="status" aria-live="polite" className="rounded-2xl border border-line bg-white p-12 text-center shadow-card space-y-4">
@@ -54,14 +78,15 @@ export default function ScreenBField({
   }
 
   if (!data) {
+    const notRun = !error;
     return (
-      <div role="alert" aria-live="assertive" className="rounded-2xl border border-amber bg-white p-8 text-center shadow-card space-y-4 sm:p-12">
+      <div role={notRun ? "status" : "alert"} aria-live={notRun ? "polite" : "assertive"} className="rounded-2xl border border-amber bg-white p-8 text-center shadow-card space-y-4 sm:p-12">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-soft text-amber-ink">
           <RefreshCw className="h-6 w-6" />
         </div>
-        <h3 className="text-xl font-bold text-ink">{t.assessmentFailed}</h3>
+        <h3 className="text-xl font-bold text-ink">{notRun ? t.fieldNoAssessmentTitle : t.assessmentFailed}</h3>
         <p className="mx-auto max-w-2xl text-sm leading-6 text-ink-soft">
-          {error || t.assessmentFailedBody}
+          {notRun ? t.fieldNoAssessmentBody : (error || t.assessmentFailedBody)}
         </p>
         <button
           type="button"
@@ -69,7 +94,7 @@ export default function ScreenBField({
           className="inline-flex items-center justify-center gap-2 rounded-full bg-action px-6 py-3 font-semibold text-white transition hover:bg-action-pressed active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <RefreshCw className="h-4 w-4" />
-          {t.retryAssessment}
+          {notRun ? t.homeRunAssessment : t.retryAssessment}
         </button>
       </div>
     );
@@ -102,6 +127,15 @@ export default function ScreenBField({
 
   return (
     <div className="space-y-6">
+      <header className="flex items-start gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-blue-soft text-brand-blue-deep">
+          <MapPinned className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">{t.fieldScreenTitle}</h1>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-ink-soft">{t.fieldScreenSubtitle}</p>
+        </div>
+      </header>
       <FreshnessStrip rainfall={rainfall} lang={lang} />
       <div className="flex justify-start"><DataReceiptDrawer data={data} lang={lang} /></div>
       {/* Freshness banner */}

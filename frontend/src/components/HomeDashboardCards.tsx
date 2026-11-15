@@ -8,6 +8,7 @@ import {
   Gauge,
   Leaf,
   MapPin,
+  MapPinned,
   MessageCircleQuestion,
   Mountain,
   RefreshCw,
@@ -223,18 +224,22 @@ export function SoilMoistureCard({ data, t }: { data: FieldAssessmentResponse | 
 export function FieldSummaryCard({
   data,
   loading,
+  hasField,
   fieldArea,
   locationName,
   onRunAssessment,
   onOpenField,
+  onSelectField,
   t,
 }: {
   data: FieldAssessmentResponse | null;
   loading: boolean;
+  hasField: boolean;
   fieldArea: number | null;
   locationName: string;
   onRunAssessment: () => void;
   onOpenField: () => void;
+  onSelectField: () => void;
   t: Dict;
 }) {
   const soilRaw = data?.soil_texture.texture_class?.trim() ?? "";
@@ -251,11 +256,20 @@ export function FieldSummaryCard({
           <p className="text-[11px] font-bold uppercase tracking-[.14em] text-ink-muted">{t.homeFieldTitle}</p>
           <p className="mt-1 flex items-center gap-1.5 text-sm font-bold text-ink">
             <MapPin className="h-4 w-4 shrink-0 text-action" aria-hidden="true" />
-            <span className="truncate">{locationName}</span>
+            <span className="truncate">{hasField && locationName ? locationName : t.homeFieldNotSelected}</span>
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {!data ? (
+          {!hasField ? (
+            <button
+              type="button"
+              onClick={onSelectField}
+              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-action px-4 text-sm font-bold text-white transition hover:bg-action-pressed active:scale-[0.98]"
+            >
+              <MapPinned className="h-4 w-4" aria-hidden="true" />
+              {t.homeSelectFieldCta}
+            </button>
+          ) : !data ? (
             <button
               type="button"
               onClick={onRunAssessment}
@@ -310,7 +324,7 @@ export function FieldSummaryCard({
       </dl>
 
       <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 pt-3 text-[11px] text-ink-muted">
-        <span className="inline-flex items-center gap-1.5"><Mountain className="h-3.5 w-3.5" aria-hidden="true" />{data ? t.terrainNote : t.homeFieldNoAssessment}</span>
+        <span className="inline-flex items-center gap-1.5"><Mountain className="h-3.5 w-3.5" aria-hidden="true" />{hasField ? (data ? t.terrainNote : t.homeFieldNoAssessment) : t.homeMapSelectHint}</span>
         <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />{t.homePrivacyNote}</span>
       </div>
     </Card>
@@ -466,7 +480,7 @@ export function StressCard({ data, onOpenField, t }: { data: FieldAssessmentResp
   );
 }
 
-export function AskCard({ t }: { t: Dict }) {
+export function AskCard({ t, hasField, onSelectField }: { t: Dict; hasField: boolean; onSelectField: () => void }) {
   const open = () => window.dispatchEvent(new Event("safefield-open-ask"));
   const questions = [t.homeAskQ1, t.homeAskQ2, t.homeAskQ3];
 
@@ -478,29 +492,45 @@ export function AskCard({ t }: { t: Dict }) {
           <MessageCircleQuestion className="h-5 w-5" aria-hidden="true" />
         </span>
       </div>
-      <p className="mt-2 text-sm leading-6 text-ink-soft">{t.homeAskBody}</p>
-      <ul className="mt-3 space-y-2">
-        {questions.map((question) => (
-          <li key={question}>
-            <button
-              type="button"
-              onClick={open}
-              className="flex w-full items-center justify-between gap-2 rounded-xl bg-white/85 px-3 py-2.5 text-left text-xs font-semibold text-ink-soft transition hover:bg-white active:scale-[0.99]"
-            >
-              <span>{question}</span>
-              <ArrowRight className="h-3.5 w-3.5 shrink-0 text-ink-muted" aria-hidden="true" />
-            </button>
-          </li>
-        ))}
-      </ul>
-      <button
-        type="button"
-        onClick={open}
-        className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-action px-4 text-sm font-bold text-white transition hover:bg-action-pressed active:scale-[0.98]"
-      >
-        <Sprout className="h-4 w-4" aria-hidden="true" />
-        {t.homeAskOpen}
-      </button>
+      {hasField ? (
+        <>
+          <p className="mt-2 text-sm leading-6 text-ink-soft">{t.homeAskBody}</p>
+          <ul className="mt-3 space-y-2">
+            {questions.map((question) => (
+              <li key={question}>
+                <button
+                  type="button"
+                  onClick={open}
+                  className="flex w-full items-center justify-between gap-2 rounded-xl bg-white/85 px-3 py-2.5 text-left text-xs font-semibold text-ink-soft transition hover:bg-white active:scale-[0.99]"
+                >
+                  <span>{question}</span>
+                  <ArrowRight className="h-3.5 w-3.5 shrink-0 text-ink-muted" aria-hidden="true" />
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            onClick={open}
+            className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-action px-4 text-sm font-bold text-white transition hover:bg-action-pressed active:scale-[0.98]"
+          >
+            <Sprout className="h-4 w-4" aria-hidden="true" />
+            {t.homeAskOpen}
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="mt-2 text-sm leading-6 text-ink-soft">{t.homeAskNeedsField}</p>
+          <button
+            type="button"
+            onClick={onSelectField}
+            className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-action px-4 text-sm font-bold text-white transition hover:bg-action-pressed active:scale-[0.98]"
+          >
+            <MapPinned className="h-4 w-4" aria-hidden="true" />
+            {t.homeSelectFieldCta}
+          </button>
+        </>
+      )}
     </Card>
   );
 }
