@@ -587,7 +587,8 @@ export default function ScreenAHome({
 
     return () => {
       stopWalkWatch();
-      stopSurveyCollection();
+      if (surveyWatchRef.current !== null && typeof navigator !== "undefined" && navigator.geolocation) navigator.geolocation.clearWatch(surveyWatchRef.current);
+      surveyWatchRef.current = null;
       surveyMarkersRef.current.forEach((surveyMarker)=>surveyMarker.remove()); surveyMarkersRef.current=[];
       marker.remove();
       map.remove();
