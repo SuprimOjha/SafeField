@@ -14,6 +14,7 @@
     "prepare:nepal-data": "node scripts/prepare-nepal-data.cjs",
     "test:i18n": "node scripts/check-i18n-parity.mjs",
     "test:field-survey": "node --test scripts/test-field-survey.cjs",
+    "test:signals": "node --experimental-strip-types --test src/lib/signals.test.ts",
     "test:gps": "node --experimental-strip-types --test src/lib/gps-average.test.ts"
   },
   "dependencies": {

@@ -31,7 +31,7 @@ function freshness(
   caveat: string,
 ): FreshnessBadgeData {
   return {
-    dataset_name: "NASA POWER Daily Agroclimatology (PRECTOTCORR, T2M, GWETTOP, GWETROOT)",
+    dataset_name: "NASA POWER Daily Agroclimatology (PRECTOTCORR, T2M, T2M_MAX, T2M_MIN, GWETTOP, GWETROOT)",
     source_org: "NASA Langley Research Center (LaRC)",
     is_nasa: true,
     status,
@@ -56,6 +56,8 @@ function parsePowerResponse(
     | undefined;
   const precipMap = paramBlock?.["PRECTOTCORR"] ?? {};
   const tempMap = paramBlock?.["T2M"] ?? {};
+  const tempMaxMap = paramBlock?.["T2M_MAX"] ?? {};
+  const tempMinMap = paramBlock?.["T2M_MIN"] ?? {};
   const gwettopMap = paramBlock?.["GWETTOP"] ?? {};
   const gwetrootMap = paramBlock?.["GWETROOT"] ?? {};
 
@@ -65,16 +67,20 @@ function parsePowerResponse(
   for (const dStr of allDates) {
     const pVal = cleanPowerVal(precipMap[dStr]);
     const tVal = cleanPowerVal(tempMap[dStr]);
+    const tMaxVal = cleanPowerVal(tempMaxMap[dStr]);
+    const tMinVal = cleanPowerVal(tempMinMap[dStr]);
     const topVal = cleanPowerVal(gwettopMap[dStr]);
     const rootVal = cleanPowerVal(gwetrootMap[dStr]);
 
     // Skip trailing dates where NASA POWER has not yet assimilated data (-999)
-    if (pVal === null && tVal === null && topVal === null) continue;
+    if (pVal === null && tVal === null && tMaxVal === null && topVal === null) continue;
 
     records.push({
       date: formatYyyymmddToIso(dStr),
       precip_mm: pVal,
       temp_c: tVal,
+      temp_max_c: tMaxVal,
+      temp_min_c: tMinVal,
       surface_soil_wetness: topVal,
       root_soil_wetness: rootVal,
     });
@@ -160,7 +166,7 @@ export async function getFieldWeatherAndHistory(
   try {
     const rawJson = await withHardDeadline(fetchJson<Record<string, unknown>>(POWER_DAILY_ENDPOINT, {
       params: {
-        parameters: "PRECTOTCORR,T2M,GWETTOP,GWETROOT",
+        parameters: "PRECTOTCORR,T2M,T2M_MAX,T2M_MIN,GWETTOP,GWETROOT",
         community: "AG",
         longitude: lonR,
         latitude: latR,

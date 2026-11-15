@@ -14,6 +14,11 @@ from app.content_packs.loader import validate_content
 from app.services.rainfall import RainfallObservation
 from app.services.imerg.provider import ImergLateProvider
 from app.services.rain_resolution import resolve_recent_rainfall
+from app.signals.agreement import SourceAgreement, rain_agreement
+from app.signals.field import build_signal_bundle
+from app.signals.models import SignalBundle
+from app.signals.rain_impact import RainImpact, assess_rain_impact
+from app.signals.stress import StressWatch, build_stress_watch
 from datetime import date, datetime, time, timedelta, timezone
 
 
@@ -57,6 +62,11 @@ class FieldAssessmentResponse(BaseModel):
     decision: DecisionResult
     climate_trend: TrendAnalysisResult
     rainfall_observation: RainfallObservation
+    # Additive fields; older clients can ignore them.
+    signals: SignalBundle | None = None
+    rain_agreement: SourceAgreement | None = None
+    rain_impact: RainImpact | None = None
+    stress_watch: StressWatch | None = None
 
 
 @router.get("/districts")
@@ -94,7 +104,7 @@ async def assess_field(
 
     # Prefer installed IMERG Late grid cells; use area-weighted polygon coverage when supplied.
     parsed_field_polygon = parse_field_polygon(field_polygon)
-    rainfall_observation, _ = resolve_recent_rainfall(
+    rainfall_observation, rainfall_candidates = resolve_recent_rainfall(
         lat, lon, power_res, hours=72, field_polygon=parsed_field_polygon
     )
 
@@ -130,6 +140,12 @@ async def assess_field(
 
     trend_res = TrendEngine.analyze_heavy_rain_trend(sorted_yrs, counts)
 
+    signal_bundle = build_signal_bundle(
+        lat, lon, summary=power_res, observation=rainfall_observation
+    )
+    rain_impact = assess_rain_impact(power_res, forecast_res)
+    stress_watch = build_stress_watch(signal_bundle, summary=power_res, impact=rain_impact)
+
     return FieldAssessmentResponse(
         latitude=lat,
         longitude=lon,
@@ -140,6 +156,10 @@ async def assess_field(
         decision=decision_res,
         climate_trend=trend_res,
         rainfall_observation=rainfall_observation,
+        signals=signal_bundle,
+        rain_agreement=rain_agreement(rainfall_candidates),
+        rain_impact=rain_impact,
+        stress_watch=stress_watch,
     )
 
 

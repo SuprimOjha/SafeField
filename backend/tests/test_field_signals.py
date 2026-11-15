@@ -75,7 +75,7 @@ def test_non_nasa_reanalysis_rain_signal_is_not_labelled_nasa():
     observation = rainfall(
         4.0,
         datetime(2026, 11, 11, 0, tzinfo=UTC),
-        source_name="Open-Meteo past-days reanalysis",
+        source_name="Open-Meteo Reanalysis Daily Precipitation (non-NASA)",
         dataset="ERA5 best-match",
         kind="model",
     )
@@ -83,6 +83,26 @@ def test_non_nasa_reanalysis_rain_signal_is_not_labelled_nasa():
     assert signal.provenance is not None
     assert signal.provenance.is_nasa is False
     assert signal.provenance.kind == "model"
+    assert signal.provenance.source_key == "open_meteo_past"
+
+
+def test_non_nasa_label_does_not_mark_source_agreement_as_nasa():
+    end = datetime(2026, 11, 11, 0, tzinfo=UTC)
+    agreement = rain_agreement(
+        [
+            rainfall(20.0, end),
+            rainfall(
+                21.0,
+                end,
+                source_name="Open-Meteo Reanalysis Daily Precipitation (non-NASA)",
+                dataset="ERA5",
+                kind="model",
+            ),
+        ],
+        gates=GATES,
+    )
+    assert agreement.state == "agree"
+    assert [source.is_nasa for source in agreement.sources] == [True, False]
 
 
 def test_unavailable_rain_never_carries_a_zero():

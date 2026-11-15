@@ -6,7 +6,7 @@ from app.services.rainfall import RainfallObservation
 from app.signals.config import SignalGates, get_gates
 from app.signals.heat import build_heat_air_signal
 from app.signals.lst import LstProvider
-from app.signals.models import SignalBundle, SignalValue
+from app.signals.models import SignalBundle, SignalValue, is_nasa_source_name
 from app.signals.smap import SmapProvider
 from app.signals.vegetation import VegProvider
 
@@ -22,7 +22,7 @@ def build_rain_signal(observation: RainfallObservation) -> SignalValue:
         )
 
     source = observation.provenance
-    is_nasa = "imerg" in source.source_name.lower() or "nasa" in source.source_name.lower()
+    is_nasa = is_nasa_source_name(source.source_name)
     if source.kind == "observation" and is_nasa:
         caveat = (
             "Satellite rainfall estimate for the area around the field, not a rain gauge in "

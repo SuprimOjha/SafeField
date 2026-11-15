@@ -4,8 +4,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
-SignalName = Literal[
-    "rain",
+SignalName = Literal[    "rain",
     "soil_moisture_surface",
     "soil_moisture_root",
     "heat_air",
@@ -32,6 +31,17 @@ VsNormal = Literal[
     "unknown",
 ]
 SourceState = Literal["ok", "stale", "missing", "error"]
+
+
+def is_nasa_source_name(source_name: str) -> bool:
+    """Detect NASA products without treating 'non-NASA' as NASA.
+
+    Several honest provenance strings say "(non-NASA)", so a plain substring
+    test would mislabel them. Removing the negation first keeps the NASA flag
+    truthful.
+    """
+    lowered = source_name.lower().replace("non-nasa", "").replace("non nasa", "")
+    return "nasa" in lowered or "imerg" in lowered
 
 
 class SignalProvenance(BaseModel):

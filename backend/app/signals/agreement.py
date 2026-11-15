@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.services.rainfall import RainfallObservation
 from app.signals.config import SignalGates, get_gates
-from app.signals.models import SignalKind
+from app.signals.models import SignalKind, is_nasa_source_name
 
 
 AgreementState = Literal[
@@ -46,7 +46,7 @@ class SourceAgreement(BaseModel):
 
 
 def _is_nasa(source_name: str) -> bool:
-    return "nasa" in source_name.lower() or "imerg" in source_name.lower()
+    return is_nasa_source_name(source_name)
 
 
 def rain_agreement(

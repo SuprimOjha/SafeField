@@ -23,6 +23,7 @@ import { get5DayRainForecast } from "@/lib/server/forecast";
 import { getRecentRain } from "@/lib/server/rainfall";
 import { evaluateTiming } from "@/lib/server/decision";
 import { analyzeHeavyRainTrend } from "@/lib/server/trend";
+import { buildFieldSignals } from "@/lib/server/signals";
 import { sanitizeUpstreamError } from "@/lib/server/upstream";
 
 export const dynamic = "force-dynamic";
@@ -133,6 +134,16 @@ export async function GET(request: NextRequest) {
     const counts = sortedYears.map((year) => yearlyHeavyDays.get(year) as number);
     const trendRes = analyzeHeavyRainTrend(sortedYears, counts);
 
+    // Signal stack: provenance envelope, versus-normal classes, source
+    // agreement, rain impact and stress screening for the same fetched data.
+    const signalOutput = buildFieldSignals({
+      latitude: Number(lat.toFixed(2)),
+      longitude: Number(lon.toFixed(2)),
+      summary: powerRes,
+      forecast: forecastRes,
+      observation: rainfallObservation,
+    });
+
     const payload: FieldAssessmentResponse = {
       latitude: lat,
       longitude: lon,
@@ -143,6 +154,10 @@ export async function GET(request: NextRequest) {
       decision: decisionRes,
       climate_trend: trendRes,
       rainfall_observation: rainfallObservation,
+      signals: signalOutput.signals,
+      rain_agreement: signalOutput.rain_agreement,
+      rain_impact: signalOutput.rain_impact,
+      stress_watch: signalOutput.stress_watch,
     };
     return NextResponse.json(payload, {
       headers: { "Cache-Control": "no-store" },
