@@ -264,6 +264,17 @@ small {
   display: none !important;
 }
 
+/* The Netlify deploy badge is injected outside our layout and collides with
+   the fixed mobile bottom navigation and the Ask FAB. Hide it; the badge can
+   also be disabled in Netlify's site settings, so this only mirrors that
+   choice for environments where the injection script still runs. */
+a[href^="https://www.netlify.com"],
+a[href^="https://netlify.com"],
+#netlify-badge,
+[data-netlify-badge] {
+  display: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto !important;

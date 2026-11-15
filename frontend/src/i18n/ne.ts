@@ -55,6 +55,9 @@ export const ne: Dictionary = {
 
   // Screen B — Field
   freshnessLatest: "पछिल्लो अवलोकन:",
+  freshnessStatusLive: "प्रत्यक्ष",
+  freshnessStatusCached: "संग्रहित प्रतिलिपि",
+  freshnessStatusUnavailable: "अनुपलब्ध",
   freshnessLatency: "विलम्ब:",
   localRainfall: "स्थानीय वर्षा (पछिल्लो ७२ घण्टा)",
   notVerified: "प्रमाणित छैन",
@@ -132,6 +135,8 @@ export const ne: Dictionary = {
   observedNotForecast: "अवलोकन गरिएको हो, पूर्वानुमान होइन।",
   dataKindLabel: "डेटाको प्रकार",
   rainFreshnessUnavailable: "वर्षा अवलोकनको मिति उपलब्ध छैन।",
+  rainUnavailableBody: "यस ठीक खेतका लागि प्रमाणित वर्षा मापन अहिले उपलब्ध छैन। तलको क्षेत्रीय अनुमानलाई मात्र मार्गदर्शनका रूपमा प्रयोग गर्नुहोस्।",
+  technicalDetails: "प्राविधिक विवरण",
   fieldWorkToday: "आज खेतमा गर्ने काम",
   surveyStandTitle: "उभिएर बिन्दु मार्क गर्नुहोस्",
   surveyStandHelp: "स्थिर उभिनुहोस्। पाँच GPS फिक्स सङ्कलन गरिन्छ; कम्तीमा तीन फिक्स १५ मिटरको गुणस्तर मापदण्डमा पर्नुपर्छ। यो विज्ञ समीक्षाको प्रतीक्षामा रहेको डिजाइन मान्यता हो।",

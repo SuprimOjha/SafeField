@@ -23,6 +23,7 @@ import { get5DayRainForecast } from "@/lib/server/forecast";
 import { getRecentRain } from "@/lib/server/rainfall";
 import { evaluateTiming } from "@/lib/server/decision";
 import { analyzeHeavyRainTrend } from "@/lib/server/trend";
+import { sanitizeUpstreamError } from "@/lib/server/upstream";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -149,7 +150,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Field assessment failed:", error);
     return NextResponse.json(
-      { detail: `Field assessment failed: ${String(error)}` },
+      { detail: `Field assessment could not be completed (${sanitizeUpstreamError(error)}). No values were guessed; please try again.` },
       { status: 502 },
     );
   }

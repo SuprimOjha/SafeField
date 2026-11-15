@@ -73,6 +73,12 @@ export default function ScreenBField({
 
   const { power_summary, elevation, soil_texture } = data;
   const rainfall = data.rainfall_observation;
+  const freshnessStatusWord =
+    power_summary.freshness.status === "LIVE"
+      ? t.freshnessStatusLive
+      : power_summary.freshness.status === "CACHED_FALLBACK"
+        ? t.freshnessStatusCached
+        : t.freshnessStatusUnavailable;
   const hasLocalRainfall = rainfall.status === "AVAILABLE" && rainfall.amount_mm !== null;
   const regionalPowerRainDays = power_summary.recent_daily_records
     .filter((record) => record.precip_mm !== null)
@@ -95,11 +101,11 @@ export default function ScreenBField({
       <FreshnessStrip rainfall={rainfall} lang={lang} />
       <div className="flex justify-start"><DataReceiptDrawer data={data} lang={lang} /></div>
       {/* Freshness banner */}
-      <div className="flex items-center justify-between rounded-lg border border-[#D7E9FF] bg-surface-blue p-4 text-xs text-ink-soft">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#D7E9FF] bg-surface-blue p-4 text-xs text-ink-soft">
         <div className="flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-info shrink-0" />
           <span>
-            <strong>{power_summary.freshness.dataset_name}</strong> | {t.freshnessLatest} {power_summary.freshness.latest_observation_date || "N/A"} ({power_summary.freshness.status})
+            <strong>{power_summary.freshness.dataset_name}</strong> | {t.freshnessLatest} {power_summary.freshness.latest_observation_date || "N/A"} ({freshnessStatusWord})
           </span>
         </div>
         <span className="hidden rounded-full bg-soft px-2.5 py-1 text-[11px] font-semibold text-ink-soft md:inline">{t.freshnessLatency} {power_summary.freshness.typical_latency}</span>
@@ -151,10 +157,8 @@ export default function ScreenBField({
             <Droplets className="w-6 h-6 text-info" />
           </div>
           <div>
-            <span className="tnum text-3xl font-bold text-ink">
-              {power_summary.latest_surface_wetness !== null ? Math.round(power_summary.latest_surface_wetness * 100) : "N/A"}
-            </span>
-            <span className="text-ink-muted ml-1">%</span>
+            <span className="tnum text-3xl font-bold text-ink">{power_summary.latest_surface_wetness !== null ? Math.round(power_summary.latest_surface_wetness * 100) : "N/A"}</span>
+            {power_summary.latest_surface_wetness !== null && <span className="text-ink-muted ml-1">%</span>}
           </div>
           <span className="mt-2 text-xs text-ink-muted">{t.wetnessNote}</span>
         </div>
@@ -167,7 +171,7 @@ export default function ScreenBField({
           </div>
           <div>
             <span className="tnum text-3xl font-bold text-ink">{power_summary.latest_temp_c ?? "N/A"}</span>
-            <span className="text-ink-muted ml-1">°C</span>
+            {power_summary.latest_temp_c !== null && <span className="text-ink-muted ml-1">°C</span>}
           </div>
           <span className="mt-2 text-xs text-ink-muted">{t.temperatureNote}</span>
         </div>
@@ -179,7 +183,7 @@ export default function ScreenBField({
             <Mountain className="w-6 h-6 text-ink-soft" />
           </div>
           <div>
-            <span className="tnum text-3xl font-bold text-ink">{elevation.slope_percent ?? "N/A"}%</span>
+            <span className="tnum text-3xl font-bold text-ink">{elevation.slope_percent !== null ? `${elevation.slope_percent}%` : "N/A"}</span>
             <span className="mt-1 block text-xs font-semibold text-ink-soft">{elevation.terrain_category}</span>
           </div>
           <span className="mt-2 text-xs text-ink-muted">{t.terrainNote}</span>

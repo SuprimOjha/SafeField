@@ -4,7 +4,7 @@
 
 import type { FreshnessBadgeData, SoilTextureResponse } from "@/types/safefield";
 import { cacheGet, cacheSet, utcNowIso } from "./cache";
-import { fetchJson } from "./upstream";
+import { fetchJson, sanitizeUpstreamError, withHardDeadline } from "./upstream";
 
 const SOILGRIDS_URL = "https://rest.isric.org/soilgrids/v2.0/properties/query";
 const SOILGRIDS_DOCS = "https://rest.isric.org/soilgrids/v2.0/docs";
@@ -49,7 +49,7 @@ export async function getSoilTexture(latitude: number, longitude: number): Promi
   if (hit) return hit.response;
 
   try {
-    const raw = await fetchJson<{ properties?: { layers?: SoilGridsLayer[] } }>(SOILGRIDS_URL, {
+    const raw = await withHardDeadline(fetchJson<{ properties?: { layers?: SoilGridsLayer[] } }>(SOILGRIDS_URL, {
       params: {
         lat: latR,
         lon: lonR,
@@ -57,9 +57,9 @@ export async function getSoilTexture(latitude: number, longitude: number): Promi
         depth: "0-5cm",
         value: "mean",
       },
-      timeoutMs: 25_000,
-      retries: 1,
-    });
+      timeoutMs: 10_000,
+      retries: 0,
+    }), 12_000, "SoilGrids");
     const layers = raw.properties?.layers ?? [];
     const props: Record<string, number | null> = {};
     for (const layer of layers) {
@@ -101,7 +101,7 @@ export async function getSoilTexture(latitude: number, longitude: number): Promi
         freshness: badge(
           "CACHED_FALLBACK",
           utcNowIso(),
-          `Showing previously cached SoilGrids estimate because the upstream request failed: ${String(error)}. ${stale.response.freshness.caveat}`,
+          `Showing the previously cached SoilGrids estimate because the upstream request did not complete (${sanitizeUpstreamError(error)}). ${stale.response.freshness.caveat}`,
         ),
       };
     }
@@ -115,7 +115,7 @@ export async function getSoilTexture(latitude: number, longitude: number): Promi
       freshness: badge(
         "UNAVAILABLE",
         utcNowIso(),
-        `SoilGrids request failed or returned incomplete data: ${String(error)}. No regional or default value is substituted. Confirm locally.`,
+        `SoilGrids did not return usable data (${sanitizeUpstreamError(error)}). No regional or default value is substituted. Confirm locally.`,
       ),
     };
   }

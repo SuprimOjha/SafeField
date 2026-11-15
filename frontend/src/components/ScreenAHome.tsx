@@ -21,7 +21,7 @@ import { FIELD_SURVEY_CONFIG } from "@/config/field-survey";
 import {
   Navigation, Compass, ArrowRight, Pencil, Undo2, Trash2,
   Check, LocateFixed, MousePointer2, Search, Loader2, X, MapPin,
-  Footprints, Info,
+  Footprints, Info, ChevronDown,
 } from "lucide-react";
 
 interface ScreenAHomeProps {
@@ -222,7 +222,20 @@ export default function ScreenAHome({
     errorGpsDenied: t.errorGpsDenied,
     errorGpsUnavailable: t.errorGpsUnavailable,
     errorGpsTimeout: t.errorGpsTimeout,
+    searchDistrictLabel: lang === "ne" ? "खोज्नुहोस् वा जिल्ला छान्नुहोस्" : "Search or choose district",
   };
+
+  // The advanced search/district section is collapsed on phones and expanded
+  // on desktop, matching the farmer-first mobile layout. DOM-driven so the
+  // user can still toggle it freely afterwards.
+  const advDetailsRef = useRef<HTMLDetailsElement | null>(null);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 640px)");
+    const apply = () => { if (advDetailsRef.current) advDetailsRef.current.open = mq.matches; };
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
 
   useEffect(() => {
     let restoredPoints: Array<{id:number;lat:number;lon:number;type:SurveyPointType;accuracy:number}> = [];
@@ -925,7 +938,7 @@ export default function ScreenAHome({
           <LocateFixed className="h-3.5 w-3.5" /> {copy.fieldMappingBadge}
         </div>
         <h2 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">{copy.title}</h2>
-        <p className="mt-2 text-sm leading-6 text-ink-soft">{copy.subtitle} {copy.subtitleExtra}</p>
+        <p className="mt-2 text-sm leading-6 text-ink-soft">{copy.subtitle}</p>
       </div>
 
       {mapError && (
@@ -943,81 +956,89 @@ export default function ScreenAHome({
             <div className="absolute inset-0 z-[2] flex items-center justify-center bg-warm/85 text-sm font-semibold text-ink-soft backdrop-blur-[2px]">{copy.loadingMap}</div>
           )}
 
-          {/* Floating glass setup panel: search, district, location actions */}
+          {/* Floating glass setup panel — farmer-first on mobile: the location
+              actions lead, search/district live in a collapsible section that
+              opens automatically on desktop (design.md 8.3). */}
           <div className="glass-surface absolute left-3 top-3 z-10 max-h-[calc(100%-24px)] w-[min(92%,370px)] overflow-y-auto rounded-xl p-3 sm:p-3.5">
-            <label className="block">
-              <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-ink-soft">{copy.searchLabel}</span>
-              <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted">
-                  {searchStatus === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                </span>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder={copy.searchPlaceholder}
-                  aria-label={copy.searchLabel}
-                  className="h-11 w-full rounded-full border border-line bg-white pl-9 pr-9 text-sm font-medium text-ink outline-none transition placeholder:font-normal placeholder:text-ink-muted focus:border-action focus:ring-4 focus:ring-action/15"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery("")}
-                    aria-label="Clear search"
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-ink-muted transition hover:bg-soft hover:text-ink-soft active:scale-[0.98]"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-                {searchQuery.trim().length >= 3 && (searchStatus === "done" || searchStatus === "error") && (
-                  <div className="absolute inset-x-0 top-full z-30 mt-1.5 max-h-60 overflow-y-auto rounded-lg border border-divider bg-white p-1 shadow-float">
-                    {searchStatus === "error" && (
-                      <p className="px-3 py-2.5 text-xs leading-5 text-danger">{copy.searchError}</p>
-                    )}
-                    {searchStatus === "done" && searchResults.length === 0 && (
-                      <p className="px-3 py-2.5 text-xs leading-5 text-ink-muted">{copy.searchNoResults}</p>
-                    )}
-                    {searchResults.map((result) => (
-                      <button
-                        key={`${result.title}-${result.lat}-${result.lon}`}
-                        type="button"
-                        onClick={() => selectSearchResult(result)}
-                        className="flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left transition hover:bg-brand-blue-soft/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action active:scale-[0.98]"
-                      >
-                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-action" aria-hidden="true" />
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm font-bold text-ink">{result.title}</span>
-                          {result.subtitle && <span className="block truncate text-xs text-ink-muted">{result.subtitle}</span>}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </label>
-            <label className="mt-2.5 block">
-              <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-ink-soft">{copy.district}</span>
-              <select value={districtName} onChange={(event) => selectDistrict(event.target.value)} disabled={districtLoading || districts.length === 0}
-                className="h-11 w-full rounded-full border border-line bg-white px-3 text-sm font-medium text-ink outline-none transition focus:border-action focus:ring-4 focus:ring-action/15">
-                <option value="">{districtLoading ? copy.loadingDistricts : copy.chooseDistrict}</option>
-                {[...districts].sort((a,b) => (a.properties?.DISTRICT ?? "").localeCompare(b.properties?.DISTRICT ?? "")).map((item) => (
-                  <option key={item.properties?.DISTRICT} value={item.properties?.DISTRICT}>{item.properties?.DISTRICT}</option>
-                ))}
-              </select>
-            </label>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {/* GPS uses the informational blue; drawing is the green primary
-                  action (design.md 8.3 color roles). */}
-              <button onClick={handleUseGps} disabled={gpsLoading} className="inline-flex h-11 items-center gap-2 rounded-full bg-gradient-brand-deep px-4 text-sm font-semibold text-white shadow-float transition hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60">
-                <Navigation className={`h-4 w-4 ${gpsLoading ? "animate-pulse" : ""}`} /> {copy.gps}
+            <button onClick={handleUseGps} disabled={gpsLoading} className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-brand-deep px-4 text-base font-bold text-white shadow-float transition hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60">
+              <Navigation className={`h-5 w-5 shrink-0 ${gpsLoading ? "animate-pulse" : ""}`} /> {copy.gps}
+            </button>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button onClick={() => { drawModeRef.current = "select"; setDrawMode("select"); if (mapRef.current) mapRef.current.getCanvas().style.cursor = ""; }} className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border px-3 py-2 text-center text-sm font-semibold leading-tight transition active:scale-[0.98] ${drawMode === "select" ? "border-[#C7E0FF] bg-brand-blue-soft text-brand-blue-deep" : "border-line bg-white text-ink-soft hover:bg-soft"}`}>
+                <MousePointer2 className="h-4 w-4 shrink-0" /> {copy.tap}
               </button>
-              <button onClick={() => { drawModeRef.current = "select"; setDrawMode("select"); if (mapRef.current) mapRef.current.getCanvas().style.cursor = ""; }} className={`inline-flex h-11 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition active:scale-[0.98] ${drawMode === "select" ? "border-[#C7E0FF] bg-brand-blue-soft text-brand-blue-deep" : "border-line bg-white text-ink-soft hover:bg-soft"}`}>
-                <MousePointer2 className="h-4 w-4" /> {copy.tap}
-              </button>
-              <button onClick={beginDrawing} className={`inline-flex h-11 items-center gap-2 rounded-full border border-transparent px-4 text-sm font-semibold transition ${drawMode === "draw" ? "bg-gradient-growth text-[#102A18] shadow-card ring-2 ring-[#079447]/40 hover:opacity-95 active:scale-[0.98]" : "bg-gradient-growth text-[#102A18] shadow-card hover:opacity-95 active:scale-[0.98]"}`}>
-                <Pencil className="h-4 w-4" /> {copy.draw}
+              <button onClick={beginDrawing} className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-transparent px-3 py-2 text-center text-sm font-semibold leading-tight transition hover:opacity-95 active:scale-[0.98] bg-gradient-growth text-[#102A18] shadow-card ${drawMode === "draw" ? "ring-2 ring-[#079447]/40" : ""}`}>
+                <Pencil className="h-4 w-4 shrink-0" /> {copy.draw}
               </button>
             </div>
+            <details ref={advDetailsRef} className="mt-2.5 rounded-xl border border-line bg-white/85">
+              <summary className="flex min-h-11 cursor-pointer select-none items-center justify-between gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wide text-ink-soft">
+                {copy.searchDistrictLabel}
+                <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
+              </summary>
+              <div className="px-3 pb-3">
+                <label className="block">
+                  <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-ink-soft">{copy.searchLabel}</span>
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted">
+                      {searchStatus === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                    </span>
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(event) => setSearchQuery(event.target.value)}
+                      placeholder={copy.searchPlaceholder}
+                      aria-label={copy.searchLabel}
+                      className="h-11 w-full rounded-full border border-line bg-white pl-9 pr-9 text-sm font-medium text-ink outline-none transition placeholder:font-normal placeholder:text-ink-muted focus:border-action focus:ring-4 focus:ring-action/15"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery("")}
+                        aria-label="Clear search"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-ink-muted transition hover:bg-soft hover:text-ink-soft active:scale-[0.98]"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                    {searchQuery.trim().length >= 3 && (searchStatus === "done" || searchStatus === "error") && (
+                      <div className="absolute inset-x-0 top-full z-30 mt-1.5 max-h-60 overflow-y-auto rounded-lg border border-divider bg-white p-1 shadow-float">
+                        {searchStatus === "error" && (
+                          <p className="px-3 py-2.5 text-xs leading-5 text-danger">{copy.searchError}</p>
+                        )}
+                        {searchStatus === "done" && searchResults.length === 0 && (
+                          <p className="px-3 py-2.5 text-xs leading-5 text-ink-muted">{copy.searchNoResults}</p>
+                        )}
+                        {searchResults.map((result) => (
+                          <button
+                            key={`${result.title}-${result.lat}-${result.lon}`}
+                            type="button"
+                            onClick={() => selectSearchResult(result)}
+                            className="flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left transition hover:bg-brand-blue-soft/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action active:scale-[0.98]"
+                          >
+                            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-action" aria-hidden="true" />
+                            <span className="min-w-0">
+                              <span className="block truncate text-sm font-bold text-ink">{result.title}</span>
+                              {result.subtitle && <span className="block truncate text-xs text-ink-muted">{result.subtitle}</span>}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </label>
+                <label className="mt-2.5 block">
+                  <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-ink-soft">{copy.district}</span>
+                  <select value={districtName} onChange={(event) => selectDistrict(event.target.value)} disabled={districtLoading || districts.length === 0}
+                    className="h-11 w-full rounded-full border border-line bg-white px-3 text-sm font-medium text-ink outline-none transition focus:border-action focus:ring-4 focus:ring-action/15">
+                    <option value="">{districtLoading ? copy.loadingDistricts : copy.chooseDistrict}</option>
+                    {[...districts].sort((a,b) => (a.properties?.DISTRICT ?? "").localeCompare(b.properties?.DISTRICT ?? "")).map((item) => (
+                      <option key={item.properties?.DISTRICT} value={item.properties?.DISTRICT}>{item.properties?.DISTRICT}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </details>
             {/* Map layers segmented control, kept inside the panel so it never
                 collides with the map's own chrome (design.md 8.7) */}
             <div className="mt-3 flex items-center gap-1 rounded-full border border-line bg-white/85 p-1">

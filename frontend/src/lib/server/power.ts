@@ -5,7 +5,7 @@
 
 import type { DailyWeatherRecord, FreshnessBadgeData, PowerSummaryResponse } from "@/types/safefield";
 import { cacheGet, cacheSet, utcNowIso } from "./cache";
-import { fetchJson } from "./upstream";
+import { fetchJson, sanitizeUpstreamError, withHardDeadline } from "./upstream";
 
 const POWER_DAILY_ENDPOINT = "https://power.larc.nasa.gov/api/temporal/daily/point";
 const POWER_DOCS_URL = "https://power.larc.nasa.gov/docs/services/api/";
@@ -158,7 +158,7 @@ export async function getFieldWeatherAndHistory(
   const startStr = `${startYear}0101`;
 
   try {
-    const rawJson = await fetchJson<Record<string, unknown>>(POWER_DAILY_ENDPOINT, {
+    const rawJson = await withHardDeadline(fetchJson<Record<string, unknown>>(POWER_DAILY_ENDPOINT, {
       params: {
         parameters: "PRECTOTCORR,T2M,GWETTOP,GWETROOT",
         community: "AG",
@@ -168,9 +168,9 @@ export async function getFieldWeatherAndHistory(
         end: todayUtc,
         format: "JSON",
       },
-      timeoutMs: 25_000,
+      timeoutMs: 20_000,
       retries: 1,
-    });
+    }), 26_000, "NASA POWER");
     const fetchedAt = utcNowIso();
     const summary = parsePowerResponse(latR, lonR, rawJson, fetchedAt, "LIVE");
     cacheSet(cacheKey, { summary, fetchedAt }, POWER_CACHE_TTL_SECONDS);
@@ -183,10 +183,10 @@ export async function getFieldWeatherAndHistory(
         ...parsed.freshness,
         status: "CACHED_FALLBACK",
         fetched_at_utc: staleHit.fetchedAt,
-        caveat: `Showing cached NASA POWER data (upstream unreachable: ${String(error)}). ${parsed.freshness.caveat}`,
+        caveat: `Showing cached NASA POWER data because the upstream service did not respond (${sanitizeUpstreamError(error)}). ${parsed.freshness.caveat}`,
       };
       return parsed;
     }
-    return unavailableSummary(latR, lonR, String(error));
+    return unavailableSummary(latR, lonR, `NASA POWER is temporarily unreachable (${sanitizeUpstreamError(error)}). No on-farm weather value is assumed.`);
   }
 }

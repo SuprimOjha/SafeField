@@ -53,6 +53,9 @@ export const en = {
 
   // Screen B — Field
   freshnessLatest: "Latest Observation:",
+  freshnessStatusLive: "live",
+  freshnessStatusCached: "cached copy",
+  freshnessStatusUnavailable: "unavailable",
   freshnessLatency: "Latency:",
   localRainfall: "Local rainfall · past 72 hours",
   notVerified: "Not verified",
@@ -130,6 +133,8 @@ export const en = {
   observedNotForecast: "Observed, not a forecast.",
   dataKindLabel: "Data kind",
   rainFreshnessUnavailable: "Rain observation date is unavailable.",
+  rainUnavailableBody: "No verified rain measurement for this exact field is available right now. Use the regional estimate below as guidance only.",
+  technicalDetails: "Technical details",
   fieldWorkToday: "Field work today",
   surveyStandTitle: "Stand and mark",
   surveyStandHelp: "Stand still. Five GPS fixes are collected; at least three must pass the 15 m quality gate. This is a design assumption pending expert review.",

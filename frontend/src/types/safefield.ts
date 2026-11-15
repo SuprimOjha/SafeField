@@ -133,6 +133,8 @@ export interface RainfallObservation {
   window_hours: number;
   provenance: RainfallProvenance | null;
   unavailable_reason: string | null;
+  /** Optional sanitized technical detail (shown only in a collapsed disclosure). */
+  unavailable_detail?: string | null;
 }
 
 export interface ContentSource {

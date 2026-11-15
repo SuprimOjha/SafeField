@@ -5,7 +5,7 @@
 
 import type { DailyForecastItem, FreshnessBadgeData, ForecastResponse } from "@/types/safefield";
 import { cacheGet, cacheSet, utcNowIso } from "./cache";
-import { fetchJson } from "./upstream";
+import { fetchJson, sanitizeUpstreamError, withHardDeadline } from "./upstream";
 
 const OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast";
 const OPEN_METEO_DOCS = "https://open-meteo.com/en/docs";
@@ -98,7 +98,7 @@ export async function get5DayRainForecast(latitude: number, longitude: number): 
   };
 
   try {
-    const raw = await fetchJson<Record<string, unknown>>(OPEN_METEO_URL, { params, timeoutMs: 15_000, retries: 1 });
+    const raw = await withHardDeadline(fetchJson<Record<string, unknown>>(OPEN_METEO_URL, { params, timeoutMs: 12_000, retries: 1 }), 17_000, "Open-Meteo forecast");
     const dailyData = (raw["daily"] as Record<string, unknown>) ?? {};
     const dates = dailyData["time"];
     if (!Array.isArray(dates) || dates.length !== 5) {
@@ -174,7 +174,7 @@ export async function get5DayRainForecast(latitude: number, longitude: number): 
     const isRateLimited = message.includes("429") || message.toLowerCase().includes("too many requests");
     const caveat = isRateLimited
       ? "Open-Meteo is temporarily rate limiting requests (HTTP 429). No forecast value is assumed. Check local weather and try again later."
-      : `Open-Meteo did not return a usable forecast (${message}). No forecast value is assumed. Check local weather and try again later.`;
+      : `Open-Meteo did not return a usable forecast (${sanitizeUpstreamError(error)}). No forecast value is assumed. Check local weather and try again later.`;
 
     return {
       latitude: latR,

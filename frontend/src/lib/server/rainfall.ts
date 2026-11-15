@@ -13,6 +13,7 @@
 // plus the NASA POWER regional context — no value is substituted.
 
 import type { RainfallObservation, RainfallProvenance, DailyWeatherRecord } from "@/types/safefield";
+import { sanitizeUpstreamError } from "@/lib/server/upstream";
 
 const OPEN_METEO_PAST_URL = "https://api.open-meteo.com/v1/forecast";
 
@@ -44,6 +45,7 @@ export async function getRecentRain(
       window_hours: hours,
       provenance: null,
       unavailable_reason: "Daily reanalysis rainfall supports whole-day windows only.",
+      unavailable_detail: null,
     };
   }
 
@@ -119,20 +121,23 @@ export async function getRecentRain(
     };
     return { status: "AVAILABLE", amount_mm: amount, window_hours: hours, provenance, unavailable_reason: null };
   } catch (error) {
+    console.error("[rainfall] open-meteo lookup failed:", error);
     return unavailable(
-      `Reanalysis rainfall lookup failed (${String(error)}). No usable local-scale observation is available for the requested window.` +
+      `Live rainfall lookup is temporarily unavailable, so no local observation is reported for this window. The regional estimate below is shown instead.` +
         powerContext,
+      sanitizeUpstreamError(error),
     );
   }
 }
 
-function unavailable(reason: string): RainfallObservation {
+function unavailable(reason: string, detail: string | null = null): RainfallObservation {
   return {
     status: "UNAVAILABLE",
     amount_mm: null,
     window_hours: 72,
     provenance: null,
     unavailable_reason: reason,
+    unavailable_detail: detail,
   };
 }
 

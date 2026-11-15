@@ -73,11 +73,11 @@ function getServerOnlineStatus() {
 }
 
 const NAV_ITEMS = [
-  { id: "home", labelEn: "Today", shortEn: "Today", labelNe: "आज", icon: MapPin },
-  { id: "field", labelEn: "My field", shortEn: "Field", labelNe: "मेरो खेत", icon: SlidersHorizontal },
-  { id: "trends", labelEn: "Climate trends", shortEn: "Trends", labelNe: "जलवायु प्रवृत्ति", icon: TrendingUp },
-  { id: "ask", labelEn: "Ask", shortEn: "Ask", labelNe: "सोध्नुहोस्", icon: MessageCircleQuestion },
-  { id: "methods", labelEn: "More", shortEn: "More", labelNe: "थप", icon: SlidersHorizontal },
+  { id: "home", labelEn: "Today", shortEn: "Today", labelNe: "आज", shortNe: "आज", icon: MapPin },
+  { id: "field", labelEn: "My field", shortEn: "Field", labelNe: "मेरो खेत", shortNe: "खेत", icon: SlidersHorizontal },
+  { id: "trends", labelEn: "Climate trends", shortEn: "Trends", labelNe: "जलवायु प्रवृत्ति", shortNe: "प्रवृत्ति", icon: TrendingUp },
+  { id: "ask", labelEn: "Ask", shortEn: "Ask", labelNe: "सोध्नुहोस्", shortNe: "सोध", icon: MessageCircleQuestion },
+  { id: "methods", labelEn: "More", shortEn: "More", labelNe: "थप", shortNe: "थप", icon: SlidersHorizontal },
 ] as const;
 
 const SESSION_KEY = "safefield_session";
@@ -496,7 +496,7 @@ export default function SafeFieldNepalApp() {
             </div>
           </header>
 
-          <section className="flex w-full flex-1 flex-col px-3 pb-28 pt-5 sm:px-6 sm:pb-32 sm:pt-7 lg:px-8 lg:pb-24 lg:pt-7">
+          <section className="flex w-full flex-1 flex-col px-3 pb-44 pt-5 sm:px-6 sm:pb-32 sm:pt-7 lg:px-8 lg:pb-24 lg:pt-7">
             {activeTab === "home" && (
               <ScreenAHome
                 selectedLat={selectedLat}
@@ -577,7 +577,7 @@ export default function SafeFieldNepalApp() {
                 >
                   <Icon className="h-[17px] w-[17px]" aria-hidden="true" />
                 </span>
-                <span className="max-w-full truncate">{lang === "ne" ? item.labelNe : item.shortEn}</span>
+                <span className="max-w-full truncate px-0.5">{lang === "ne" ? item.shortNe : item.shortEn}</span>
               </button>
             );
           })}
