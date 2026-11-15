@@ -29,6 +29,7 @@ interface ScreenAHomeProps {
   selectedLon: number;
   onLocationSelect: (lat: number, lon: number, name: string) => void;
   onFieldPolygonSelect: (polygon: [number, number][] | null) => void;
+  onSandOverrideChange: (value: number | null) => void;
   onProceedToField: () => void;
   lang: Lang;
   fieldPolygon?: [number, number][] | null;
@@ -93,6 +94,7 @@ export default function ScreenAHome({
   selectedLon,
   onLocationSelect,
   onFieldPolygonSelect,
+  onSandOverrideChange,
   onProceedToField,
   lang,
   fieldPolygon,
@@ -128,6 +130,8 @@ export default function ScreenAHome({
   const [surveyPoints, setSurveyPoints] = useState<Array<{id:number;lat:number;lon:number;type:SurveyPointType;accuracy:number}>>([]);
   const [surveyPointsLoaded, setSurveyPointsLoaded] = useState(false);
   const [pendingSurveyFix, setPendingSurveyFix] = useState<{lat:number;lon:number;accuracy:number;used:number;rejected:number}|null>(null);
+  const [pendingSoilSample, setPendingSoilSample] = useState<{lat:number;lon:number;accuracy:number}|null>(null);
+  const [soilSandInput, setSoilSandInput] = useState("");
   const [surveyCollecting, setSurveyCollecting] = useState(false);
   const [surveyFixCount, setSurveyFixCount] = useState(0);
   const surveyWatchRef = useRef<number|null>(null);
@@ -812,7 +816,21 @@ export default function ScreenAHome({
 
     }
     setGpsReceipt({used:point.used,rejected:point.rejected});
+    if (type === "soil") { setPendingSoilSample({lat:point.lat,lon:point.lon,accuracy:point.accuracy}); setSoilSandInput(""); }
     setPendingSurveyFix(null); markerRef.current?.setLngLat([point.lon,point.lat]); mapRef.current?.easeTo({center:[point.lon,point.lat],duration:500});
+  };
+
+  const saveSoilSample = () => {
+    if (!pendingSoilSample) return;
+    const raw = soilSandInput.trim();
+    if (raw) {
+      const value = Number(raw);
+      if (!Number.isFinite(value) || value < 0 || value > 100) return;
+      onSandOverrideChange(value);
+      try { window.localStorage.setItem("safefield_soil_sample_input", JSON.stringify({kind:"farmer_input",sand_percent:value,accuracy_m:pendingSoilSample.accuracy,recorded_at_utc:new Date().toISOString()})); }
+      catch { /* Local assessment input remains active for this session. */ }
+    }
+    setPendingSoilSample(null);
   };
 
   const undoWalkCorner = () => {
@@ -860,6 +878,12 @@ export default function ScreenAHome({
         : `${walkCorners.length} ${walkCorners.length === 1 ? "corner" : "corners"} marked — ready to finish the field.`;
 
   return (
+      {pendingSoilSample && <div className="fixed inset-0 z-[120] flex items-end justify-center bg-charcoal/60 p-3 sm:items-center"><section role="dialog" aria-modal="true" aria-labelledby="soil-sample-title" className="w-full max-w-md rounded-2xl bg-white p-5 shadow-sheet">
+        <h2 id="soil-sample-title" className="text-xl font-extrabold text-forest">{t.surveySoilEntryTitle}</h2>
+        <p className="mt-2 text-base text-ink-soft">{t.surveySoilEntryHelp}</p>
+        <label className="mt-4 block text-base font-semibold text-ink">{t.surveySandPercent}<input type="number" min="0" max="100" step="1" inputMode="decimal" value={soilSandInput} onChange={(event)=>setSoilSandInput(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-line px-4 text-base" placeholder={t.surveySandPlaceholder}/></label>
+        <div className="mt-4 flex gap-2"><button type="button" onClick={saveSoilSample} className="min-h-12 flex-1 rounded-full bg-action px-4 text-base font-bold text-white">{t.surveySaveSoilInput}</button><button type="button" onClick={()=>setPendingSoilSample(null)} className="min-h-12 rounded-full border border-line px-4 text-base font-semibold">{t.surveyCancel}</button></div>
+      </section></div>}
       {pendingSurveyFix && <div className="fixed inset-0 z-[120] flex items-end justify-center bg-charcoal/60 p-3 sm:items-center"><section ref={surveyDialogRef} role="dialog" aria-modal="true" aria-labelledby="survey-point-title" className="w-full max-w-md rounded-2xl bg-white p-5 shadow-sheet">
         <h2 id="survey-point-title" className="text-xl font-extrabold text-forest">{t.surveyPointQuestion}</h2><p className="mt-2 text-base text-ink-soft">{t.surveyGpsAccuracy}: ±{Math.round(pendingSurveyFix.accuracy)} m</p>
         <div className="mt-4 grid grid-cols-2 gap-2">{([["corner",t.surveyCorner],["water",t.surveyWater],["wet",t.surveyWet],["erosion",t.surveyErosion],["soil",t.surveySoil],["note",t.surveyOther]] as const).map(([type,label])=><button key={type} type="button" onClick={()=>saveSurveyPoint(type)} className="min-h-12 rounded-xl border border-line bg-soft px-3 py-3 text-left text-base font-bold text-forest">{label}</button>)}</div>
