@@ -262,7 +262,7 @@ export default function ScreenAHome({
     for (const point of surveyPoints) {
       const element = document.createElement("div");
       element.className = "flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-forest text-sm font-bold text-white shadow-float";
-      element.textContent = ({water:"W",wet:"L",erosion:"E",soil:"S",note:"N"} as const)[point.type];
+      element.textContent = ({corner:"C",water:"W",wet:"L",erosion:"E",soil:"S",note:"N"} as const)[point.type];
       surveyMarkersRef.current.push(new MapLibreMarker({element}).setLngLat([point.lon,point.lat]).addTo(map));
     }
   }, [surveyPoints, mapReady]);
@@ -1015,7 +1015,7 @@ export default function ScreenAHome({
             <p className="text-sm font-bold text-forest">{t.surveyStandTitle}</p>
             <p className="mt-1 text-sm text-ink-soft">{t.surveyStandHelp}</p>
             <button ref={surveyTriggerRef} type="button" onClick={startStandSurvey} disabled={surveyCollecting} className="mt-3 inline-flex min-h-12 items-center gap-2 rounded-full bg-action px-5 text-sm font-bold text-white disabled:opacity-50">{surveyCollecting ? <Loader2 className="h-4 w-4 animate-spin"/> : <LocateFixed className="h-4 w-4"/>}{surveyCollecting ? `${t.surveyCollecting} ${surveyFixCount}/${FIELD_SURVEY_CONFIG.gpsFixCount}` : t.surveyStartCapture}</button>
-            {surveyPoints.length>0 && <div className="mt-2 space-y-1 text-base text-ink-soft"><p className="font-semibold">{t.surveyOtherPoints}: {surveyPoints.length}</p>{surveyPoints.map((point)=><p key={point.id}>{({water:t.surveyWater,wet:t.surveyWet,erosion:t.surveyErosion,soil:t.surveySoil,note:t.surveyOther} as const)[point.type]} · {t.surveyPointQuality}: ±{Math.round(point.accuracy)} m</p>)}</div>}
+            {surveyPoints.length>0 && <div className="mt-2 space-y-1 text-base text-ink-soft"><p className="font-semibold">{t.surveyOtherPoints}: {surveyPoints.length}</p>{surveyPoints.map((point)=><p key={point.id}>{({corner:copy.walkCorner,water:t.surveyWater,wet:t.surveyWet,erosion:t.surveyErosion,soil:t.surveySoil,note:t.surveyOther} as const)[point.type]} · {t.surveyPointQuality}: ±{Math.round(point.accuracy)} m</p>)}</div>}
             {gpsReceipt && <details className="mt-2 text-sm text-ink-soft"><summary className="min-h-12 cursor-pointer py-3 font-semibold">{t.surveyGpsReceipt}</summary><p>{t.surveyFixesUsed}: {gpsReceipt.used} · {t.surveyFixesRejected}: {gpsReceipt.rejected}</p></details>}
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
