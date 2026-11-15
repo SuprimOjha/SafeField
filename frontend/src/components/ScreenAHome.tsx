@@ -15,6 +15,9 @@ import type { Feature, FeatureCollection, Geometry, Polygon, MultiPolygon } from
 import "maplibre-gl/dist/maplibre-gl.css";
 import { createMap, addSatelliteLayer, setSatellite, isSatelliteSourceError } from "@/lib/basemap";
 import { getDict, type Lang } from "@/i18n";
+import { averageFixes, type GpsFix } from "@/lib/gps-average";
+import { polygonSelfIntersects, pointInDistricts } from "@/lib/field-geometry";
+import { FIELD_SURVEY_CONFIG } from "@/config/field-survey";
 import {
   Navigation, Compass, ArrowRight, Pencil, Undo2, Trash2,
   Check, Layers3, LocateFixed, MousePointer2, Search, Loader2, X, MapPin,
@@ -26,6 +29,7 @@ interface ScreenAHomeProps {
   selectedLon: number;
   onLocationSelect: (lat: number, lon: number, name: string) => void;
   onFieldPolygonSelect: (polygon: [number, number][] | null) => void;
+  onSandOverrideChange: (value: number | null) => void;
   onProceedToField: () => void;
   lang: Lang;
   fieldPolygon?: [number, number][] | null;
@@ -34,6 +38,7 @@ interface ScreenAHomeProps {
 type DrawMode = "select" | "draw";
 type WalkCorner = { lat: number; lon: number; accuracy: number };
 type WalkStatus = "idle" | "waiting" | "live" | "unavailable";
+type SurveyPointType = "corner" | "water" | "wet" | "erosion" | "soil" | "note";
 type DistrictProperties = { DISTRICT?: string; PROVINCE?: number; HQ?: string };
 type DistrictFeature = Feature<Polygon | MultiPolygon, DistrictProperties>;
 
@@ -89,6 +94,7 @@ export default function ScreenAHome({
   selectedLon,
   onLocationSelect,
   onFieldPolygonSelect,
+  onSandOverrideChange,
   onProceedToField,
   lang,
   fieldPolygon,
@@ -121,6 +127,21 @@ export default function ScreenAHome({
   // Corners feed the same draw pipeline (drawPoints/user-field layer), plus a
   // live GPS watch that shows the walking position and per-corner accuracy.
   const [walkCorners, setWalkCorners] = useState<WalkCorner[]>([]);
+  const [surveyPoints, setSurveyPoints] = useState<Array<{id:number;lat:number;lon:number;type:SurveyPointType;accuracy:number}>>([]);
+  const [surveyPointsLoaded, setSurveyPointsLoaded] = useState(false);
+  const [pendingSurveyFix, setPendingSurveyFix] = useState<{lat:number;lon:number;accuracy:number;used:number;rejected:number}|null>(null);
+  const [pendingSoilSample, setPendingSoilSample] = useState<{lat:number;lon:number;accuracy:number}|null>(null);
+  const [soilSandInput, setSoilSandInput] = useState("");
+  const [surveyCollecting, setSurveyCollecting] = useState(false);
+  const [surveyFixCount, setSurveyFixCount] = useState(0);
+  const surveyWatchRef = useRef<number|null>(null);
+  const surveyFixesRef = useRef<GpsFix[]>([]);
+  const surveyPointIdRef = useRef(0);
+  const surveyTriggerRef = useRef<HTMLButtonElement>(null);
+  const surveyDialogRef = useRef<HTMLElement>(null);
+  const surveyWasOpenRef = useRef(false);
+  const surveyMarkersRef = useRef<MapLibreMarker[]>([]);
+  const [gpsReceipt, setGpsReceipt] = useState<{used:number;rejected:number}|null>(null);
   const [walkRequesting, setWalkRequesting] = useState(false);
   const [walkStatus, setWalkStatus] = useState<WalkStatus>("idle");
   const [walkLiveAccuracy, setWalkLiveAccuracy] = useState<number | null>(null);
@@ -203,12 +224,70 @@ export default function ScreenAHome({
     errorGpsTimeout: t.errorGpsTimeout,
   };
 
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem("safefield_survey_points");
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const valid = parsed.filter((point): point is {id:number;lat:number;lon:number;type:SurveyPointType;accuracy:number} =>
+            point && Number.isSafeInteger(point.id) && Number.isFinite(point.lat) && Number.isFinite(point.lon) &&
+            Number.isFinite(point.accuracy) && ["water","wet","erosion","soil","note"].includes(point.type)
+          );
+          setSurveyPoints(valid);
+          surveyPointIdRef.current = valid.reduce((max, point) => Math.max(max, point.id), 0);
+        }
+      }
+    } catch { /* Invalid or unavailable local storage leaves survey points empty. */ }
+    setSurveyPointsLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!surveyPointsLoaded) return;
+    try { window.localStorage.setItem("safefield_survey_points", JSON.stringify(surveyPoints)); }
+    catch { /* Field survey remains usable when storage is unavailable or full. */ }
+  }, [surveyPoints, surveyPointsLoaded]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    surveyMarkersRef.current.forEach((marker) => marker.remove());
+    surveyMarkersRef.current = [];
+    for (const point of surveyPoints) {
+      const element = document.createElement("div");
+      element.className = "flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-forest text-sm font-bold text-white shadow-float";
+      element.textContent = ({water:"W",wet:"L",erosion:"E",soil:"S",note:"N"} as const)[point.type];
+      surveyMarkersRef.current.push(new MapLibreMarker({element}).setLngLat([point.lon,point.lat]).addTo(map));
+    }
+  }, [surveyPoints, mapReady]);
+
+  useEffect(() => {
+    if (!pendingSurveyFix && !pendingSoilSample) { if (surveyWasOpenRef.current) { surveyWasOpenRef.current = false; surveyTriggerRef.current?.focus(); } return; }
+    surveyWasOpenRef.current = true;
+    const handleKeys = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { setPendingSurveyFix(null); setPendingSoilSample(null); return; }
+      if (event.key !== "Tab" || !surveyDialogRef.current) return;
+      const items = surveyDialogRef.current.querySelectorAll<HTMLElement>("button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex='-1'])");
+      if (!items.length) return;
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    window.addEventListener("keydown", handleKeys);
+    return () => window.removeEventListener("keydown", handleKeys);
+  }, [pendingSurveyFix, pendingSoilSample]);
+
   useEffect(() => { onLocationSelectRef.current = onLocationSelect; }, [onLocationSelect]);
   useEffect(() => { drawPointsRef.current = drawPoints; }, [drawPoints]);
   useEffect(() => { districtsRef.current = districts; }, [districts]);
 
   // Live GPS watch for the walk method: keeps a small dot on the map and the
   // accuracy pill up to date while the farmer walks between corners.
+  const stopSurveyCollection = useCallback(() => {
+    if (surveyWatchRef.current !== null && typeof navigator !== "undefined" && navigator.geolocation) navigator.geolocation.clearWatch(surveyWatchRef.current);
+    surveyWatchRef.current = null; setSurveyCollecting(false);
+  }, []);
+
   const stopWalkWatch = useCallback(() => {
     if (walkWatchRef.current !== null && typeof navigator !== "undefined" && navigator.geolocation) {
       navigator.geolocation.clearWatch(walkWatchRef.current);
@@ -512,6 +591,9 @@ export default function ScreenAHome({
 
     return () => {
       stopWalkWatch();
+      if (surveyWatchRef.current !== null && typeof navigator !== "undefined" && navigator.geolocation) navigator.geolocation.clearWatch(surveyWatchRef.current);
+      surveyWatchRef.current = null;
+      surveyMarkersRef.current.forEach((surveyMarker)=>surveyMarker.remove()); surveyMarkersRef.current=[];
       marker.remove();
       map.remove();
       mapRef.current = null;
@@ -519,7 +601,7 @@ export default function ScreenAHome({
       setMapReady(false);
     };
   // Keep one OpenFreeMap vector map; satellite imagery is toggled as a raster overlay.
-  }, [updateDrawLayer, onFieldPolygonSelect, stopWalkWatch]);
+  }, [updateDrawLayer, onFieldPolygonSelect, stopWalkWatch, stopSurveyCollection]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -592,6 +674,10 @@ export default function ScreenAHome({
 
   const finishDrawing = () => {
     if (drawPoints.length < 3) return;
+    if (polygonSelfIntersects(drawPoints)) { setMapError(lang === "ne" ? "खेतको सीमा आफैं काटिएको छ। कुनाहरू सच्याउनुहोस्।" : "The field boundary crosses itself. Adjust the corners before finishing."); return; }
+    const geometries = districts.map((feature) => feature.geometry);
+    if (geometries.length && drawPoints.some((point) => !pointInDistricts(point, geometries))) { setMapError(lang === "ne" ? "सीमाको केही भाग नेपालका उपलब्ध जिल्ला सीमाबाहिर छ।" : "Part of this boundary falls outside the available Nepal district boundaries."); return; }
+    setMapError(null);
     const area = polygonAreaHectares(drawPoints);
     setFieldArea(area);
     drawModeRef.current = "select";
@@ -706,6 +792,47 @@ export default function ScreenAHome({
     );
   };
 
+  const startStandSurvey = () => {
+    if (!navigator.geolocation) { setMapError(copyRef.current.errorGeolocationUnsupported); return; }
+    stopSurveyCollection(); surveyFixesRef.current = []; setSurveyFixCount(0); setPendingSurveyFix(null); setSurveyCollecting(true);
+    surveyWatchRef.current = navigator.geolocation.watchPosition((position) => {
+      surveyFixesRef.current = [...surveyFixesRef.current, {latitude:position.coords.latitude,longitude:position.coords.longitude,accuracy:position.coords.accuracy,timestamp:position.timestamp}];
+      setSurveyFixCount(surveyFixesRef.current.length);
+      if (surveyFixesRef.current.length < FIELD_SURVEY_CONFIG.gpsFixCount) return;
+      const result = averageFixes(surveyFixesRef.current,{maxAccuracyMeters:FIELD_SURVEY_CONFIG.maxGpsAccuracyMeters}); stopSurveyCollection();
+      if (result.usedCount < FIELD_SURVEY_CONFIG.minGoodGpsFixes || result.latitude === null || result.longitude === null || result.accuracy === null) { setMapError(lang === "ne" ? "पर्याप्त राम्रो GPS फिक्स प्राप्त भएन। खुला आकाश भएको ठाउँमा पुनः प्रयास गर्नुहोस्।" : "Not enough good GPS fixes. Move to open sky and try again."); return; }
+      if (result.latitude < 26.3 || result.latitude > 30.5 || result.longitude < 80 || result.longitude > 88.3) { setMapError(copyRef.current.errorGpsOutside); return; }
+      setPendingSurveyFix({lat:result.latitude,lon:result.longitude,accuracy:result.accuracy,used:result.usedCount,rejected:result.rejectedCount}); setMapError(null);
+    }, (error) => { stopSurveyCollection(); setMapError(error.code === error.PERMISSION_DENIED ? copyRef.current.errorGpsDenied : copyRef.current.errorGpsUnavailable); }, {enableHighAccuracy:true,maximumAge:0,timeout:30000});
+  };
+  const saveSurveyPoint = (type: SurveyPointType) => {
+    if (!pendingSurveyFix) return; const point = pendingSurveyFix;
+    if (type === "corner") {
+      const next = [...drawPointsRef.current,[point.lon,point.lat] as [number,number]];
+      if (next.length > FIELD_SURVEY_CONFIG.maxPolygonVertices) { setMapError(copyRef.current.errorTooManyVertices); return; }
+      drawPointsRef.current=next; setDrawPoints(next); walkCornersRef.current=[...walkCornersRef.current,{lat:point.lat,lon:point.lon,accuracy:point.accuracy}]; setWalkCorners(walkCornersRef.current); if(mapRef.current) updateDrawLayer(mapRef.current,next);
+    } else {
+      setSurveyPoints((old)=>[...old,{id:++surveyPointIdRef.current,lat:point.lat,lon:point.lon,type,accuracy:point.accuracy}]);
+
+    }
+    setGpsReceipt({used:point.used,rejected:point.rejected});
+    if (type === "soil") { setPendingSoilSample({lat:point.lat,lon:point.lon,accuracy:point.accuracy}); setSoilSandInput(""); }
+    setPendingSurveyFix(null); markerRef.current?.setLngLat([point.lon,point.lat]); mapRef.current?.easeTo({center:[point.lon,point.lat],duration:500});
+  };
+
+  const saveSoilSample = () => {
+    if (!pendingSoilSample) return;
+    const raw = soilSandInput.trim();
+    if (raw) {
+      const value = Number(raw);
+      if (!Number.isFinite(value) || value < 0 || value > 100) return;
+      onSandOverrideChange(value);
+      try { window.localStorage.setItem("safefield_soil_sample_input", JSON.stringify({kind:"farmer_input",sand_percent:value,accuracy_m:pendingSoilSample.accuracy,recorded_at_utc:new Date().toISOString()})); }
+      catch { /* Local assessment input remains active for this session. */ }
+    }
+    setPendingSoilSample(null);
+  };
+
   const undoWalkCorner = () => {
     if (!walkCornersRef.current.length) return;
     walkCornersRef.current = walkCornersRef.current.slice(0, -1);
@@ -751,6 +878,17 @@ export default function ScreenAHome({
         : `${walkCorners.length} ${walkCorners.length === 1 ? "corner" : "corners"} marked — ready to finish the field.`;
 
   return (
+      {pendingSoilSample && <div className="fixed inset-0 z-[120] flex items-end justify-center bg-charcoal/60 p-3 sm:items-center"><section ref={surveyDialogRef} role="dialog" aria-modal="true" aria-labelledby="soil-sample-title" className="w-full max-w-md rounded-2xl bg-white p-5 shadow-sheet">
+        <h2 id="soil-sample-title" className="text-xl font-extrabold text-forest">{t.surveySoilEntryTitle}</h2>
+        <p className="mt-2 text-base text-ink-soft">{t.surveySoilEntryHelp}</p>
+        <label className="mt-4 block text-base font-semibold text-ink">{t.surveySandPercent}<input type="number" min="0" max="100" step="1" inputMode="decimal" value={soilSandInput} onChange={(event)=>setSoilSandInput(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-line px-4 text-base" placeholder={t.surveySandPlaceholder}/></label>
+        <div className="mt-4 flex gap-2"><button type="button" onClick={saveSoilSample} className="min-h-12 flex-1 rounded-full bg-action px-4 text-base font-bold text-white">{t.surveySaveSoilInput}</button><button type="button" onClick={()=>setPendingSoilSample(null)} className="min-h-12 rounded-full border border-line px-4 text-base font-semibold">{t.surveyCancel}</button></div>
+      </section></div>}
+      {pendingSurveyFix && <div className="fixed inset-0 z-[120] flex items-end justify-center bg-charcoal/60 p-3 sm:items-center"><section ref={surveyDialogRef} role="dialog" aria-modal="true" aria-labelledby="survey-point-title" className="w-full max-w-md rounded-2xl bg-white p-5 shadow-sheet">
+        <h2 id="survey-point-title" className="text-xl font-extrabold text-forest">{t.surveyPointQuestion}</h2><p className="mt-2 text-base text-ink-soft">{t.surveyGpsAccuracy}: ±{Math.round(pendingSurveyFix.accuracy)} m</p>
+        <div className="mt-4 grid grid-cols-2 gap-2">{([["corner",t.surveyCorner],["water",t.surveyWater],["wet",t.surveyWet],["erosion",t.surveyErosion],["soil",t.surveySoil],["note",t.surveyOther]] as const).map(([type,label])=><button key={type} type="button" onClick={()=>saveSurveyPoint(type)} className="min-h-12 rounded-xl border border-line bg-soft px-3 py-3 text-left text-base font-bold text-forest">{label}</button>)}</div>
+        <button type="button" onClick={()=>setPendingSurveyFix(null)} className="mt-3 min-h-12 w-full rounded-full border border-line px-4 text-sm font-semibold text-ink-soft">{t.surveyCancel}</button>
+      </section></div>}
     <div className="space-y-5">
       <section className="overflow-hidden rounded-xl border border-divider bg-white shadow-float">
         <div className="border-b border-divider bg-cream px-5 py-6 sm:px-7">
@@ -866,6 +1004,13 @@ export default function ScreenAHome({
             {walkStatusBox}
           </div>
 
+          <div className="mt-3 rounded-xl border border-divider bg-white p-3">
+            <p className="text-sm font-bold text-forest">{t.surveyStandTitle}</p>
+            <p className="mt-1 text-sm text-ink-soft">{t.surveyStandHelp}</p>
+            <button ref={surveyTriggerRef} type="button" onClick={startStandSurvey} disabled={surveyCollecting} className="mt-3 inline-flex min-h-12 items-center gap-2 rounded-full bg-action px-5 text-sm font-bold text-white disabled:opacity-50">{surveyCollecting ? <Loader2 className="h-4 w-4 animate-spin"/> : <LocateFixed className="h-4 w-4"/>}{surveyCollecting ? `${t.surveyCollecting} ${surveyFixCount}/${FIELD_SURVEY_CONFIG.gpsFixCount}` : t.surveyStartCapture}</button>
+            {surveyPoints.length>0 && <div className="mt-2 space-y-1 text-base text-ink-soft"><p className="font-semibold">{t.surveyOtherPoints}: {surveyPoints.length}</p>{surveyPoints.map((point)=><p key={point.id}>{({water:t.surveyWater,wet:t.surveyWet,erosion:t.surveyErosion,soil:t.surveySoil,note:t.surveyOther} as const)[point.type]} · {t.surveyPointQuality}: ±{Math.round(point.accuracy)} m</p>)}</div>}
+            {gpsReceipt && <details className="mt-2 text-sm text-ink-soft"><summary className="min-h-12 cursor-pointer py-3 font-semibold">{t.surveyGpsReceipt}</summary><p>{t.surveyFixesUsed}: {gpsReceipt.used} · {t.surveyFixesRejected}: {gpsReceipt.rejected}</p></details>}
+          </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <button onClick={markWalkCorner} disabled={walkRequesting} className="inline-flex h-10 items-center gap-2 rounded-full bg-action px-4 text-xs font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-60">
               {walkRequesting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <MapPin className="h-4 w-4" aria-hidden="true" />}
@@ -936,7 +1081,7 @@ export default function ScreenAHome({
         <div className="flex flex-col gap-3 px-4 pb-5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-ink-soft">
             <span className="inline-flex items-center gap-2"><span className="h-2.5 w-5 rounded-xs border border-[#087443] bg-[#16a34a]/30" /> {copy.districtBoundaries}</span>
-            {fieldArea !== null && <span className="tnum font-bold text-forest">{copy.area}: {fieldArea.toFixed(3)} ha</span>}
+            {fieldArea !== null && <span className="tnum font-bold text-forest">{copy.area}: {fieldArea.toFixed(3)} ha</span>}{fieldArea !== null && <p className="w-full text-base text-ink-soft">{t.surveyAreaCaveat}</p>}
             <span>{districts.length || 0} {districts.length === 1 ? (lang === "ne" ? "जिल्ला" : "district") : (lang === "ne" ? "जिल्ला" : "districts")} {districtLoading ? copy.districtsLoading : copy.districtsAvailable}</span>
           </div>
           <button onClick={onProceedToField} className="inline-flex min-h-12 items-center justify-center gap-3 rounded-full bg-action px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-50">

@@ -298,14 +298,16 @@ export default function SafeFieldNepalApp() {
     setAssessmentError(null);
     setAssessmentState(null);
     try {
+      // Keep the precise field polygon on this device. The API receives only
+      // rounded representative coordinates; no field geometry is transmitted.
       const data = await fetchFieldAssessment(
-        selectedLat,
-        selectedLon,
+        Number(selectedLat.toFixed(2)),
+        Number(selectedLon.toFixed(2)),
         fertilizerType,
         cropStage,
         true,
         sandPercentOverride,
-        selectedFieldPolygon,
+        null,
       );
       if (requestId === requestSequence.current) {
         startTransition(() => {
@@ -432,6 +434,7 @@ export default function SafeFieldNepalApp() {
                 selectedLon={selectedLon}
                 onLocationSelect={handleLocationChange}
                 onFieldPolygonSelect={handlePolygonChange}
+                onSandOverrideChange={handleSandOverrideChange}
                 fieldPolygon={selectedFieldPolygon}
                 onProceedToField={handleProceedToField}
                 lang={lang}
