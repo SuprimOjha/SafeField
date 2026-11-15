@@ -743,6 +743,8 @@ export default function ScreenAHome({
     setWalkCorners([]);
     setWalkStatus("idle");
     setWalkLiveAccuracy(null);
+    // The setup panel covers the map, so close it before the farmer taps corners.
+    setSetupOpen(false);
     drawModeRef.current = "draw";
     drawPointsRef.current = [];
     setDrawMode("draw");
@@ -1112,6 +1114,19 @@ export default function ScreenAHome({
               <div ref={mapContainerRef} className="h-full w-full" />
               {!mapReady && (
                 <div className="absolute inset-0 z-[2] flex items-center justify-center bg-warm/85 text-sm font-semibold text-ink-soft backdrop-blur-[2px]">{copy.loadingMap}</div>
+              )}
+
+              {/* Draw control stays on the map so the boundary tool is one tap
+                  away; it hides while the setup panel or the draw bar is open. */}
+              {drawMode !== "draw" && !setupOpen && (
+                <button
+                  type="button"
+                  onClick={beginDrawing}
+                  className="absolute left-3 top-3 z-[6] inline-flex min-h-11 max-w-[calc(100%-96px)] items-center gap-2 rounded-full bg-gradient-growth px-4 text-sm font-bold text-[#102A18] shadow-float transition hover:opacity-95 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#079447] focus-visible:ring-offset-2"
+                >
+                  <Pencil className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span className="truncate">{copy.draw}</span>
+                </button>
               )}
 
               {setupOpen && (
