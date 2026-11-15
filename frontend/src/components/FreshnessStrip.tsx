@@ -1,0 +1,23 @@
+"use client";
+
+import { Clock3, CloudRain } from "lucide-react";
+import type { RainfallObservation } from "@/types/safefield";
+import { getDict, type Lang } from "@/i18n";
+
+interface FreshnessStripProps { rainfall: RainfallObservation; lang: Lang; }
+
+export default function FreshnessStrip({ rainfall, lang }: FreshnessStripProps) {
+  const t = getDict(lang);
+  const provenance = rainfall.provenance;
+  const isObservation = provenance?.kind === "observation";
+  const start = provenance?.observed_start_utc?.slice(0, 10);
+  const end = provenance?.observed_end_utc?.slice(0, 10);
+  const dateLabel = start && end ? (start === end ? start : start + " – " + end) : null;
+  return <div role="status" className="flex flex-col gap-2 rounded-xl border border-info/30 bg-info-soft px-4 py-3 text-base text-ink sm:flex-row sm:items-center">
+    <div className="flex items-center gap-2 font-bold"><CloudRain aria-hidden="true" className="h-5 w-5 shrink-0 text-info" /><span>{t.rainDataFreshness}</span></div>
+    {rainfall.status === "AVAILABLE" && provenance && dateLabel
+      ? <p className="min-w-0 flex-1">{t.rainDataCovers.replace("{date}", dateLabel)} {isObservation ? t.observedNotForecast : t.dataKindLabel + ": " + provenance.kind + "."}</p>
+      : <p className="min-w-0 flex-1">{rainfall.unavailable_reason || t.rainFreshnessUnavailable}</p>}
+    {provenance?.latency_note ? <span className="inline-flex items-center gap-1 text-sm text-ink-soft"><Clock3 aria-hidden="true" className="h-4 w-4 shrink-0" />{provenance.latency_note}</span> : null}
+  </div>;
+}
