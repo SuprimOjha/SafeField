@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Database, X } from "lucide-react";
 import type { FieldAssessmentResponse, FreshnessBadgeData } from "@/types/safefield";
 import { getDict, type Lang } from "@/i18n";
@@ -34,20 +34,31 @@ function SourceReceipt({ title, source, t }: { title: string; source: FreshnessB
 
 export default function DataReceiptDrawer({ data, lang }: DataReceiptDrawerProps) {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
   const t = getDict(lang);
   useEffect(() => {
-    if (!open) return;
-    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
+    if (!open) { triggerRef.current?.focus(); return; }
+    const handleKeys = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { setOpen(false); return; }
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const items = dialogRef.current.querySelectorAll<HTMLElement>("button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])");
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    window.addEventListener("keydown", handleKeys);
+    return () => window.removeEventListener("keydown", handleKeys);
   }, [open]);
   const rainfall = data.rainfall_observation;
   return <>
-    <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-line bg-white px-5 py-3 text-base font-bold text-forest hover:bg-soft focus-visible:outline-offset-4">
+    <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-line bg-white px-5 py-3 text-base font-bold text-forest hover:bg-soft focus-visible:outline-offset-4">
       <Database aria-hidden="true" className="h-5 w-5" />{t.showDataReceipt}
     </button>
     {open && <div className="fixed inset-0 z-[100] flex items-end justify-center bg-charcoal/55 sm:items-center sm:p-5" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
-      <section role="dialog" aria-modal="true" aria-labelledby="data-receipt-title" className="max-h-[88dvh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border border-divider bg-cream p-5 shadow-sheet sm:rounded-2xl sm:p-6">
+      <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="data-receipt-title" className="max-h-[88dvh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border border-divider bg-cream p-5 shadow-sheet sm:rounded-2xl sm:p-6">
         <div className="sticky top-0 z-10 -mx-1 mb-4 flex items-center justify-between gap-3 bg-cream px-1 py-2">
           <div><h2 id="data-receipt-title" className="text-xl font-extrabold text-ink">{t.dataReceiptTitle}</h2><p className="text-base text-ink-soft">{t.dataReceiptIntro}</p></div>
           <button type="button" autoFocus onClick={() => setOpen(false)} aria-label={t.close} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-line bg-white text-ink"><X aria-hidden="true" className="h-5 w-5" /></button>
