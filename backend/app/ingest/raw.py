@@ -18,8 +18,8 @@ SOURCE_MODELS: dict[str, type[BaseModel]] = {
 
 PRODUCTS = {
     "smap": ("SPL4SMGP", "008"),
-    "lst": ("MOD11A1", "061"),
-    "vegetation": ("MOD13Q1", "061"),
+    "lst": ("VNP21A1D", "002"),
+    "vegetation": ("VNP13A1", "002"),
 }
 
 
@@ -75,6 +75,9 @@ class RawSnapshotAdapter:
             snapshot = self.model.model_validate(payload)
         except ValidationError as exc:
             raise ValueError(f"{raw_path.name} does not match the {self.name} contract: {exc}") from exc
+        # Report the product that the file actually contains, never a default.
+        self.product = snapshot.product
+        self.version = snapshot.version
 
         snapshot_day = self._snapshot_day(payload)
         if snapshot_day != day:

@@ -7,6 +7,7 @@ from app.signals.models import SignalName, SignalProvenance, SignalValue
 from app.signals.snapshots import (
     SmapSnapshot,
     SnapshotFormatError,
+    coverage_radius_km,
     load_latest_snapshot,
     load_snapshot_on,
     nearest_cell,
@@ -73,7 +74,8 @@ class SmapProvider:
                 name,
                 "No quality-approved SMAP cell around this field has a valid value for the latest day.",
             )
-        if not within_coverage(cell, latitude, longitude, snapshot.resolution_km):
+        radius_km = coverage_radius_km(snapshot.resolution_km, snapshot.grid_spacing_km)
+        if not within_coverage(cell, latitude, longitude, radius_km):
             return _unavailable(
                 name,
                 "The nearest installed SMAP cell does not cover this field. The installed "
@@ -147,7 +149,10 @@ class SmapProvider:
             ]
             cell = nearest_cell(valid, latitude, longitude)
             if cell is not None and not within_coverage(
-                cell, latitude, longitude, snapshot.resolution_km
+                cell,
+                latitude,
+                longitude,
+                coverage_radius_km(snapshot.resolution_km, snapshot.grid_spacing_km),
             ):
                 cell = None
             series.append((day, float(getattr(cell, field)) if cell is not None else None))
@@ -163,6 +168,11 @@ def _provenance(snapshot: SmapSnapshot, coverage: float) -> SignalProvenance:
     )
     if snapshot.model_only:
         caveat += " This date is flagged model-only because no SMAP observation was assimilated."
+    if snapshot.grid_spacing_km and snapshot.grid_spacing_km > snapshot.resolution_km:
+        caveat += (
+            f" Snapshot cells are sampled about {snapshot.grid_spacing_km:g} km apart "
+            f"from the native {snapshot.resolution_km:g} km grid; they are not a finer product."
+        )
     return SignalProvenance(
         source_name="NASA SMAP L4 Surface and Root Zone Soil Moisture",
         product=snapshot.product,

@@ -35,6 +35,7 @@ class SmapSnapshot(BaseModel):
     data_date: date
     fetched_at: datetime
     resolution_km: float = Field(gt=0)
+    grid_spacing_km: float | None = Field(default=None, gt=0)
     model_only: bool | None = None
     coverage_fraction: float | None = Field(default=None, ge=0, le=1)
     granule_ids: list[str] = Field(default_factory=list)
@@ -56,6 +57,7 @@ class LstSnapshot(BaseModel):
     data_date: date
     fetched_at: datetime
     resolution_km: float = Field(gt=0)
+    grid_spacing_km: float | None = Field(default=None, gt=0)
     granule_ids: list[str] = Field(default_factory=list)
     cells: list[LstCell] = Field(default_factory=list)
 
@@ -75,6 +77,7 @@ class VegSnapshot(BaseModel):
     composite_end: date
     fetched_at: datetime
     resolution_m: float = Field(gt=0)
+    grid_spacing_m: float | None = Field(default=None, gt=0)
     granule_ids: list[str] = Field(default_factory=list)
     cells: list[VegCell] = Field(default_factory=list)
 
@@ -187,6 +190,20 @@ def valid_coverage(cells: list, valid: list[bool]) -> float:
     if not cells:
         return 0.0
     return sum(1 for item in valid if item) / len(cells)
+
+
+def coverage_radius_km(
+    resolution_km: float, grid_spacing_km: float | None = None
+) -> float:
+    """Radius used by ``within_coverage`` for one snapshot.
+
+    ``within_coverage`` allows two of these radii. A snapshot built on a regular
+    grid reports how far apart its cells are: half the spacing keeps the
+    allowed distance at one grid step instead of two native pixels.
+    """
+    if grid_spacing_km:
+        return grid_spacing_km / 2
+    return resolution_km
 
 
 def within_coverage(cell, latitude: float, longitude: float, resolution_km: float) -> bool:

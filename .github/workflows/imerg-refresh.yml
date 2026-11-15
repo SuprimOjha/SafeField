@@ -28,10 +28,11 @@ jobs:
       - name: Check Earthdata credentials
         id: credentials
         env:
+          EARTHDATA_TOKEN: ${{ secrets.EARTHDATA_TOKEN }}
           EARTHDATA_USERNAME: ${{ secrets.EARTHDATA_USERNAME }}
           EARTHDATA_PASSWORD: ${{ secrets.EARTHDATA_PASSWORD }}
         run: |
-          if [[ -n "$EARTHDATA_USERNAME" && -n "$EARTHDATA_PASSWORD" ]]; then
+          if [[ -n "$EARTHDATA_TOKEN" || ( -n "$EARTHDATA_USERNAME" && -n "$EARTHDATA_PASSWORD" ) ]]; then
             echo "configured=true" >> "$GITHUB_OUTPUT"
           else
             echo "configured=false" >> "$GITHUB_OUTPUT"
@@ -41,6 +42,7 @@ jobs:
         if: steps.credentials.outputs.configured == 'true'
         working-directory: backend
         env:
+          EARTHDATA_TOKEN: ${{ secrets.EARTHDATA_TOKEN }}
           EARTHDATA_USERNAME: ${{ secrets.EARTHDATA_USERNAME }}
           EARTHDATA_PASSWORD: ${{ secrets.EARTHDATA_PASSWORD }}
           IMERG_RETENTION_DAYS: "30"
@@ -48,11 +50,14 @@ jobs:
           SIGNAL_RETENTION_DAYS: "120"
           # Optional: with these secrets the cache and files are written to
           # Supabase, so the runner's temporary disk is not the only copy.
+          # Storage keeps only SUPABASE_RECENT_DAYS (default 3); the long
+          # timeline is archived to the git data branch by data-publish.yml.
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SUPABASE_STORAGE_BUCKET: safefield-data
+          SUPABASE_RECENT_DAYS: "3"
         run: python -m app.cli refresh-data --days ${{ github.event.inputs.days || '7' }}
       - uses: actions/upload-artifact@v4
         if: steps.credentials.outputs.configured == 'true'

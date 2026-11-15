@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     supabase_service_role_key: str = ""
     supabase_storage_bucket: str = "safefield-data"
     supabase_restore_on_startup: bool = True
+    # Supabase Storage is a live cache, not the archive. Only files newer than
+    # this window are mirrored, and older remote objects are deleted, so a free
+    # tier bucket cannot fill up. The long timeline is published to the git
+    # ``data`` branch by the archive workflow.
+    supabase_recent_days: int = Field(default=3, ge=1, le=30)
 
     # Automatic data refresh and retention. The refresh installs newly published
     # IMERG days, then removes data older than these windows. Values are

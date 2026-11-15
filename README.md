@@ -95,8 +95,9 @@ The current assessment API is geographically bounded to Nepal coordinates betwee
 backend/                 FastAPI service, data ingest, cache and automation
   app/api/               Assessment and signal endpoints
   app/services/imerg/    IMERG granule download and grid cache
-  app/ingest/            Snapshot ingest, retention pruning, scheduler
+  app/ingest/            NASA snapshot readers, staging, retention, scheduler
   app/cache/             SQLite cache with TTLs
+  app/storage/           Supabase Postgres/Storage bootstrap and recent-window mirror
   tests/                 pytest suite
   .env.example           Copy to backend/.env and fill credentials
 frontend/                Next.js app (dashboard, map, Ask assistant, i18n)
@@ -147,8 +148,10 @@ The backend can keep its local satellite cache current without manual steps. Whe
 
 1. waits `DATA_REFRESH_STARTUP_DELAY_SECONDS` (default 60 s) so startup stays fast;
 2. installs the most recently published NASA GPM IMERG Late daily granules for the last `IMERG_REFRESH_DAYS` completed UTC days (default 3), skipping dates already installed;
-3. only after the new data is installed, deletes data that is outside the retention windows;
-4. repeats every `DATA_REFRESH_INTERVAL_HOURS` (default 6 h).
+3. asks NASA CMR for the latest complete SMAP soil-moisture day (`SPL4SMGP` v008), VIIRS land-surface-temperature day (`VNP21A1D` v002) and VIIRS 16-day vegetation composite (`VNP13A1` v002), downloads the Nepal tiles, aggregates them onto the 0.1° Nepal grid, and stages one JSON per source in `backend/data/incoming/<source>/`;
+4. installs any staged snapshot through the same validation used for manual ingests;
+5. only after new data is installed, deletes data that is outside the retention windows;
+6. repeats every `DATA_REFRESH_INTERVAL_HOURS` (default 6 h).
 
 A file lock prevents two refreshes from running at once, and the last result is written atomically to `backend/data/automation-status.json` (runtime state, gitignored). The status file records what was installed, what was pruned and any error, but never credentials, file paths or precise coordinates.
 
@@ -162,7 +165,7 @@ EARTHDATA_PASSWORD=your_password
 # EARTHDATA_TOKEN=...          # optional alternative to username/password
 ```
 
-For GitHub Actions, add them as repository secrets `EARTHDATA_USERNAME` and `EARTHDATA_PASSWORD`. The workflow `.github/workflows/imerg-refresh.yml` runs daily at 02:25 UTC and can also be started manually; if the secrets are missing it reports that and skips the install rather than failing silently.
+For GitHub Actions, add them as repository secrets `EARTHDATA_USERNAME` and `EARTHDATA_PASSWORD`, or a single `EARTHDATA_TOKEN`. `.github/workflows/imerg-refresh.yml` runs daily at 02:25 UTC and `.github/workflows/data-publish.yml` at 03:45 UTC; both can be started manually. If the secrets are missing they report that and skip the download rather than failing silently.
 
 Never commit credentials, paste them into issues, or place them in source files.
 
@@ -173,6 +176,7 @@ Never commit credentials, paste them into issues, or place them in source files.
 | `IMERG_RETENTION_DAYS` | 30 | IMERG grid cells and raw granules older than this |
 | `API_CACHE_RETENTION_DAYS` | 30 | Cached live API responses older than this |
 | `SIGNAL_RETENTION_DAYS` | 120 | Installed satellite snapshots and staged raw files older than this |
+| `SUPABASE_RECENT_DAYS` | 3 | Files older than this are deleted from Supabase Storage (never from local disk) |
 
 The pruning runs in the same job as the install, so old data is replaced gradually instead of accumulating. Data inside the window is kept; nothing is deleted before new data has been written.
 
@@ -190,7 +194,17 @@ python -m app.cli status                    # installed snapshot state
 
 ### What is automated, honestly
 
-Only **NASA GPM IMERG rainfall** is downloaded automatically. A verified raw snapshot placed in `backend/data/incoming/<source>/YYYY-MM-DD.json` (or restored from Supabase Storage) is installed automatically by the same refresh job. This repository does **not** ship numeric readers for SMAP, land-surface temperature or NDVI/EVI granules, so it never downloads or invents those values itself; until a verified reader stages them, the interface reports the signal as unavailable. Missing data is never replaced with another product. If Earthdata credentials are absent, the refresh records `skipped_no_credentials` and the app keeps whatever it already has, clearly labelled by age.
+The refresh downloads and validates three NASA products in addition to IMERG:
+
+| Source | Product | Native data | What is stored |
+|---|---|---|---|
+| `smap` | SMAP L4 `SPL4SMGP` v008 | 3-hourly 9 km surface and root-zone soil moisture, 8 granules per day | Mean of the 8 granules on the 0.1° Nepal grid |
+| `lst` | VIIRS `VNP21A1D` v002 | Daily 1 km land-surface temperature, 4 Nepal tiles | Kelvin converted to °C, QC bits 0–1 must be clear |
+| `vegetation` | VIIRS `VNP13A1` v002 | 16-day 500 m NDVI/EVI composite, 4 Nepal tiles | NDVI and EVI with pixel reliability 0 |
+
+Each snapshot is aggregated to the same 42 × 83 grid (0.1°, about 11.1 km) used by the field signals. A grid cell is only approved when at least half of its native pixels pass the fill-value, QC and physical-range checks; otherwise it is stored as `null`, never filled with a guess. CMR lookback windows account for real publication latency: 10 days for SMAP, 30 days for VNP21A1D, and 45 days for VNP13A1, so a product that has not yet published a complete day is reported as `not_available` instead of being invented.
+
+Any error is written to `backend/data/automation-status.json` as that source's `status` (for example `error` or `not_available`) with the CMR reason. If Earthdata credentials are absent, the refresh records `skipped_no_credentials` and the app keeps whatever it already has, clearly labelled by age. Missing data is never replaced with another product or with simulated values.
 
 ## Optional Supabase Storage
 
@@ -199,7 +213,7 @@ SQLite and the local `backend/data/` directories remain the default and work wit
 | Data | Where it goes | Notes |
 |---|---|---|
 | Cached live API responses, IMERG grid cells | Supabase Postgres, private `safefield` schema | Tables are created automatically; `SUPABASE_DB_URL` |
-| Satellite snapshots, staged provider JSON, raw IMERG granules, `status.json` | Supabase Storage bucket (`safefield-data`) | Private bucket, created on first run; `SUPABASE_URL` + `SUPABASE_SECRET_KEY` |
+| Satellite snapshots, staged provider JSON, raw IMERG granules, `status.json` | Supabase Storage bucket (`safefield-data`), **most recent `SUPABASE_RECENT_DAYS` days only** | Private bucket, created on first run; `SUPABASE_URL` + `SUPABASE_SECRET_KEY` |
 
 Setup:
 
@@ -213,8 +227,8 @@ Behaviour:
 - The cache backend keeps the same interface and SQL as the SQLite cache, so no API route changes.
 - Tables live in a separate `safefield` schema, not `public`. Supabase's PostgREST API exposes only `public`, so the anon key cannot read the cache.
 - On startup the backend creates the tables and bucket if needed, restores missing files, and reports readiness at `GET /api/integrations/data-storage`. Startup still succeeds if Supabase is temporarily unreachable; the next refresh retries.
-- The local disk is still the fast read/write path. After a refresh, files are mirrored up; on startup, missing snapshots, staged JSON and `status.json` are restored from Storage (`SUPABASE_RESTORE_ON_STARTUP=false` disables the file restore). Raw IMERG granules are mirrored but not auto-restored because they can be re-downloaded.
-- The same retention windows apply remotely: expired files are deleted from the bucket in the refresh job.
+- The local disk is still the fast read/write path. After a refresh, files inside the recent window are mirrored up; on startup, missing snapshots, staged JSON and `status.json` are restored from Storage (`SUPABASE_RESTORE_ON_STARTUP=false` disables the file restore). Raw IMERG granules are mirrored but not auto-restored because they can be re-downloaded.
+- Storage is a **live cache, not the archive**. Only files newer than `SUPABASE_RECENT_DAYS` (default 3) are uploaded, and older remote objects are deleted on every refresh, so a free-tier bucket cannot fill up. Local disk keeps the longer `SIGNAL_RETENTION_DAYS` and `IMERG_RETENTION_DAYS` windows; the long timeline is archived to git (next section).
 - Storage failures are reported as `status: error` in the automation status and turn the run `partial`; they never hide a successful install. Error messages include the HTTP status and object path, never the key.
 - Field boundaries are still never uploaded. Only provider/satellite data is stored.
 
@@ -228,7 +242,13 @@ python -m app.cli storage-sync --force     # re-upload even when sizes match
 python -m app.cli storage-restore          # restore missing snapshots/staged JSON/status.json
 ```
 
-For GitHub Actions, add `SUPABASE_DB_URL`, `SUPABASE_URL` and `SUPABASE_SECRET_KEY` as repository secrets; the workflow passes them through when they exist.
+For GitHub Actions, add `SUPABASE_DB_URL`, `SUPABASE_URL` and `SUPABASE_SECRET_KEY` as repository secrets; the workflow passes them through when they exist and sets `SUPABASE_RECENT_DAYS=3`.
+
+### Long timeline on the `data` branch
+
+Supabase Storage is capped to the live window to stay inside the free tier. The durable long timeline lives in git instead: `.github/workflows/data-publish.yml` runs daily at 03:45 UTC (or manually), restores the existing published snapshots, refreshes the NASA products with `SIGNAL_RETENTION_DAYS=180`, and commits every validated signal day plus `status.json` to the `data` branch. The job refuses to erase existing branch data when the local data directory is empty, and stops with an error if the branch would exceed `max_bytes` (default 500 MB, editable in the manual trigger).
+
+The archive is written by the bot with these repository secrets: `EARTHDATA_TOKEN` or `EARTHDATA_USERNAME`/`EARTHDATA_PASSWORD`. It does not pass Supabase credentials, so archiving never consumes the free bucket. The running backend reads the recent window (Supabase Storage or local disk); it does not query the `data` branch at request time, so a live deployment depends only on the last few days of snapshots. History accumulates from the first successful run; the workflow publishes the latest complete day of each product and does not backfill older days. Inspect the branch with `git fetch origin data && git ls-tree --name-only origin/data signals/smap`.
 
 ## Tests and Quality Gates
 
@@ -262,16 +282,19 @@ The frontend can be built with `npm run build` and served by any Node host. The 
 
 | Variable | Purpose |
 |---|---|
-| `EARTHDATA_USERNAME`, `EARTHDATA_PASSWORD` | NASA Earthdata Login used by the automatic IMERG refresh (mark as secret) |
+| `EARTHDATA_USERNAME`, `EARTHDATA_PASSWORD` | NASA Earthdata Login used by the automatic refresh (mark as secret). `EARTHDATA_TOKEN` is an alternative. |
 | `SUPABASE_DB_URL` | Supabase Postgres connection string for the API cache and IMERG cells (mark as secret) |
 | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | Supabase Storage URL and secret key (mark the key as secret). The legacy `SUPABASE_SERVICE_ROLE_KEY` is also accepted. |
 | `SUPABASE_STORAGE_BUCKET` | Bucket name, default `safefield-data` |
+| `SUPABASE_RECENT_DAYS` | Days of files kept in Supabase Storage, default `3` |
 | `DATA_REFRESH_ENABLED` | `true` to run the in-process scheduler |
-| `IMERG_RETENTION_DAYS`, `API_CACHE_RETENTION_DAYS`, `SIGNAL_RETENTION_DAYS` | How long data is kept before automatic deletion |
+| `IMERG_RETENTION_DAYS`, `API_CACHE_RETENTION_DAYS`, `SIGNAL_RETENTION_DAYS` | How long data is kept on local disk before automatic deletion |
 
-On first start the backend creates the Postgres tables and the private bucket, then restores files. The scheduler then installs newly published IMERG days, ingests any staged snapshots, deletes data outside the retention windows locally, in Postgres and in Storage, and mirrors the result back to Supabase. Confirm the wiring with `GET /api/integrations/data-storage`.
+On first start the backend creates the Postgres tables and the private bucket, then restores files. The scheduler then installs newly published IMERG days, downloads and installs NASA snapshots, deletes local and Postgres data outside the retention windows, mirrors the recent window to Storage, and deletes older Storage objects. Confirm the wiring with `GET /api/integrations/data-storage`.
 
-Render's free web instances sleep when idle, which pauses the in-process scheduler; the next request wakes the service and the scheduled refresh resumes. For updates while the service is idle, either use an always-on instance or keep the GitHub Actions workflow enabled with the same Supabase and Earthdata repository secrets.
+`render.yaml` sets the local retention windows to 7 days because the free instance has a small ephemeral disk; Supabase Storage keeps 3 days and the `data` branch keeps the long timeline. Override those values in the Render dashboard if the service has a larger disk.
+
+Render's free web instances sleep when idle, which pauses the in-process scheduler; the next request wakes the service and the scheduled refresh resumes. For updates while the service is idle, keep the GitHub Actions workflows enabled: `imerg-refresh.yml` with the Supabase and Earthdata secrets, and `data-publish.yml` with the Earthdata secrets only.
 
 ## Current Scope and Limitations
 

@@ -68,6 +68,11 @@ def main() -> int:
     refresh_parser.add_argument("--signal-retention-days", type=int, default=None)
     refresh_parser.add_argument("--api-cache-retention-days", type=int, default=None)
     refresh_parser.add_argument("--no-prune", action="store_true", help="Install new data without deleting old data")
+    refresh_parser.add_argument(
+        "--no-snapshot-download",
+        action="store_true",
+        help="Do not download SMAP/VIIRS snapshots; only install already staged files",
+    )
 
     automation_parser = subparsers.add_parser("automation-status", help="Show the last automatic data refresh result")
     automation_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
@@ -152,6 +157,7 @@ def main() -> int:
             signal_retention_days=args.signal_retention_days,
             api_cache_retention_days=args.api_cache_retention_days,
             prune=not args.no_prune,
+            download_snapshots=not args.no_snapshot_download,
         )
         print(json.dumps(report.model_dump(mode="json"), indent=2, ensure_ascii=False))
         return 0 if report.status == "ok" else 1
@@ -176,6 +182,20 @@ def main() -> int:
             imerg = payload.get("imerg") or {}
             prune = payload.get("prune") or {}
             print(f"  installed IMERG days: {', '.join(imerg.get('installed_dates') or []) or 'none'}")
+            snapshots = payload.get("snapshots") or {}
+            snapshot_sources = snapshots.get("sources") or {}
+            print(
+                f"  snapshots: {snapshots.get('status', 'skipped')} "
+                f"(installed {snapshots.get('installed_files', 0)}, "
+                f"staged {snapshots.get('staged_files', 0)})"
+            )
+            if snapshot_sources:
+                print(
+                    "  snapshot sources: "
+                    + ", ".join(f"{key}={value}" for key, value in sorted(snapshot_sources.items()))
+                )
+            if snapshots.get("error"):
+                print(f"  snapshot error: {snapshots['error']}")
             print(
                 "  pruned: "
                 f"{prune.get('imerg_days', 0)} IMERG day(s), "

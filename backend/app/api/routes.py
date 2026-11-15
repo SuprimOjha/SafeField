@@ -241,12 +241,14 @@ async def get_data_storage_status(request: Request) -> dict[str, object]:
             "bucket": settings.supabase_storage_bucket if settings.supabase_storage_enabled else None,
             "status": report.get("storage", "unknown"),
             "restored_files": report.get("restored_files", 0),
+            "recent_days": settings.supabase_recent_days,
         },
         "retention_windows": {
             "imerg_refresh_days": settings.imerg_refresh_days,
             "imerg_retention_days": settings.imerg_retention_days,
             "api_cache_retention_days": settings.api_cache_retention_days,
             "signal_retention_days": settings.signal_retention_days,
+            "supabase_recent_days": settings.supabase_recent_days,
         },
         "error": report.get("error"),
     }

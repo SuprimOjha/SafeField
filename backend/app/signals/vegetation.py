@@ -7,6 +7,7 @@ from app.signals.models import SignalName, SignalProvenance, SignalValue
 from app.signals.snapshots import (
     SnapshotFormatError,
     VegSnapshot,
+    coverage_radius_km,
     load_latest_snapshot,
     load_snapshot_on,
     nearest_cell,
@@ -71,7 +72,7 @@ class VegProvider:
         cell = nearest_cell(valid_cells, latitude, longitude)
         if cell is None:
             return _unavailable(name, "No quality-approved vegetation cell is available for this field.")
-        if not within_coverage(cell, latitude, longitude, snapshot.resolution_m / 1000.0):
+        if not within_coverage(cell, latitude, longitude, _radius_km(snapshot)):
             return _unavailable(
                 name,
                 "The nearest installed vegetation cell does not cover this field. The installed "
@@ -130,7 +131,10 @@ class VegProvider:
             ]
             cell = nearest_cell(valid, latitude, longitude)
             if cell is not None and not within_coverage(
-                cell, latitude, longitude, snapshot.resolution_m / 1000.0
+                cell,
+                latitude,
+                longitude,
+                _radius_km(snapshot),
             ):
                 cell = None
             series.append(
@@ -139,9 +143,24 @@ class VegProvider:
         return series
 
 
+def _radius_km(snapshot: VegSnapshot) -> float:
+    spacing_km = snapshot.grid_spacing_m / 1000.0 if snapshot.grid_spacing_m else None
+    return coverage_radius_km(snapshot.resolution_m / 1000.0, spacing_km)
+
+
 def _provenance(snapshot: VegSnapshot, coverage: float) -> SignalProvenance:
     start = datetime.combine(snapshot.composite_start, time.min, tzinfo=timezone.utc)
     end = datetime.combine(snapshot.composite_end + timedelta(days=1), time.min, tzinfo=timezone.utc)
+    caveat = (
+        "Vegetation indices describe canopy greenness, not directly water stress or crop "
+        "health. A 16-day composite can hide short stress events, and the pixel is much "
+        "larger than a smallholder plot."
+    )
+    if snapshot.grid_spacing_m:
+        caveat += (
+            f" Snapshot cells are a quality-weighted mean of native pixels aggregated to "
+            f"about {snapshot.grid_spacing_m:g} m; they are not a native 500 m product."
+        )
     return SignalProvenance(
         source_name="NASA Vegetation Index (MODIS/VIIRS 16-day composite)",
         product=snapshot.product,
@@ -159,11 +178,7 @@ def _provenance(snapshot: VegSnapshot, coverage: float) -> SignalProvenance:
         ),
         granule_ids=snapshot.granule_ids,
         coverage_fraction=round(coverage, 4),
-        caveat=(
-            "Vegetation indices describe canopy greenness, not directly water stress or crop "
-            "health. A 16-day composite can hide short stress events, and the pixel is much "
-            "larger than a smallholder plot."
-        ),
+        caveat=caveat,
     )
 
 

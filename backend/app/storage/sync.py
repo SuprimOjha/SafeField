@@ -1,10 +1,12 @@
-"""Mirror local data files to Supabase Storage and restore them on startup.
+"""Mirror recent data files to Supabase Storage and restore them on startup.
 
 The backend keeps writing to the local data directories. Supabase Storage is a
-durable copy: snapshots, staged raw JSON, downloaded IMERG granules and
-``status.json`` are uploaded after a refresh, removed remotely when their
-retention window ends, and restored into an empty working directory on startup.
-Local disk therefore stays a cache rather than the only copy.
+live cache for the most recent days only: snapshots, staged raw JSON, downloaded
+IMERG granules and ``status.json`` are uploaded after a refresh, and everything
+older than ``supabase_recent_days`` is deleted remotely. That keeps a free-tier
+bucket from filling up. The long timeline is published to the git ``data``
+branch by the data-publish workflow instead, and local disk keeps the longer
+retention windows.
 
 No field geometry is mirrored; these directories contain satellite and
 provider data only.
@@ -16,7 +18,7 @@ import os
 import re
 import tempfile
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable, Literal
 
@@ -74,6 +76,12 @@ def _iter_files(directory: Path) -> list[Path]:
     )
 
 
+def recent_window_start(settings: Settings, today: date | None = None) -> date:
+    """First day of the live window that Supabase Storage keeps."""
+    day = today or datetime.now(timezone.utc).date()
+    return day - timedelta(days=max(settings.supabase_recent_days - 1, 0))
+
+
 def upload_directory(
     storage: SupabaseStorage,
     local_dir: Path,
@@ -81,6 +89,8 @@ def upload_directory(
     report: StorageSyncReport,
     *,
     force: bool = False,
+    keep_after: date | None = None,
+    parse_date: Callable[[str], date | None] | None = None,
 ) -> None:
     files = _iter_files(local_dir)
     if not files:
@@ -88,6 +98,10 @@ def upload_directory(
     remote = storage.list_names(prefix)
     for path in files:
         key = f"{prefix}/{path.relative_to(local_dir).as_posix()}"
+        if keep_after is not None:
+            day = parse_date(key) if parse_date else None
+            if day is None or day < keep_after:
+                continue
         size = path.stat().st_size
         if not force and remote.get(key) == size:
             continue
@@ -234,14 +248,41 @@ def sync_up(
     raw_dir: Path | None = None,
     force: bool = False,
     storage: SupabaseStorage | None = None,
+    today: date | None = None,
+    recent_cutoff: date | None = None,
 ) -> StorageSyncReport:
     resolved = settings or get_settings()
+    cutoff = recent_cutoff or recent_window_start(resolved, today)
 
     def action(client: SupabaseStorage, report: StorageSyncReport) -> None:
         for source in SNAPSHOT_SOURCES:
-            upload_directory(client, source_dir(source, root), f"signals/{source}", report, force=force)
-            upload_directory(client, incoming_dir(source), f"incoming/{source}", report, force=force)
-        upload_directory(client, raw_dir or default_raw_dir(), "imerg/raw", report, force=force)
+            upload_directory(
+                client,
+                source_dir(source, root),
+                f"signals/{source}",
+                report,
+                force=force,
+                keep_after=cutoff,
+                parse_date=_date_from_json_key,
+            )
+            upload_directory(
+                client,
+                incoming_dir(source),
+                f"incoming/{source}",
+                report,
+                force=force,
+                keep_after=cutoff,
+                parse_date=_date_from_json_key,
+            )
+        upload_directory(
+            client,
+            raw_dir or default_raw_dir(),
+            "imerg/raw",
+            report,
+            force=force,
+            keep_after=cutoff,
+            parse_date=_date_from_granule_key,
+        )
         upload_file(client, status_path(), STATUS_OBJECT, report, force=force)
 
     return _run(action, resolved, storage)
@@ -269,18 +310,27 @@ def prune_remote(
     *,
     signal_cutoff: date,
     imerg_cutoff: date,
+    recent_cutoff: date | None = None,
     storage: SupabaseStorage | None = None,
 ) -> StorageSyncReport:
+    """Delete remote objects outside the live window.
+
+    ``recent_cutoff`` caps the bucket to the Supabase live window; local
+    retention windows are longer because the git ``data`` branch archives them.
+    """
+
     def action(client: SupabaseStorage, report: StorageSyncReport) -> None:
+        signal_day = recent_cutoff or signal_cutoff
+        imerg_day = recent_cutoff or imerg_cutoff
         for source in SNAPSHOT_SOURCES:
             delete_remote_before(
-                client, f"signals/{source}", signal_cutoff, report, parse_date=_date_from_json_key
+                client, f"signals/{source}", signal_day, report, parse_date=_date_from_json_key
             )
             delete_remote_before(
-                client, f"incoming/{source}", signal_cutoff, report, parse_date=_date_from_json_key
+                client, f"incoming/{source}", signal_day, report, parse_date=_date_from_json_key
             )
         delete_remote_before(
-            client, "imerg/raw", imerg_cutoff, report, parse_date=_date_from_granule_key
+            client, "imerg/raw", imerg_day, report, parse_date=_date_from_granule_key
         )
 
     return _run(action, settings or get_settings(), storage)
@@ -302,6 +352,7 @@ __all__ = [
     "default_raw_dir",
     "get_storage",
     "prune_remote",
+    "recent_window_start",
     "restore_directory",
     "restore_down",
     "restore_file",

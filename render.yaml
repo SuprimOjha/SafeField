@@ -22,19 +22,26 @@ services:
       - key: IMERG_REFRESH_DAYS
         value: "3"
       - key: IMERG_RETENTION_DAYS
-        value: "30"
+        value: "7"
       - key: API_CACHE_RETENTION_DAYS
-        value: "30"
+        value: "7"
+      # The free instance has a small ephemeral disk: keep a week locally, mirror
+      # only SUPABASE_RECENT_DAYS to Supabase, and archive the long timeline to
+      # the git data branch.
       - key: SIGNAL_RETENTION_DAYS
-        value: "120"
+        value: "7"
       - key: SUPABASE_STORAGE_BUCKET
         value: safefield-data
       - key: SUPABASE_RESTORE_ON_STARTUP
         value: "true"
+      - key: SUPABASE_RECENT_DAYS
+        value: "3"
       # Secrets are entered in the Render dashboard and never stored here.
       - key: EARTHDATA_USERNAME
         sync: false
       - key: EARTHDATA_PASSWORD
+        sync: false
+      - key: EARTHDATA_TOKEN
         sync: false
       - key: SUPABASE_DB_URL
         sync: false

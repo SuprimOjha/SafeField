@@ -13,6 +13,8 @@ pytest-asyncio>=0.24.0
 earthaccess>=0.17.0,<0.18.0
 xarray>=2024.3.0
 netCDF4>=1.6.5
+# SMAP L4 and VIIRS HDF5 readers for the automatic snapshot pipeline.
+h5py>=3.10.0
 # Equal-area field polygon intersections for IMERG grid-cell coverage.
 shapely>=2.0.0
 pyproj>=3.6.0

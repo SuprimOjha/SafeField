@@ -14,12 +14,26 @@ from app.ingest.automation import (
     read_automation_status,
     run_data_refresh,
 )
+from app.ingest.products import ProductResult
 from app.ingest.scheduler import DataRefreshScheduler
+from app.ingest.shared import write_snapshot
 from app.services.imerg.fetch_daily import fetch_imerg
 from app.services.imerg.grid_cache import ImergGridCache
+from app.signals.status import read_status
 
 
 TODAY = date(2026, 11, 15)
+
+
+@pytest.fixture(autouse=True)
+def isolated_data_paths(tmp_path, monkeypatch):
+    monkeypatch.setenv("SAFEFIELD_STATUS_PATH", str(tmp_path / "status.json"))
+    monkeypatch.setenv("SAFEFIELD_INCOMING_DIR", str(tmp_path / "incoming"))
+
+
+def no_snapshot_download(settings, today, *, root=None):
+    """Test double: never contact Earthdata from the automation tests."""
+    return []
 
 
 def make_settings(tmp_path: Path, **overrides) -> Settings:
@@ -49,6 +63,50 @@ def store_day(cache: ImergGridCache, day: date, value: float = 1.0) -> None:
         f"3B-DAY-L.MS.MRG.3IMERG.{day:%Y%m%d}-S000000-E235959.V07C",
         datetime.now(timezone.utc),
     )
+
+
+def staged_smap_payload(day: date) -> dict:
+    return {
+        "product": "SPL4SMGP",
+        "version": "008",
+        "data_date": day.isoformat(),
+        "fetched_at": f"{TODAY.isoformat()}T00:00:00+00:00",
+        "resolution_km": 9.0,
+        "grid_spacing_km": 9.0,
+        "coverage_fraction": 1.0,
+        "granule_ids": [f"SPL4SMGP.008.{day:%Y%m%d}00"],
+        "cells": [
+            {
+                "latitude": 27.7,
+                "longitude": 85.3,
+                "surface_sm": 0.22,
+                "root_sm": 0.2,
+                "quality": "good",
+            }
+        ],
+    }
+
+
+def installed_lst_payload(day: date) -> dict:
+    return {
+        "product": "VNP21A1D",
+        "version": "002",
+        "data_date": day.isoformat(),
+        "fetched_at": f"{TODAY.isoformat()}T00:00:00+00:00",
+        "resolution_km": 11.1,
+        "grid_spacing_km": 11.1,
+        "granule_ids": [f"VNP21A1D.A2026{day.timetuple().tm_yday:03d}.h25v06.002.h5"],
+        "cells": [
+            {
+                "latitude": 27.7,
+                "longitude": 85.3,
+                "lst_day_c": 24.5,
+                "lst_night_c": None,
+                "qc_good": True,
+                "clear_sky": True,
+            }
+        ],
+    }
 
 
 def must_not_fetch(**kwargs):
@@ -121,10 +179,61 @@ def test_refresh_without_credentials_reports_honestly_and_fetches_nothing(tmp_pa
 
     assert report.status == "skipped_no_credentials"
     assert "backend/.env" in report.message
+    assert report.snapshots.status == "skipped_no_credentials"
     payload = read_automation_status(Path(settings.automation_status_path))
     assert payload["status"] == "skipped_no_credentials"
     assert payload["imerg"]["installed_dates"] == []
+    assert payload["snapshots"]["status"] == "skipped_no_credentials"
     assert "correct-horse-battery" not in json.dumps(payload)
+
+
+def test_snapshot_download_results_are_recorded_honestly(tmp_path):
+    settings = make_settings(tmp_path)
+    signals_root = tmp_path / "signals"
+    installed_day = TODAY - timedelta(days=1)
+    write_snapshot("lst", installed_day, installed_lst_payload(installed_day), root=signals_root)
+
+    def snapshot_fetch(settings, today, *, root=None):
+        return [
+            ProductResult(
+                source="smap",
+                status="not_available",
+                error="No completed SPL4SMGP day with all eight granules.",
+            ),
+            ProductResult(
+                source="lst",
+                status="up_to_date",
+                day=installed_day,
+                granule_ids=["VNP21A1D.A2026318.h25v06.002.h5"],
+            ),
+            ProductResult(source="vegetation", status="error", error="RuntimeError: boom"),
+        ]
+
+    report = run_data_refresh(
+        settings=settings,
+        fetch_fn=lambda days, cache: {"processed": [], "skipped_dates": []},
+        snapshot_fetch_fn=snapshot_fetch,
+        today_utc=TODAY,
+        root=signals_root,
+        imerg_raw_dir=tmp_path / "raw",
+    )
+
+    assert report.snapshots.status == "error"
+    assert report.snapshots.sources == {
+        "smap": "not_available",
+        "lst": "up_to_date",
+        "vegetation": "error",
+    }
+    assert report.status == "partial"
+    status = read_status()
+    assert status is not None
+    assert status.sources["smap"].status == "missing"
+    assert "SPL4SMGP" in (status.sources["smap"].last_error or "")
+    assert status.sources["lst"].status == "ok"
+    assert status.sources["lst"].latest_data_date == installed_day
+    assert status.sources["lst"].product == "VNP21A1D"
+    assert status.sources["lst"].granule_ids == ["VNP21A1D.A2026318.h25v06.002.h5"]
+    assert status.sources["vegetation"].status == "error"
 
 
 def test_refresh_installs_new_day_then_prunes_only_old_data(tmp_path, monkeypatch):
@@ -146,7 +255,9 @@ def test_refresh_installs_new_day_then_prunes_only_old_data(tmp_path, monkeypatc
     for day in (old_day, recent_day):
         directory = incoming_root / "smap"
         directory.mkdir(parents=True, exist_ok=True)
-        (directory / f"{day.isoformat()}.json").write_text("{}", encoding="utf-8")
+        (directory / f"{day.isoformat()}.json").write_text(
+            json.dumps(staged_smap_payload(day)), encoding="utf-8"
+        )
 
     raw_dir = tmp_path / "raw"
     raw_dir.mkdir()
@@ -182,6 +293,7 @@ def test_refresh_installs_new_day_then_prunes_only_old_data(tmp_path, monkeypatc
     report = run_data_refresh(
         settings=settings,
         fetch_fn=fake_fetch,
+        snapshot_fetch_fn=no_snapshot_download,
         today_utc=TODAY,
         root=signals_root,
         imerg_raw_dir=raw_dir,
@@ -240,6 +352,7 @@ def test_stale_lock_is_recovered(tmp_path):
     report = run_data_refresh(
         settings=settings,
         fetch_fn=lambda days, cache: {"processed": [], "skipped_dates": []},
+        snapshot_fetch_fn=no_snapshot_download,
         today_utc=TODAY,
         root=tmp_path / "signals",
         imerg_raw_dir=tmp_path / "raw",
@@ -260,6 +373,7 @@ def test_refresh_redacts_credentials_from_errors(tmp_path):
     report = run_data_refresh(
         settings=settings,
         fetch_fn=failing_fetch,
+        snapshot_fetch_fn=no_snapshot_download,
         today_utc=TODAY,
         root=tmp_path / "signals",
         imerg_raw_dir=tmp_path / "raw",

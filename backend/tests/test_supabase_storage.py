@@ -33,6 +33,16 @@ from app.storage.sync import (
 TODAY = date(2026, 11, 15)
 
 
+@pytest.fixture(autouse=True)
+def isolated_status_path(tmp_path, monkeypatch):
+    monkeypatch.setenv("SAFEFIELD_STATUS_PATH", str(tmp_path / "status.json"))
+
+
+def no_snapshot_download(settings, today, *, root=None):
+    """Test double: storage tests must not contact Earthdata."""
+    return []
+
+
 def bare_settings(tmp_path: Path, **overrides) -> Settings:
     values = {
         "cache_db_path": str(tmp_path / "cache.db"),
@@ -412,7 +422,7 @@ def test_sync_up_mirrors_signals_incoming_and_raw(tmp_path, monkeypatch):
     storage = FakeStorage()
     settings = bare_settings(tmp_path)
 
-    report = sync_up(settings, root=signals, raw_dir=raw, storage=storage)
+    report = sync_up(settings, root=signals, raw_dir=raw, storage=storage, today=TODAY)
 
     assert report.status == "ok"
     assert report.uploaded_files == 3
@@ -420,6 +430,69 @@ def test_sync_up_mirrors_signals_incoming_and_raw(tmp_path, monkeypatch):
     assert "signals/smap/2026-11-14.json" in storage.objects
     assert "incoming/smap/2026-11-14.json" in storage.objects
     assert "imerg/raw/3B-DAY-L.MS.MRG.3IMERG.20261114-S000000-E235959.V07C.nc4" in storage.objects
+
+
+def test_sync_up_uploads_only_the_live_window(tmp_path, monkeypatch):
+    signals = tmp_path / "signals"
+    incoming = tmp_path / "incoming"
+    raw = tmp_path / "raw"
+    for directory, name in (
+        (signals / "smap", "2026-11-10.json"),
+        (signals / "smap", "2026-11-14.json"),
+        (incoming / "lst", "2026-11-14.json"),
+        (raw, "3B-DAY-L.MS.MRG.3IMERG.20261101-S000000-E235959.V07C.nc4"),
+        (raw, "3B-DAY-L.MS.MRG.3IMERG.20261114-S000000-E235959.V07C.nc4"),
+    ):
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / name).write_bytes(b"data")
+    monkeypatch.setenv("SAFEFIELD_INCOMING_DIR", str(incoming))
+    storage = FakeStorage()
+    settings = bare_settings(tmp_path, supabase_recent_days=3)
+
+    report = sync_up(settings, root=signals, raw_dir=raw, storage=storage, today=TODAY)
+
+    assert report.status == "ok"
+    assert "signals/smap/2026-11-14.json" in storage.objects
+    assert "incoming/lst/2026-11-14.json" in storage.objects
+    assert "signals/smap/2026-11-10.json" not in storage.objects
+    assert (
+        "imerg/raw/3B-DAY-L.MS.MRG.3IMERG.20261114-S000000-E235959.V07C.nc4"
+        in storage.objects
+    )
+    assert (
+        "imerg/raw/3B-DAY-L.MS.MRG.3IMERG.20261101-S000000-E235959.V07C.nc4"
+        not in storage.objects
+    )
+
+
+def test_prune_remote_caps_the_bucket_to_the_live_window():
+    storage = FakeStorage(
+        {
+            "signals/smap/2026-11-01.json": 2,
+            "signals/smap/2026-11-13.json": 2,
+            "signals/smap/2026-11-14.json": 2,
+            "incoming/lst/2026-11-01.json": 2,
+            "incoming/lst/2026-11-14.json": 2,
+            "imerg/raw/3B-DAY-L.MS.MRG.3IMERG.20261101-S000000-E235959.V07C.nc4": 2,
+            "imerg/raw/3B-DAY-L.MS.MRG.3IMERG.20261114-S000000-E235959.V07C.nc4": 2,
+        }
+    )
+
+    storage_sync.prune_remote(
+        settings=None,
+        signal_cutoff=date(2026, 8, 1),
+        imerg_cutoff=date(2026, 8, 1),
+        recent_cutoff=date(2026, 11, 13),
+        storage=storage,
+    )
+
+    assert sorted(storage.deletes) == [
+        "imerg/raw/3B-DAY-L.MS.MRG.3IMERG.20261101-S000000-E235959.V07C.nc4",
+        "incoming/lst/2026-11-01.json",
+        "signals/smap/2026-11-01.json",
+    ]
+    assert "signals/smap/2026-11-14.json" in storage.objects
+    assert "signals/smap/2026-11-13.json" in storage.objects
 
 
 def test_restore_down_restores_only_missing_json(tmp_path, monkeypatch):
@@ -458,7 +531,12 @@ def test_refresh_reports_storage_upload_and_prune(tmp_path, monkeypatch):
     monkeypatch.setenv("SAFEFIELD_INCOMING_DIR", str(incoming))
     raw.mkdir()
     (raw / "3B-DAY-L.MS.MRG.3IMERG.20261001-S000000-E235959.V07C.nc4").write_bytes(b"old")
-    storage = FakeStorage({"signals/smap/2026-09-01.json": 2})
+    storage = FakeStorage(
+        {
+            "signals/smap/2026-09-01.json": 2,
+            "signals/smap/2026-11-10.json": 2,
+        }
+    )
 
     def fake_fetch(days, cache):
         return {
@@ -470,6 +548,7 @@ def test_refresh_reports_storage_upload_and_prune(tmp_path, monkeypatch):
     report = run_data_refresh(
         settings=settings,
         fetch_fn=fake_fetch,
+        snapshot_fetch_fn=no_snapshot_download,
         today_utc=TODAY,
         root=signals,
         imerg_raw_dir=raw,
@@ -479,10 +558,12 @@ def test_refresh_reports_storage_upload_and_prune(tmp_path, monkeypatch):
     )
 
     assert report.status == "ok"
+    assert report.windows["supabase_recent_days"] == 3
     assert report.storage.status == "ok"
     assert report.storage.uploaded_files == 1  # only the retained snapshot is left
-    assert report.storage.deleted_files == 1
+    assert report.storage.deleted_files == 2  # both remote snapshots are outside the 3-day window
     assert "signals/smap/2026-09-01.json" in storage.deletes
+    assert "signals/smap/2026-11-10.json" in storage.deletes
 
 
 def test_storage_failure_does_not_hide_installed_data(tmp_path):
@@ -507,6 +588,7 @@ def test_storage_failure_does_not_hide_installed_data(tmp_path):
     report = run_data_refresh(
         settings=settings,
         fetch_fn=fake_fetch,
+        snapshot_fetch_fn=no_snapshot_download,
         today_utc=TODAY,
         root=tmp_path / "signals",
         imerg_raw_dir=tmp_path / "raw",

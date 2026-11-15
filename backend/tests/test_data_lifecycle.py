@@ -53,6 +53,11 @@ def up_to_date_fetch(days, cache):
     return {"status": "up_to_date", "processed": [], "skipped_dates": []}
 
 
+def no_snapshot_download(settings, today, *, root=None):
+    """Test double: the lifecycle tests must not contact Earthdata."""
+    return []
+
+
 def test_refresh_installs_valid_staged_snapshot_and_updates_status(tmp_path, monkeypatch):
     settings = make_settings(tmp_path)
     signals = tmp_path / "signals"
@@ -69,6 +74,7 @@ def test_refresh_installs_valid_staged_snapshot_and_updates_status(tmp_path, mon
     report = run_data_refresh(
         settings=settings,
         fetch_fn=up_to_date_fetch,
+        snapshot_fetch_fn=no_snapshot_download,
         today_utc=TODAY,
         root=signals,
         imerg_raw_dir=tmp_path / "raw",
@@ -103,6 +109,7 @@ def test_refresh_skips_snapshot_day_that_is_already_installed(tmp_path, monkeypa
     report = run_data_refresh(
         settings=settings,
         fetch_fn=up_to_date_fetch,
+        snapshot_fetch_fn=no_snapshot_download,
         today_utc=TODAY,
         root=signals,
         imerg_raw_dir=tmp_path / "raw",
@@ -132,6 +139,7 @@ def test_invalid_staged_snapshot_is_reported_without_stopping_imerg(tmp_path, mo
     report = run_data_refresh(
         settings=settings,
         fetch_fn=fetched,
+        snapshot_fetch_fn=no_snapshot_download,
         today_utc=TODAY,
         root=tmp_path / "signals",
         imerg_raw_dir=tmp_path / "raw",
@@ -157,6 +165,7 @@ def test_invalid_snapshot_error_does_not_leak_the_incoming_path(tmp_path, monkey
     report = run_data_refresh(
         settings=settings,
         fetch_fn=up_to_date_fetch,
+        snapshot_fetch_fn=no_snapshot_download,
         today_utc=TODAY,
         root=tmp_path / "signals",
         imerg_raw_dir=tmp_path / "raw",
@@ -185,4 +194,6 @@ def test_data_storage_endpoint_reports_initialized_resources():
     assert body["postgres"]["status"] == "ok"
     assert body["storage"]["status"] == "error"
     assert body["storage"]["restored_files"] == 3
+    assert body["storage"]["recent_days"] >= 1
     assert body["retention_windows"]["signal_retention_days"] >= 1
+    assert body["retention_windows"]["supabase_recent_days"] >= 1

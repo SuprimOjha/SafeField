@@ -1,12 +1,17 @@
-name: Publish validated data branch
+name: Refresh and publish the long-timeline data branch
+
+# Supabase Storage only keeps the live window (SUPABASE_RECENT_DAYS, default 3).
+# This workflow is the durable archive: it refreshes NASA snapshots, keeps a
+# long local retention window, and publishes every signal day to the ``data``
+# branch so the full timeline lives in git instead of the free-tier bucket.
 
 on:
   workflow_dispatch:
     inputs:
       max_bytes:
-        description: Maximum total bytes allowed on the data branch
+        description: Maximum total working-tree bytes allowed on the data branch
         required: false
-        default: "20971520"
+        default: "524288000"
   schedule:
     - cron: "45 3 * * *"
 
@@ -20,6 +25,7 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -44,7 +50,9 @@ jobs:
             git rm -rf . >/dev/null 2>&1 || true
           fi
 
-      - name: Restore published data for validation
+      - name: Restore published data before refreshing
+        # publish_data mirrors the working tree, so restoring the branch first
+        # keeps the existing long timeline and only appends newly verified days.
         run: |
           mkdir -p backend/data/signals
           if [ -d ../data-branch/signals ]; then
@@ -54,13 +62,45 @@ jobs:
             cp ../data-branch/status.json backend/data/status.json
           fi
 
+      - name: Check Earthdata credentials
+        id: credentials
+        env:
+          EARTHDATA_TOKEN: ${{ secrets.EARTHDATA_TOKEN }}
+          EARTHDATA_USERNAME: ${{ secrets.EARTHDATA_USERNAME }}
+          EARTHDATA_PASSWORD: ${{ secrets.EARTHDATA_PASSWORD }}
+        run: |
+          if [[ -n "$EARTHDATA_TOKEN" || ( -n "$EARTHDATA_USERNAME" && -n "$EARTHDATA_PASSWORD" ) ]]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "Earthdata secrets are not configured; publishing the existing branch data only."
+          fi
+
+      - name: Refresh NASA snapshots and IMERG
+        if: steps.credentials.outputs.configured == 'true'
+        working-directory: backend
+        # A partial result (for example one product still inside its NASA
+        # latency window) is reported in the log, but verified data is still
+        # published below.
+        continue-on-error: true
+        env:
+          EARTHDATA_TOKEN: ${{ secrets.EARTHDATA_TOKEN }}
+          EARTHDATA_USERNAME: ${{ secrets.EARTHDATA_USERNAME }}
+          EARTHDATA_PASSWORD: ${{ secrets.EARTHDATA_PASSWORD }}
+          # Long timeline on the data branch; Supabase Storage is capped
+          # separately by SUPABASE_RECENT_DAYS and is not used by this job.
+          SIGNAL_RETENTION_DAYS: "180"
+          IMERG_RETENTION_DAYS: "7"
+          API_CACHE_RETENTION_DAYS: "7"
+        run: python -m app.cli refresh-data --days 7
+
       - name: Show installed data status
         working-directory: backend
         run: python -m app.cli status --json
 
       - name: Mirror snapshots and status.json
         working-directory: backend
-        run: python -m app.cli publish-data --data-dir ../data-branch --max-bytes ${{ github.event.inputs.max_bytes || '20971520' }}
+        run: python -m app.cli publish-data --data-dir ../data-branch --max-bytes ${{ github.event.inputs.max_bytes || '524288000' }}
 
       - name: Commit and push with retries
         run: |

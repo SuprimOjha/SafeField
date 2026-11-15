@@ -24,6 +24,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.cache import create_cache, create_imerg_cache
 from app.cache.sqlite_cache import SQLiteCache
 from app.config import Settings, get_settings, redact_secrets
+from app.ingest.products import PRODUCTS as PRODUCT_SPECS
+from app.ingest.products import ProductResult, refresh_snapshots
 from app.ingest.raw import RawSnapshotAdapter, incoming_dir
 from app.ingest.shared import (
     latest_snapshot_date,
@@ -74,10 +76,12 @@ class PruneSection(BaseModel):
 class SnapshotSection(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    status: Literal["ok", "skipped", "error"] = "skipped"
+    status: Literal["ok", "skipped", "skipped_no_credentials", "error"] = "skipped"
     installed_files: int = 0
     skipped_files: int = 0
+    staged_files: int = 0
     installed: dict[str, int] = Field(default_factory=dict)
+    sources: dict[str, str] = Field(default_factory=dict)
     error: str | None = None
 
 
@@ -335,12 +339,12 @@ def _scrub_paths(message: str, settings: Settings, source: str, root: Path | Non
 
 
 def _run_snapshot_ingest(settings: Settings, *, root: Path | None = None) -> SnapshotSection:
-    """Install staged raw snapshots that a verified reader has produced.
+    """Install staged raw snapshots that the product readers have produced.
 
-    Only files already present in ``data/incoming/<source>`` are considered;
-    this job never downloads or invents SMAP/LST/vegetation values. Days that
-    are already installed are skipped, so a corrected raw file still requires
-    the explicit ``ingest --force`` path instead of silently rewriting history.
+    Files in ``data/incoming/<source>`` come from ``app.ingest.products`` (or a
+    manual verified drop); this step validates and installs them. Days that are
+    already installed are skipped, so a corrected raw file still requires the
+    explicit ``ingest --force`` path instead of silently rewriting history.
     """
     section = SnapshotSection()
     staged_files = 0
@@ -411,6 +415,114 @@ def _run_snapshot_ingest(settings: Settings, *, root: Path | None = None) -> Sna
     return section
 
 
+def _run_snapshot_download(
+    settings: Settings,
+    today: date,
+    *,
+    root: Path | None,
+    fetch_fn: Callable[..., list[ProductResult]] | None,
+) -> list[ProductResult] | None:
+    """Download and stage the newest NASA day/composite for every snapshot source.
+
+    Returns ``None`` when no download was attempted because Earthdata
+    credentials are absent. Every failure is reported as a result, never as a
+    fabricated file.
+    """
+    if fetch_fn is None and not has_earthdata_credentials(settings):
+        return None
+    try:
+        if fetch_fn is not None:
+            return list(fetch_fn(settings, today, root=root))
+        return refresh_snapshots(settings, today, root=root)
+    except Exception as exc:  # one crashing download must not stop IMERG
+        message = _redact(f"{type(exc).__name__}: {exc}", settings)
+        return [
+            ProductResult(source=source, status="error", error=message)
+            for source in SNAPSHOT_SOURCES
+        ]
+
+
+def _record_snapshot_results(
+    results: list[ProductResult],
+    *,
+    root: Path | None,
+) -> None:
+    """Reflect download outcomes in status.json without inventing coverage.
+
+    ``staged`` results are recorded by ``_run_snapshot_ingest`` after the file
+    is validated and installed, so they are left alone here.
+    """
+    for result in results:
+        if result.status == "staged":
+            continue
+        spec = PRODUCT_SPECS.get(result.source)
+        if spec is None:
+            continue
+        installed = latest_snapshot_date(result.source, root)
+        if result.status == "up_to_date":
+            if installed is None:
+                continue
+            update_source_status(
+                result.source,
+                state="ok",
+                latest_data_date=installed or result.day,
+                product=spec.short_name,
+                version=spec.version,
+                granule_ids=result.granule_ids if result.day == installed else None,
+                root=root,
+            )
+        elif result.status == "error":
+            update_source_status(
+                result.source,
+                state="error",
+                last_error=result.error,
+                root=root,
+            )
+        elif result.status == "not_available" and installed is None:
+            update_source_status(
+                result.source,
+                state="missing",
+                last_error=result.error,
+                root=root,
+            )
+
+
+def _merge_snapshot_section(
+    section: SnapshotSection,
+    results: list[ProductResult] | None,
+) -> None:
+    if results is None:
+        if section.status == "error":
+            section.error = (
+                section.error
+                or "No Earthdata credentials are configured; no snapshot download "
+                "was requested."
+            )
+        elif section.installed_files:
+            section.status = "ok"
+        else:
+            section.status = "skipped_no_credentials"
+            section.error = (
+                "No Earthdata credentials are configured; no snapshot download was "
+                "requested. Set EARTHDATA_USERNAME and EARTHDATA_PASSWORD in backend/.env."
+            )
+        return
+    section.sources = {result.source: result.status for result in results}
+    section.staged_files = sum(1 for result in results if result.status == "staged")
+    failures = [
+        f"{result.source}: {result.error}"
+        for result in results
+        if result.status == "error" and result.error
+    ]
+    if section.status == "error" or failures:
+        section.status = "error"
+        issues = [section.error] if section.error else []
+        issues.extend(failures)
+        section.error = "; ".join(item for item in issues if item)[:500] or None
+    else:
+        section.status = "ok"
+
+
 def _run_storage_sync(
     settings: Settings,
     *,
@@ -418,25 +530,35 @@ def _run_storage_sync(
     raw_dir: Path | None,
     signal_cutoff: date,
     imerg_cutoff: date,
-    prune: bool,
+    recent_cutoff: date,
     storage: Any | None = None,
 ) -> StorageSection:
-    """Mirror new files to Supabase Storage and remove expired remote objects."""
+    """Mirror the recent window to Supabase Storage and delete older objects.
+
+    The remote cap is enforced on every refresh, even with ``--no-prune``,
+    because it protects a free-tier bucket rather than local retention.
+    """
     client = storage or get_storage(settings)
     section = StorageSection()
     if client is None:
         return section
     try:
-        reports = [sync_up(settings, root=root, raw_dir=raw_dir, storage=client)]
-        if prune:
-            reports.append(
-                prune_remote(
-                    settings,
-                    signal_cutoff=signal_cutoff,
-                    imerg_cutoff=imerg_cutoff,
-                    storage=client,
-                )
-            )
+        reports = [
+            sync_up(
+                settings,
+                root=root,
+                raw_dir=raw_dir,
+                recent_cutoff=recent_cutoff,
+                storage=client,
+            ),
+            prune_remote(
+                settings,
+                signal_cutoff=signal_cutoff,
+                imerg_cutoff=imerg_cutoff,
+                recent_cutoff=recent_cutoff,
+                storage=client,
+            ),
+        ]
         section.uploaded_files = sum(report.uploaded_files for report in reports)
         section.deleted_files = sum(report.deleted_files for report in reports)
         errors = [report.error for report in reports if report.status == "error"]
@@ -463,13 +585,15 @@ def run_data_refresh(
     signal_retention_days: int | None = None,
     api_cache_retention_days: int | None = None,
     prune: bool = True,
+    download_snapshots: bool = True,
     today_utc: date | None = None,
     fetch_fn: Callable[..., dict[str, Any]] | None = None,
+    snapshot_fetch_fn: Callable[..., list[ProductResult]] | None = None,
     root: Path | None = None,
     imerg_raw_dir: Path | None = None,
     storage: Any | None = None,
 ) -> AutomationStatus:
-    """Install the latest IMERG days, then prune data outside retention windows.
+    """Install the latest IMERG days and NASA snapshots, then prune old data.
 
     Safe to call from the scheduler, a CLI, or a workflow. A concurrent run is
     skipped rather than duplicated. Nothing is downloaded when credentials are
@@ -481,11 +605,13 @@ def run_data_refresh(
     imerg_keep = imerg_retention_days or settings.imerg_retention_days
     signal_keep = signal_retention_days or settings.signal_retention_days
     api_keep = api_cache_retention_days or settings.api_cache_retention_days
+    recent_days = settings.supabase_recent_days
     for label, value in (
         ("days", refresh_days),
         ("imerg_retention_days", imerg_keep),
         ("signal_retention_days", signal_keep),
         ("api_cache_retention_days", api_keep),
+        ("supabase_recent_days", recent_days),
     ):
         if value < 1:
             raise ValueError(f"{label} must be at least 1")
@@ -496,6 +622,7 @@ def run_data_refresh(
         "imerg_retention_days": imerg_keep,
         "signal_retention_days": signal_keep,
         "api_cache_retention_days": api_keep,
+        "supabase_recent_days": recent_days,
     }
     lock = RefreshLock(
         lock_path(settings),
@@ -515,7 +642,20 @@ def run_data_refresh(
     try:
         grid_cache = create_imerg_cache(settings)
         imerg_section = _run_imerg(settings, refresh_days, grid_cache, fetch_fn)
+        snapshot_results = (
+            _run_snapshot_download(
+                settings,
+                today,
+                root=root,
+                fetch_fn=snapshot_fetch_fn,
+            )
+            if download_snapshots
+            else []
+        )
         snapshot_section = _run_snapshot_ingest(settings, root=root)
+        _merge_snapshot_section(snapshot_section, snapshot_results)
+        if snapshot_results:
+            _record_snapshot_results(snapshot_results, root=root)
         prune_section = (
             _run_prune(
                 settings,
@@ -537,7 +677,7 @@ def run_data_refresh(
             raw_dir=imerg_raw_dir,
             signal_cutoff=today - timedelta(days=signal_keep),
             imerg_cutoff=today - timedelta(days=imerg_keep),
-            prune=prune,
+            recent_cutoff=today - timedelta(days=max(recent_days - 1, 0)),
             storage=storage,
         )
 
@@ -595,7 +735,14 @@ def run_data_refresh(
             )
 
         if snapshot_section.installed_files:
-            message += f" Installed {snapshot_section.installed_files} staged snapshot day(s)."
+            message += f" Installed {snapshot_section.installed_files} snapshot day(s) from staged files."
+        if snapshot_section.sources:
+            message += " Snapshot checks: " + ", ".join(
+                f"{source}={status}"
+                for source, status in sorted(snapshot_section.sources.items())
+            ) + "."
+        elif snapshot_section.status == "skipped_no_credentials":
+            message += " Snapshot download skipped: no Earthdata credentials."
 
         if storage_section.status == "error":
             message += f" Supabase Storage sync failed: {storage_section.error}"
@@ -603,8 +750,9 @@ def run_data_refresh(
             storage_section.uploaded_files or storage_section.deleted_files
         ):
             message += (
-                f" Supabase Storage: uploaded {storage_section.uploaded_files} "
-                f"file(s), removed {storage_section.deleted_files}."
+                f" Supabase Storage (last {recent_days} day(s)): uploaded "
+                f"{storage_section.uploaded_files} file(s), removed "
+                f"{storage_section.deleted_files}."
             )
 
         finished_at = datetime.now(timezone.utc)

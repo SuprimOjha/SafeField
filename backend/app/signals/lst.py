@@ -7,6 +7,7 @@ from app.signals.models import SignalName, SignalProvenance, SignalValue
 from app.signals.snapshots import (
     LstSnapshot,
     SnapshotFormatError,
+    coverage_radius_km,
     load_latest_snapshot,
     load_snapshot_on,
     nearest_cell,
@@ -57,7 +58,8 @@ class LstProvider:
         cell = nearest_cell(valid_cells, latitude, longitude)
         if cell is None:
             return _unavailable("No quality-approved clear LST cell is available for this field.")
-        if not within_coverage(cell, latitude, longitude, snapshot.resolution_km):
+        radius_km = coverage_radius_km(snapshot.resolution_km, snapshot.grid_spacing_km)
+        if not within_coverage(cell, latitude, longitude, radius_km):
             return _unavailable(
                 "The nearest installed LST cell does not cover this field. The installed "
                 "snapshot only covers a pilot area; it is not extrapolated to distant fields."
@@ -112,7 +114,10 @@ class LstProvider:
             ]
             cell = nearest_cell(valid, latitude, longitude)
             if cell is not None and not within_coverage(
-                cell, latitude, longitude, snapshot.resolution_km
+                cell,
+                latitude,
+                longitude,
+                coverage_radius_km(snapshot.resolution_km, snapshot.grid_spacing_km),
             ):
                 cell = None
             series.append((day, float(cell.lst_day_c) if cell is not None else None))
@@ -121,6 +126,16 @@ class LstProvider:
 
 def _provenance(snapshot: LstSnapshot, coverage: float) -> SignalProvenance:
     day_start = datetime.combine(snapshot.data_date, time.min, tzinfo=timezone.utc)
+    caveat = (
+        "Land surface temperature is the temperature of the surface skin as seen from "
+        "space, not air temperature at 2 m and not a measurement inside the crop canopy. "
+        "Cloudy or poor-quality pixels are discarded by the ingestion pipeline."
+    )
+    if snapshot.grid_spacing_km:
+        caveat += (
+            f" Snapshot cells are a quality-weighted mean of native pixels aggregated to "
+            f"about {snapshot.grid_spacing_km:g} km; they are not a 1 km product."
+        )
     return SignalProvenance(
         source_name="NASA Land Surface Temperature (MODIS/VIIRS daily)",
         product=snapshot.product,
@@ -138,11 +153,7 @@ def _provenance(snapshot: LstSnapshot, coverage: float) -> SignalProvenance:
         ),
         granule_ids=snapshot.granule_ids,
         coverage_fraction=round(coverage, 4),
-        caveat=(
-            "Land surface temperature is the temperature of the surface skin as seen from "
-            "space, not air temperature at 2 m and not a measurement inside the crop canopy. "
-            "Cloudy or poor-quality pixels are discarded by the ingestion pipeline."
-        ),
+        caveat=caveat,
     )
 
 
