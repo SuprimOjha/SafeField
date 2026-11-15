@@ -83,15 +83,6 @@ These labels are not fertilizer rates, application instructions, safety certific
 
 ## How it works
 
-```mermaid
-flowchart TD
-    A[Choose a field location] --> B[Load available environmental data]
-    B --> C[Check source, date, freshness and coverage]
-    C --> D[Combine rainfall, weather, soil and terrain context]
-    D --> E[Run transparent screening and trend analysis]
-    E --> F[Show result, evidence and limitations]
-    F --> G[Farmer or local adviser reviews conditions]
-```
 
 The assessment is designed to preserve data provenance. The displayed result should be interpreted alongside the data receipt, source freshness, spatial resolution and caveats for each input.
 
@@ -131,49 +122,6 @@ python -m app.cli fetch-imerg --days 7
 
 See [`backend/docs/IMERG_FETCH.md`](backend/docs/IMERG_FETCH.md) for ingestion details. Upstream authentication, data availability and the cache must be checked in the local environment.
 
-## Tests and quality checks
-
-Backend tests:
-
-```bash
-cd backend
-pytest
-```
-
-Frontend scripts available in `frontend/package.json` include:
-
-```bash
-npm run build
-npm run lint
-npm run test:i18n
-npm run test:field-survey
-npm run test:ask
-```
-
-These commands are provided for local verification. Their presence in this README does not imply that every test has passed in every environment.
-
-## Repository guide
-
-| Path | Description |
-|---|---|
-| `frontend/` | Next.js web application and user interface |
-| `backend/` | FastAPI services, data integrations, screening logic and tests |
-| `docs/` | Data provenance, safety notes, validation plan and demonstration guidance |
-| `aassets/` | Project logo and NASA Space Apps visual assets |
-
-### Selected documentation
-
-- [Data provenance and limitations](docs/DATA_PROVENANCE.md)
-- [Prototype decision-rule register](docs/RULE_REGISTER.md)
-- [Farmer handling safety](docs/FARMER_SAFETY.md)
-- [Scientific and field validation plan](docs/VALIDATION_PLAN.md)
-- [GPM IMERG integration status](docs/IMERG_INTEGRATION_STATUS.md)
-- [Research evidence status](docs/RESEARCH_EVIDENCE_STATUS.md)
-- [Mobile usability requirements](docs/MOBILE_USABILITY.md)
-- [Basemap provider notes](docs/ESRI_AND_BASEMAP_NOTES.md)
-- [Judge demonstration checklist](docs/DEMO_AND_JUDGE_CHECKLIST.md)
-
-Keep asset paths and filename capitalization exactly as shown. GitHub paths are case-sensitive.
 
 ## Limitations and responsible use
 
