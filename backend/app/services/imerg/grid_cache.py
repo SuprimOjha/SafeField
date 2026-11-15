@@ -196,13 +196,38 @@ class ImergGridCache:
                 "reason": dates.unavailable_reason,
             }
         nearest, rows = self._point_rows(latitude, longitude, dates)
-        return {
+        probe: dict[str, object] = {
             "requested": [latitude, longitude],
             "dates": [day.isoformat() for day in dates],
             "nearest_cell": None if nearest is None else [float(nearest["latitude"]), float(nearest["longitude"])],
             "matched_days": sorted(row["date_utc"] for row in rows),
             "reason": None,
         }
+        if nearest is not None:
+            cell_latitude = nearest["latitude"]
+            cell_longitude = nearest["longitude"]
+            with self._connect() as conn:
+                probe["cell_types"] = [type(cell_latitude).__name__, type(cell_longitude).__name__]
+                probe["same_latitude_rows"] = int(
+                    conn.execute(
+                        "SELECT COUNT(*) AS n FROM imerg_daily_cells WHERE latitude = ?",
+                        (cell_latitude,),
+                    ).fetchone()["n"]
+                )
+                probe["same_longitude_rows"] = int(
+                    conn.execute(
+                        "SELECT COUNT(*) AS n FROM imerg_daily_cells WHERE longitude = ?",
+                        (cell_longitude,),
+                    ).fetchone()["n"]
+                )
+                probe["same_cell_rows"] = int(
+                    conn.execute(
+                        "SELECT COUNT(*) AS n FROM imerg_daily_cells "
+                        "WHERE latitude = ? AND longitude = ?",
+                        (cell_latitude, cell_longitude),
+                    ).fetchone()["n"]
+                )
+        return probe
 
     def _get_point_rain(self, latitude: float, longitude: float, hours: int) -> RainfallObservation:
         dates = self._recent_dates(hours)
