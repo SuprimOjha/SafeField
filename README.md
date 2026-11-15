@@ -270,6 +270,20 @@ Supabase Storage is capped to the live window to stay inside the free tier. The 
 
 The archive is written by the bot with these repository secrets: `EARTHDATA_TOKEN` or `EARTHDATA_USERNAME`/`EARTHDATA_PASSWORD`. The same job also mirrors the last `SUPABASE_RECENT_DAYS` days to Supabase (when the Supabase secrets exist) so the API host can restore the latest snapshots without doing the memory-heavy download itself. The running backend reads the recent window (Supabase Storage or local disk); it does not query the `data` branch at request time, so a live deployment depends only on the last few days of snapshots. History accumulates from the first successful run; the workflow publishes the latest complete day of each product and does not backfill older days. Inspect the branch with `git fetch origin data && git ls-tree --name-only origin/data signals/smap`.
 
+### Shipped baseline snapshots
+
+Three real NASA snapshots ship in `backend/data/signals` so a fresh deployment resolves the SMAP, LST and vegetation signals without a download:
+
+| Files | Product | Valid date | Cells |
+| --- | --- | --- | --- |
+| `smap/2026-11-12.json` | SMAP L4 `SPL4SMGP` | 2026-11-12 | 4,628 |
+| `lst/2026-11-02.json` | VIIRS `VNP21A1D` daily | 2026-11-02 | 3,486 |
+| `vegetation/2026-11-08.json` | VIIRS `VNP13A1` 16-day composite, 2026-10-24 to 2026-11-08 | 2026-11-08 | 3,486 |
+
+`backend/data/signals/baselines.json` lists them, and retention pruning (`prune_snapshots`, `prune_snapshots_older_than`) never deletes a listed file, so `SIGNAL_RETENTION_DAYS` cannot remove the only copy of a shipped baseline. Everything else still expires on the normal retention windows.
+
+The snapshots are installed, but installation is not the same as being displayable. The pre-existing software gates are unchanged: LST needs at least 50% quality-approved clear cells and vegetation needs at least 80% QA-good cells, measured across the whole Nepal grid. In these baselines LST has 146 of 3,486 clear cells (4%) and vegetation has 95 of 3,486 QA-good cells (3%), so `heat_surface`, `ndvi` and `evi` report `unavailable` with that reason instead of showing a value. SMAP quality flags are different, and both soil-moisture signals resolve from the 2026-11-12 baseline. The next daily LST day or the next 16-day composite is unlikely to change the outcome during the cloudy post-monsoon season; making these three signals displayable needs a baseline with much higher clear-sky coverage (for example a dry-season composite) or a change to the gates. Neither is done here, so the app keeps reporting the honest reason.
+
 ## Tests and Quality Gates
 
 ```bash
