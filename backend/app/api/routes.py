@@ -181,12 +181,17 @@ async def assess_field(
 
 
 @router.get("/integrations/imerg/status")
-async def get_imerg_integration_status() -> dict[str, object]:
+async def get_imerg_integration_status(
+    probe_lat: float | None = None,
+    probe_lon: float | None = None,
+) -> dict[str, object]:
     """Report the local IMERG cache state; the API never downloads granules."""
+    if (probe_lat is None) != (probe_lon is None):
+        raise HTTPException(status_code=422, detail="Provide both probe_lat and probe_lon, or neither.")
     provider = ImergLateProvider()
     ready = provider.is_available
     installed_days = provider.cache.installed_dates(limit=10)
-    return {
+    payload: dict[str, object] = {
         "integration": "GPM IMERG Late daily",
         "status": "CACHE_READY" if ready else "NOT_INSTALLED",
         "used_by_field_assessment": ready,
@@ -201,6 +206,9 @@ async def get_imerg_integration_status() -> dict[str, object]:
             "Validate the local cache against rain gauges before operational use.",
         ],
     }
+    if probe_lat is not None and probe_lon is not None:
+        payload["point_probe"] = provider.cache.point_lookup_probe(probe_lat, probe_lon)
+    return payload
 
 
 @router.get("/integrations/imerg/automation")

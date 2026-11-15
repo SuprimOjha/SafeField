@@ -184,6 +184,26 @@ class ImergGridCache:
                 ORDER BY date_utc DESC""", (nearest["latitude"], nearest["longitude"], *[d.isoformat() for d in dates])).fetchall()
         return nearest, rows
 
+    def point_lookup_probe(self, latitude: float, longitude: float, hours: int = 72) -> dict[str, object]:
+        """Report how a point lookup resolves, without returning rainfall amounts."""
+        dates = self._recent_dates(hours)
+        if isinstance(dates, RainfallObservation):
+            return {
+                "requested": [latitude, longitude],
+                "dates": [],
+                "nearest_cell": None,
+                "matched_days": [],
+                "reason": dates.unavailable_reason,
+            }
+        nearest, rows = self._point_rows(latitude, longitude, dates)
+        return {
+            "requested": [latitude, longitude],
+            "dates": [day.isoformat() for day in dates],
+            "nearest_cell": None if nearest is None else [float(nearest["latitude"]), float(nearest["longitude"])],
+            "matched_days": sorted(row["date_utc"] for row in rows),
+            "reason": None,
+        }
+
     def _get_point_rain(self, latitude: float, longitude: float, hours: int) -> RainfallObservation:
         dates = self._recent_dates(hours)
         if isinstance(dates, RainfallObservation):

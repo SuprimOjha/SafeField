@@ -163,3 +163,30 @@ def test_missing_day_reason_names_the_cell_and_dates(tmp_path):
     assert days[0].isoformat() not in result.unavailable_reason
     assert days[1].isoformat() in result.unavailable_reason
     assert days[2].isoformat() in result.unavailable_reason
+
+
+def test_point_lookup_probe_reports_nearest_cell_and_matched_days(tmp_path):
+    cache = ImergGridCache(str(tmp_path / "probe.sqlite"))
+    days = _recent_days()
+    fetched_at = datetime.now(timezone.utc)
+    for day, amount in zip(days, [1.0, 2.0, 3.0]):
+        cache.store_daily_grid(
+            day, [27.5], [85.25], [[amount]], [[48]], _granule_id(day), fetched_at
+        )
+
+    probe = cache.point_lookup_probe(27.46, 85.28)
+
+    assert probe["dates"] == [day.isoformat() for day in days]
+    assert probe["nearest_cell"] == [27.5, 85.25]
+    assert probe["matched_days"] == sorted(day.isoformat() for day in days)
+    assert probe["reason"] is None
+
+
+def test_point_lookup_probe_reports_why_a_lookup_is_unavailable(tmp_path):
+    cache = ImergGridCache(str(tmp_path / "probe-empty.sqlite"))
+
+    probe = cache.point_lookup_probe(27.46, 85.28)
+
+    assert probe["nearest_cell"] is None
+    assert probe["matched_days"] == []
+    assert "daily IMERG record" in probe["reason"]
