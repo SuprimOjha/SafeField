@@ -225,21 +225,27 @@ export default function ScreenAHome({
   };
 
   useEffect(() => {
+    let restoredPoints: Array<{id:number;lat:number;lon:number;type:SurveyPointType;accuracy:number}> = [];
     try {
       const raw = window.localStorage.getItem("safefield_survey_points");
       if (raw) {
         const parsed: unknown = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          const valid = parsed.filter((point): point is {id:number;lat:number;lon:number;type:SurveyPointType;accuracy:number} =>
+          restoredPoints = parsed.filter((point): point is {id:number;lat:number;lon:number;type:SurveyPointType;accuracy:number} =>
             point && Number.isSafeInteger(point.id) && Number.isFinite(point.lat) && Number.isFinite(point.lon) &&
             Number.isFinite(point.accuracy) && ["water","wet","erosion","soil","note"].includes(point.type)
           );
-          setSurveyPoints(valid);
-          surveyPointIdRef.current = valid.reduce((max, point) => Math.max(max, point.id), 0);
         }
       }
     } catch { /* Invalid or unavailable local storage leaves survey points empty. */ }
-    setSurveyPointsLoaded(true);
+
+    // Restore after the effect turn and cancel if this component unmounts first.
+    const timer = window.setTimeout(() => {
+      surveyPointIdRef.current = restoredPoints.reduce((max, point) => Math.max(max, point.id), 0);
+      setSurveyPoints(restoredPoints);
+      setSurveyPointsLoaded(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
