@@ -134,6 +134,7 @@ export default function ScreenAHome({
   const surveyPointIdRef = useRef(0);
   const surveyTriggerRef = useRef<HTMLButtonElement>(null);
   const surveyDialogRef = useRef<HTMLElement>(null);
+  const surveyWasOpenRef = useRef(false);
   const surveyMarkersRef = useRef<MapLibreMarker[]>([]);
   const [gpsReceipt, setGpsReceipt] = useState<{used:number;rejected:number}|null>(null);
   const [walkRequesting, setWalkRequesting] = useState(false);
@@ -256,7 +257,8 @@ export default function ScreenAHome({
   }, [surveyPoints, mapReady]);
 
   useEffect(() => {
-    if (!pendingSurveyFix) { surveyTriggerRef.current?.focus(); return; }
+    if (!pendingSurveyFix) { if (surveyWasOpenRef.current) { surveyWasOpenRef.current = false; surveyTriggerRef.current?.focus(); } return; }
+    surveyWasOpenRef.current = true;
     const handleKeys = (event: KeyboardEvent) => {
       if (event.key === "Escape") { setPendingSurveyFix(null); return; }
       if (event.key !== "Tab" || !surveyDialogRef.current) return;
