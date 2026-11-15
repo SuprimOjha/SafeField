@@ -59,7 +59,7 @@ def get_storage(settings: Settings | None = None) -> SupabaseStorage | None:
         return None
     return SupabaseStorage(
         resolved.supabase_url,
-        resolved.supabase_service_role_key,
+        resolved.supabase_storage_key,
         resolved.supabase_storage_bucket,
     )
 

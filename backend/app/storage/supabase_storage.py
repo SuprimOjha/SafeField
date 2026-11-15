@@ -1,8 +1,12 @@
 """Minimal Supabase Storage client over the documented REST API.
 
 Only the operations this project needs are implemented: bucket creation,
-listing, upload, download and delete. Requests are authenticated with the
-service-role key, which is read from the environment and never logged.
+listing, upload, download and delete. Requests are authenticated with a
+secret key, which is read from the environment and never logged.
+
+Supabase's new secret keys (``sb_secret_...``) must be sent only in the
+``apikey`` header. Legacy ``service_role`` JWTs also require a Bearer token,
+so the Bearer header is added only for JWT-shaped keys.
 """
 
 from __future__ import annotations
@@ -28,15 +32,17 @@ class SupabaseStorage:
         timeout_seconds: float = 20.0,
     ) -> None:
         base = base_url.rstrip("/")
-        if not base or not service_role_key.strip():
-            raise ValueError("Supabase URL and service-role key are required for storage.")
+        key = service_role_key.strip()
+        if not base or not key:
+            raise ValueError("Supabase URL and secret key are required for storage.")
         self.bucket = bucket
         self._bucket_api = f"{base}/storage/v1/bucket"
         self._object_api = f"{base}/storage/v1/object"
-        self._headers = {
-            "apikey": service_role_key,
-            "Authorization": f"Bearer {service_role_key}",
-        }
+        self._headers = {"apikey": key}
+        if key.startswith("eyJ"):
+            # Legacy service_role JWTs also authenticate through Bearer.
+            # New sb_secret_ keys must not be sent there.
+            self._headers["Authorization"] = f"Bearer {key}"
         self._client = client or httpx.Client(timeout=timeout_seconds)
         self._owns_client = client is None
 

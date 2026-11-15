@@ -79,6 +79,22 @@ async def get_nepal_districts() -> dict[str, str]:
     }
 
 
+@router.get("/content")
+def get_farmer_content() -> dict[str, object]:
+    """Serve verified content-pack records; empty packs are reported as empty."""
+    report = validate_content()
+    return {
+        "status": report["status"],
+        "sources": report["source_records"],
+        "fertilizer_references": report["fertilizer"],
+        "home_remedies": report["remedies"],
+        "conversions": report["conversions_data"],
+        "skipped": report["skipped"],
+        "warnings": report["warnings"],
+        "error": report.get("error"),
+    }
+
+
 @router.get("/field-assessment", response_model=FieldAssessmentResponse)
 async def assess_field(
     lat: float = Query(..., ge=26.3, le=30.5, description="Latitude in Nepal"),
@@ -169,10 +185,13 @@ async def get_imerg_integration_status() -> dict[str, object]:
     """Report the local IMERG cache state; the API never downloads granules."""
     provider = ImergLateProvider()
     ready = provider.is_available
+    installed_days = provider.cache.installed_dates(limit=10)
     return {
         "integration": "GPM IMERG Late daily",
         "status": "CACHE_READY" if ready else "NOT_INSTALLED",
         "used_by_field_assessment": ready,
+        "latest_installed_date": installed_days[0].isoformat() if installed_days else None,
+        "installed_days": [day.isoformat() for day in installed_days],
         "supported_streams_in_contract": ["LATE"],
         "message": "Recent IMERG Late cells are cached and used for rainfall screening." if ready else "No fresh IMERG Late cache is installed; field assessment falls back to NASA POWER where available.",
         "next_steps": [] if ready else [

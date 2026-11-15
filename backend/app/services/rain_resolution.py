@@ -41,6 +41,11 @@ def resolve_recent_rainfall(
         if power_summary.rain_last_72h_mm is not None and len(power_records) == 3
         else ""
     )
+    imerg_context = (
+        f" IMERG cache: {observation.unavailable_reason}"
+        if observation.unavailable_reason
+        else ""
+    )
     unavailable = RainfallObservation(
         status="UNAVAILABLE",
         amount_mm=None,
@@ -49,6 +54,7 @@ def resolve_recent_rainfall(
         unavailable_reason=(
             "No usable local-scale rainfall observation is available "
             "for the selected field and requested window."
+            + imerg_context
             + (f" {reanalysis.unavailable_reason}" if reanalysis.unavailable_reason else "")
             + power_context
         ),

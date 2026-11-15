@@ -1,8 +1,10 @@
 from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import pytest
 from pydantic import ValidationError
 
+from app.services import rain_resolution
 from app.services.rainfall import RainfallObservation, RainfallProvenance
 
 
@@ -85,3 +87,36 @@ def test_negative_rainfall_amount_is_rejected():
 def test_coverage_fraction_outside_unit_interval_is_rejected():
     with pytest.raises(ValidationError):
         provenance(coverage_fraction=1.1)
+
+
+def test_unavailable_message_keeps_every_provider_reason(monkeypatch):
+    class FakeImergProvider:
+        def get_recent_rain(self, *args, **kwargs):
+            return RainfallObservation(
+                status="UNAVAILABLE",
+                window_hours=72,
+                unavailable_reason="Only 0 daily IMERG record(s) are cached; 3 consecutive days are required.",
+            )
+
+    monkeypatch.setattr(rain_resolution, "ImergLateProvider", FakeImergProvider)
+    monkeypatch.setattr(
+        rain_resolution,
+        "get_recent_rain_reanalysis",
+        lambda *args, **kwargs: RainfallObservation(
+            status="UNAVAILABLE",
+            window_hours=72,
+            unavailable_reason="Reanalysis lookup failed (HTTP 429).",
+        ),
+    )
+    power = SimpleNamespace(
+        recent_daily_records=[],
+        rain_last_72h_mm=None,
+        freshness=SimpleNamespace(spatial_resolution="~55 km grid cell"),
+    )
+
+    result, candidates = rain_resolution.resolve_recent_rainfall(26.45, 87.28, power, hours=72)
+
+    assert result.status == "UNAVAILABLE"
+    assert "Only 0 daily IMERG record(s) are cached" in result.unavailable_reason
+    assert "HTTP 429" in result.unavailable_reason
+    assert len(candidates) == 3

@@ -215,7 +215,7 @@ def main() -> int:
                 json.dumps(
                     {
                         "status": "skipped",
-                        "message": "Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in backend/.env first.",
+                        "message": "Set SUPABASE_URL and SUPABASE_SECRET_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY) in backend/.env first.",
                     },
                     indent=2,
                 )
@@ -236,7 +236,7 @@ def main() -> int:
                 json.dumps(
                     {
                         "status": "skipped",
-                        "message": "Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in backend/.env first.",
+                        "message": "Set SUPABASE_URL and SUPABASE_SECRET_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY) in backend/.env first.",
                     },
                     indent=2,
                 )

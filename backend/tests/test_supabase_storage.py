@@ -39,6 +39,7 @@ def bare_settings(tmp_path: Path, **overrides) -> Settings:
         "automation_status_path": str(tmp_path / "automation-status.json"),
         "supabase_db_url": "",
         "supabase_url": "",
+        "supabase_secret_key": "",
         "supabase_service_role_key": "",
     }
     values.update(overrides)
@@ -222,12 +223,12 @@ class FakeStorage:
         return len(paths)
 
 
-def make_storage_client(handler, bucket="safefield-data"):
+def make_storage_client(handler, bucket="safefield-data", key="service-role-secret"):
     client = httpx.Client(transport=httpx.MockTransport(handler))
-    return SupabaseStorage("https://demo.supabase.co", "service-role-secret", bucket, client=client)
+    return SupabaseStorage("https://demo.supabase.co", key, bucket, client=client)
 
 
-def test_storage_upload_uses_upsert_and_never_leaks_key():
+def test_storage_upload_uses_upsert_and_apikey():
     seen = []
 
     def handler(request):
@@ -241,7 +242,63 @@ def test_storage_upload_uses_upsert_and_never_leaks_key():
     assert request.method == "POST"
     assert str(request.url).endswith("/storage/v1/object/safefield-data/signals/smap/2026-11-14.json")
     assert request.headers["x-upsert"] == "true"
-    assert request.headers["authorization"] == "Bearer service-role-secret"
+    assert request.headers["apikey"] == "service-role-secret"
+    # Only legacy JWT keys authenticate through Bearer.
+    assert request.headers.get("authorization") is None
+
+
+def test_storage_new_secret_key_is_sent_only_as_apikey():
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        return httpx.Response(200, json={"Key": "bucket/file"})
+
+    storage = make_storage_client(handler, key="sb_secret_example_not_a_jwt")
+    storage.upload_bytes("status.json", b"{}", "application/json")
+
+    request = seen[0]
+    assert request.headers["apikey"] == "sb_secret_example_not_a_jwt"
+    assert request.headers.get("authorization") is None
+
+
+def test_storage_legacy_jwt_key_also_uses_bearer():
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        return httpx.Response(200, json={"Key": "bucket/file"})
+
+    legacy = "eyJhbGciOiJIUzI1NiJ9.payload.signature"
+    storage = make_storage_client(handler, key=legacy)
+    storage.upload_bytes("status.json", b"{}", "application/json")
+
+    request = seen[0]
+    assert request.headers["apikey"] == legacy
+    assert request.headers["authorization"] == f"Bearer {legacy}"
+
+
+def test_settings_prefer_new_secret_key_and_fall_back_to_legacy(tmp_path):
+    both = bare_settings(
+        tmp_path,
+        supabase_url="https://demo.supabase.co",
+        supabase_secret_key="sb_secret_new",
+        supabase_service_role_key="eyJlegacy",
+    )
+    assert both.supabase_storage_key == "sb_secret_new"
+    assert both.supabase_storage_enabled is True
+
+    legacy_only = bare_settings(
+        tmp_path,
+        supabase_url="https://demo.supabase.co",
+        supabase_service_role_key="eyJlegacy",
+    )
+    assert legacy_only.supabase_storage_key == "eyJlegacy"
+    assert legacy_only.supabase_storage_enabled is True
+
+    neither = bare_settings(tmp_path, supabase_url="https://demo.supabase.co")
+    assert neither.supabase_storage_key == ""
+    assert neither.supabase_storage_enabled is False
 
 
 def test_storage_list_paginates_and_downloads():

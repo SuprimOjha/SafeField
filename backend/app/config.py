@@ -27,11 +27,14 @@ class Settings(BaseSettings):
 
     # Optional Supabase storage. When SUPABASE_DB_URL is set, cached API
     # responses and IMERG grid cells live in Supabase Postgres instead of the
-    # local SQLite file. When SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are
-    # set, snapshot and raw data files are mirrored to Supabase Storage.
+    # local SQLite file. When SUPABASE_URL and a secret key are set, snapshot
+    # and raw data files are mirrored to Supabase Storage.
     # Without these variables the app runs exactly as before on local disk.
     supabase_db_url: str = ""
     supabase_url: str = ""
+    # New Supabase secret keys (sb_secret_...) are preferred. The legacy
+    # service_role JWT remains supported for existing deployments.
+    supabase_secret_key: str = ""
     supabase_service_role_key: str = ""
     supabase_storage_bucket: str = "safefield-data"
     supabase_restore_on_startup: bool = True
@@ -67,8 +70,12 @@ class Settings(BaseSettings):
         return bool(self.supabase_db_url.strip())
 
     @property
+    def supabase_storage_key(self) -> str:
+        return (self.supabase_secret_key or self.supabase_service_role_key).strip()
+
+    @property
     def supabase_storage_enabled(self) -> bool:
-        return bool(self.supabase_url.strip() and self.supabase_service_role_key.strip())
+        return bool(self.supabase_url.strip() and self.supabase_storage_key)
 
     @property
     def cors_origin_list(self) -> list[str]:
@@ -94,6 +101,7 @@ def redact_secrets(message: str, settings: Settings) -> str:
         settings.earthdata_token,
         settings.earthdata_username,
         settings.earthdata_password,
+        settings.supabase_secret_key,
         settings.supabase_service_role_key,
     ]
     if settings.supabase_db_url:

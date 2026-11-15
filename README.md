@@ -139,7 +139,7 @@ npm install
 npm run dev
 ```
 
-The frontend expects the API at `NEXT_PUBLIC_API_BASE_URL` (default `http://127.0.0.1:8000`).
+The frontend calls the FastAPI backend at `NEXT_PUBLIC_API_BASE_URL`. When it is unset, the app uses the same-origin Next.js route; `frontend/.env.example` shows `http://127.0.0.1:8000` for local development, and `netlify.toml` points the hosted build at the Render backend.
 
 ## Automatic Data Refresh and Retention
 
@@ -199,12 +199,12 @@ SQLite and the local `backend/data/` directories remain the default and work wit
 | Data | Where it goes | Notes |
 |---|---|---|
 | Cached live API responses, IMERG grid cells | Supabase Postgres, private `safefield` schema | Tables are created automatically; `SUPABASE_DB_URL` |
-| Satellite snapshots, staged provider JSON, raw IMERG granules, `status.json` | Supabase Storage bucket (`safefield-data`) | Private bucket, created on first run; `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` |
+| Satellite snapshots, staged provider JSON, raw IMERG granules, `status.json` | Supabase Storage bucket (`safefield-data`) | Private bucket, created on first run; `SUPABASE_URL` + `SUPABASE_SECRET_KEY` |
 
 Setup:
 
 1. In Supabase, open **Project Settings → Database** and copy the Postgres connection string into `SUPABASE_DB_URL` (append `?sslmode=require` if it is not already present).
-2. Copy the project URL into `SUPABASE_URL` and the **service-role** key into `SUPABASE_SERVICE_ROLE_KEY`. The service-role key is server-side only: it must never be exposed to the frontend, logged, or committed.
+2. Copy the project URL into `SUPABASE_URL` and the **secret** key into `SUPABASE_SECRET_KEY` (Project Settings → API Keys → secret key, `sb_secret_...`). The legacy `service_role` JWT still works through `SUPABASE_SERVICE_ROLE_KEY`, but Supabase is deprecating it. Either key is server-side only: it must never be exposed to the frontend, logged, or committed.
 3. Keep `SUPABASE_STORAGE_BUCKET=safefield-data` or choose another name.
 4. Restart the backend.
 
@@ -228,7 +228,7 @@ python -m app.cli storage-sync --force     # re-upload even when sizes match
 python -m app.cli storage-restore          # restore missing snapshots/staged JSON/status.json
 ```
 
-For GitHub Actions, add `SUPABASE_DB_URL`, `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` as repository secrets; the workflow passes them through when they exist.
+For GitHub Actions, add `SUPABASE_DB_URL`, `SUPABASE_URL` and `SUPABASE_SECRET_KEY` as repository secrets; the workflow passes them through when they exist.
 
 ## Tests and Quality Gates
 
@@ -251,7 +251,7 @@ The content validator (`python -m app.cli validate-content`) checks the source a
 
 ## Deployment
 
-- **Netlify (current):** https://safefieldnp.netlify.app serves the current dashboard build.
+- **Netlify (current):** https://safefieldnp.netlify.app serves the current dashboard build. `netlify.toml` builds it against the Render API (`NEXT_PUBLIC_API_BASE_URL`); changing that value requires a redeploy because Next.js inlines it at build time.
 - **Vercel:** the `safefieldnp.vercel.app` project currently serves an earlier build. Its Git connection and production branch need to be corrected in the Vercel dashboard before it will reflect this repository.
 
 The frontend can be built with `npm run build` and served by any Node host. The backend works with no cloud account on a host with a persistent disk for the SQLite cache and IMERG files. With the optional Supabase settings above, cached data and data files live in Supabase instead, so an ephemeral disk is enough.
@@ -264,7 +264,7 @@ The frontend can be built with `npm run build` and served by any Node host. The 
 |---|---|
 | `EARTHDATA_USERNAME`, `EARTHDATA_PASSWORD` | NASA Earthdata Login used by the automatic IMERG refresh (mark as secret) |
 | `SUPABASE_DB_URL` | Supabase Postgres connection string for the API cache and IMERG cells (mark as secret) |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Supabase Storage URL and service-role key (mark the key as secret) |
+| `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | Supabase Storage URL and secret key (mark the key as secret). The legacy `SUPABASE_SERVICE_ROLE_KEY` is also accepted. |
 | `SUPABASE_STORAGE_BUCKET` | Bucket name, default `safefield-data` |
 | `DATA_REFRESH_ENABLED` | `true` to run the in-process scheduler |
 | `IMERG_RETENTION_DAYS`, `API_CACHE_RETENTION_DAYS`, `SIGNAL_RETENTION_DAYS` | How long data is kept before automatic deletion |
