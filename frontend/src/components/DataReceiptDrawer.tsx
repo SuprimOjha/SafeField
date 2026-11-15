@@ -14,21 +14,21 @@ function MetadataRow({ label, value }: { label: string; value: string | number |
   </div>;
 }
 
-function SourceReceipt({ title, source }: { title: string; source: FreshnessBadgeData }) {
+function SourceReceipt({ title, source, t }: { title: string; source: FreshnessBadgeData; t: ReturnType<typeof getDict> }) {
   return <section className="rounded-xl border border-divider bg-white p-4">
     <h3 className="mb-2 text-base font-bold text-forest">{title}</h3>
     <dl>
-      <MetadataRow label="Dataset" value={source.dataset_name} />
-      <MetadataRow label="Source" value={source.source_org} />
-      <MetadataRow label="NASA" value={source.is_nasa ? "Yes" : "No"} />
-      <MetadataRow label="Status" value={source.status} />
-      <MetadataRow label="Latest date" value={source.latest_observation_date} />
-      <MetadataRow label="Fetched (UTC)" value={source.fetched_at_utc} />
-      <MetadataRow label="Typical latency" value={source.typical_latency} />
-      <MetadataRow label="Resolution" value={source.spatial_resolution} />
-      <MetadataRow label="Limitations" value={source.caveat} />
+      <MetadataRow label={t.receiptDataset} value={source.dataset_name} />
+      <MetadataRow label={t.receiptSource} value={source.source_org} />
+      <MetadataRow label={t.receiptNasa} value={source.is_nasa ? "Yes" : "No"} />
+      <MetadataRow label={t.receiptStatus} value={source.status} />
+      <MetadataRow label={t.receiptLatestDate} value={source.latest_observation_date} />
+      <MetadataRow label={t.receiptFetched} value={source.fetched_at_utc} />
+      <MetadataRow label={t.receiptLatency} value={source.typical_latency} />
+      <MetadataRow label={t.receiptResolution} value={source.spatial_resolution} />
+      <MetadataRow label={t.receiptLimitations} value={source.caveat} />
     </dl>
-    {source.docs_url ? <a href={source.docs_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex min-h-12 items-center font-semibold text-info underline underline-offset-4">Source documentation</a> : null}
+    {source.docs_url ? <a href={source.docs_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex min-h-12 items-center font-semibold text-info underline underline-offset-4">{t.receiptDocumentation}</a> : null}
   </section>;
 }
 
@@ -56,24 +56,24 @@ export default function DataReceiptDrawer({ data, lang }: DataReceiptDrawerProps
           {rainfall.provenance ? <section className="rounded-xl border border-divider bg-white p-4">
             <h3 className="mb-2 text-base font-bold text-forest">{t.rainfallReceipt}</h3>
             <dl>
-              <MetadataRow label="Source" value={rainfall.provenance.source_name} />
-              <MetadataRow label="Dataset / product" value={rainfall.provenance.dataset} />
-              <MetadataRow label="Version" value={rainfall.provenance.version} />
-              <MetadataRow label="Kind" value={rainfall.provenance.kind} />
-              <MetadataRow label="Valid from (UTC)" value={rainfall.provenance.observed_start_utc} />
-              <MetadataRow label="Valid to (UTC)" value={rainfall.provenance.observed_end_utc} />
-              <MetadataRow label="Fetched (UTC)" value={rainfall.provenance.fetched_at_utc} />
-              <MetadataRow label="Resolution" value={rainfall.provenance.spatial_resolution} />
-              <MetadataRow label="Latency" value={rainfall.provenance.latency_note} />
-              <MetadataRow label="Coverage" value={rainfall.provenance.coverage_fraction} />
-              <MetadataRow label="Units" value={rainfall.provenance.units} />
-              <MetadataRow label="Spatial method" value={rainfall.provenance.spatial_method} />
+              <MetadataRow label={t.receiptSource} value={rainfall.provenance.source_name} />
+              <MetadataRow label={t.receiptDataset} value={rainfall.provenance.dataset} />
+              <MetadataRow label={t.receiptVersion} value={rainfall.provenance.version} />
+              <MetadataRow label={t.receiptKind} value={rainfall.provenance.kind} />
+              <MetadataRow label={t.receiptValidFrom} value={rainfall.provenance.observed_start_utc} />
+              <MetadataRow label={t.receiptValidTo} value={rainfall.provenance.observed_end_utc} />
+              <MetadataRow label={t.receiptFetched} value={rainfall.provenance.fetched_at_utc} />
+              <MetadataRow label={t.receiptResolution} value={rainfall.provenance.spatial_resolution} />
+              <MetadataRow label={t.receiptLatency} value={rainfall.provenance.latency_note} />
+              <MetadataRow label={t.receiptCoverage} value={rainfall.provenance.coverage_fraction} />
+              <MetadataRow label={t.receiptUnits} value={rainfall.provenance.units} />
+              <MetadataRow label={t.receiptSpatialMethod} value={rainfall.provenance.spatial_method} />
             </dl>
           </section> : <p className="rounded-xl border border-amber bg-amber-soft p-4 text-base text-amber-ink">{t.rainfallReceiptUnavailable}</p>}
-          <SourceReceipt title={t.powerReceipt} source={data.power_summary.freshness} />
-          <SourceReceipt title={t.elevationReceipt} source={data.elevation.freshness} />
-          <SourceReceipt title={t.soilReceipt} source={data.soil_texture.freshness} />
-          <SourceReceipt title={t.forecastReceipt} source={data.forecast.freshness} />
+          <SourceReceipt title={t.powerReceipt} source={data.power_summary.freshness} t={t} />
+          <SourceReceipt title={t.elevationReceipt} source={data.elevation.freshness} t={t} />
+          <SourceReceipt title={t.soilReceipt} source={data.soil_texture.freshness} t={t} />
+          <SourceReceipt title={t.forecastReceipt} source={data.forecast.freshness} t={t} />
         </div>
       </section>
     </div>}
