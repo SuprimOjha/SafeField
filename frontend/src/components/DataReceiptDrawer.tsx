@@ -19,6 +19,8 @@ function SourceReceipt({ title, source, t }: { title: string; source: FreshnessB
     <h3 className="mb-2 text-base font-bold text-forest">{title}</h3>
     <dl>
       <MetadataRow label={t.receiptDataset} value={source.dataset_name} />
+      <MetadataRow label={t.receiptVersion} value={t.receiptNotExposed} />
+      <MetadataRow label={t.receiptKind} value={t.receiptNotExposed} />
       <MetadataRow label={t.receiptSource} value={source.source_org} />
       <MetadataRow label={t.receiptNasa} value={source.is_nasa ? t.receiptYes : t.receiptNo} />
       <MetadataRow label={t.receiptStatus} value={source.status} />
