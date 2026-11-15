@@ -6,63 +6,48 @@
  * accents, warm cream canvases, clean white panels, restrained amber alerts.
  */
 @theme {
-  /* Brand palette */
-  --color-forest: #174b35;
+  /* Safe Field Nepal farmer-first palette. Legacy aliases remain available
+     so existing screens keep their established visual semantics. */
+  --color-forest: #1f5a3a;
+  --color-primary: #1f5a3a;
   --color-leaf: #2f8f4e;
   --color-growth: #55b95f;
   --color-lime: #a8d96c;
   --color-mint: #e8f4e8;
-
-  /* Action greens */
-  --color-action: #2fae62;
-  --color-action-pressed: #238a4c;
-  --color-action-soft: #ddf3e3;
-
-  /* Earth accents (soil-related labels only) */
-  --color-earth: #76563c;
-  --color-soil: #4d392c;
-
-  /* Canvases and surfaces */
-  --color-cream: #f5eedf;
-  --color-warm: #f8f6ef;
-  --color-canvas: #f7f8f5;
-  --color-soft: #f1f4ee;
+  --color-action: #1f5a3a;
+  --color-action-pressed: #17452d;
+  --color-action-soft: #e5efe8;
+  --color-water: #2b6fb3;
+  --color-earth: #8a6a4a;
+  --color-soil: #76563c;
+  --color-cream: #f3f6f2;
+  --color-warm: #f3f6f2;
+  --color-canvas: #f3f6f2;
+  --color-soft: #edf2ed;
   --color-map-dark: #173d2c;
   --color-charcoal: #171a18;
-
-  /* Ink scale */
   --color-ink: #202923;
-  --color-ink-soft: #657168;
-  --color-ink-muted: #89938b;
-
-  /* Lines */
-  --color-divider: #e4e9e2;
-  --color-line: #dce4da;
-
-  /* Semantic colors */
-  --color-amber: #f2b93b;
-  --color-amber-soft: #fff2c9;
-  --color-amber-ink: #805b12;
-  --color-danger: #d94b43;
-  --color-danger-soft: #fce8e6;
-  --color-info: #4d91c6;
-  --color-info-soft: #e7f1f8;
-  --color-success: #299b58;
-  --color-warning: #d99a24;
-
-  /* Radii */
+  --color-ink-soft: #56635a;
+  --color-ink-muted: #56635a;
+  --color-divider: #dfe5df;
+  --color-line: #dfe5df;
+  --color-amber: #b7791f;
+  --color-amber-soft: #fff4df;
+  --color-amber-ink: #70470d;
+  --color-danger: #b3261e;
+  --color-danger-soft: #fcebea;
+  --color-info: #2b6fb3;
+  --color-info-soft: #e8f1fa;
+  --color-success: #1f5a3a;
+  --color-warning: #b7791f;
   --radius-xs: 6px;
   --radius-sm: 9px;
-  --radius-md: 13px;
-  --radius-lg: 18px;
-  --radius-xl: 24px;
-  --radius-panel: 26px;
-
-  /* Elevation */
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-panel: 16px;
   --shadow-float: 0 4px 18px rgba(24, 44, 30, 0.1);
   --shadow-sheet: 0 8px 28px rgba(24, 44, 30, 0.12);
-
-  /* Type: Inter for Latin, Noto Sans Devanagari for Nepali glyphs */
   --font-sans: var(--font-inter), var(--font-noto-devanagari), system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
@@ -78,11 +63,22 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Minimum touch target per the design system (44px) */
+/* Farmer-first touch target: controls remain easy to use with gloves. */
 button,
 select,
-input {
-  min-height: 44px;
+input,
+textarea {
+  min-height: 48px;
+}
+
+body {
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.secondary-text,
+small {
+  font-size: max(16px, 1em);
 }
 
 :focus-visible {
