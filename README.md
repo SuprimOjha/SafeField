@@ -109,19 +109,6 @@ The project does not claim these datasets are integrated into the current assess
 | IMERG ingestion and geospatial processing | earthaccess, xarray, netCDF4, Shapely, pyproj, SQLite cache |
 | External data services | NASA POWER, NASA GPM IMERG, Open-Meteo, ISRIC SoilGrids, Open-Elevation |
 
-### 4. Optional: install GPM IMERG Late rainfall data
-
-The field-assessment API reads the local IMERG cache; it does not download satellite granules during a farmer request. To populate the cache, configure a root `.env` file using `.env.example` and your own NASA Earthdata Login credentials. Never commit `.env` or credentials.
-
-From the `backend` directory:
-
-```bash
-python -m pip install -r requirements.txt
-python -m app.cli fetch-imerg --days 7
-```
-
-See [`backend/docs/IMERG_FETCH.md`](backend/docs/IMERG_FETCH.md) for ingestion details. Upstream authentication, data availability and the cache must be checked in the local environment.
-
 
 ## Limitations and responsible use
 
