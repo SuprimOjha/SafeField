@@ -117,6 +117,18 @@ class ImergGridCache:
             rows = conn.execute(query, params).fetchall()
         return [date.fromisoformat(row["date_utc"]) for row in rows]
 
+    def cell_counts_by_day(self, limit: int = 10) -> dict[str, int]:
+        """Installed cell rows per observation day, newest first."""
+        if limit < 1:
+            return {}
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT date_utc, COUNT(*) AS cells FROM imerg_daily_cells "
+                "GROUP BY date_utc ORDER BY date_utc DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+        return {row["date_utc"]: int(row["cells"]) for row in rows}
+
     def has_day(self, day: date) -> bool:
         with self._connect() as conn:
             row = conn.execute(
@@ -180,8 +192,17 @@ class ImergGridCache:
         if nearest is None:
             return RainfallObservation(status="UNAVAILABLE", window_hours=hours, unavailable_reason="No IMERG grid cells have been installed. Run the fetch-imerg command.")
         by_date = {row["date_utc"]: row for row in rows}
-        if any(day.isoformat() not in by_date for day in dates):
-            return RainfallObservation(status="UNAVAILABLE", window_hours=hours, unavailable_reason="The nearest IMERG grid cell is missing one or more daily values.")
+        missing_dates = [day.isoformat() for day in dates if day.isoformat() not in by_date]
+        if missing_dates:
+            cell = f"({float(nearest['latitude']):.2f}, {float(nearest['longitude']):.2f})"
+            return RainfallObservation(
+                status="UNAVAILABLE",
+                window_hours=hours,
+                unavailable_reason=(
+                    f"The nearest IMERG grid cell {cell} is missing daily values for "
+                    f"{', '.join(missing_dates)}; no partial-window total is reported."
+                ),
+            )
         selected = [by_date[day.isoformat()] for day in dates]
         if any(int(row["valid_samples"]) < MIN_VALID_DAILY_SAMPLES for row in selected):
             return RainfallObservation(status="UNAVAILABLE", window_hours=hours, unavailable_reason="A point grid cell has fewer than 39 valid half-hour samples in at least one daily granule; no low-coverage daily total is used.")

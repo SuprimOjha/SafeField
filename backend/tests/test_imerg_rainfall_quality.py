@@ -132,3 +132,34 @@ def test_mixed_imerg_product_versions_are_not_combined(tmp_path):
     assert result.status == "UNAVAILABLE"
     assert result.amount_mm is None
     assert "mixed product versions" in (result.unavailable_reason or "")
+
+
+def test_cell_counts_by_day_reports_each_installed_day(tmp_path):
+    cache = ImergGridCache(str(tmp_path / "cell-counts.sqlite"))
+    days = _recent_days()
+    _store_days(cache, days, [1.0, 2.0, 3.0])
+
+    assert cache.cell_counts_by_day() == {day.isoformat(): 1 for day in days}
+
+
+def test_missing_day_reason_names_the_cell_and_dates(tmp_path):
+    cache = ImergGridCache(str(tmp_path / "missing-days.sqlite"))
+    days = _recent_days()
+    fetched_at = datetime.now(timezone.utc)
+    cache.store_daily_grid(
+        days[0], [27.0], [85.0], [[1.0]], [[48]], _granule_id(days[0]), fetched_at
+    )
+    cache.store_daily_grid(
+        days[1], [27.1], [85.0], [[2.0]], [[48]], _granule_id(days[1]), fetched_at
+    )
+    cache.store_daily_grid(
+        days[2], [27.1], [85.0], [[3.0]], [[48]], _granule_id(days[2]), fetched_at
+    )
+
+    result = cache.get_recent_rain(27.0, 85.0, 72)
+
+    assert result.status == "UNAVAILABLE"
+    assert "(27.00, 85.00)" in result.unavailable_reason
+    assert days[0].isoformat() not in result.unavailable_reason
+    assert days[1].isoformat() in result.unavailable_reason
+    assert days[2].isoformat() in result.unavailable_reason

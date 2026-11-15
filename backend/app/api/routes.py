@@ -192,6 +192,7 @@ async def get_imerg_integration_status() -> dict[str, object]:
         "used_by_field_assessment": ready,
         "latest_installed_date": installed_days[0].isoformat() if installed_days else None,
         "installed_days": [day.isoformat() for day in installed_days],
+        "installed_cells_by_day": provider.cache.cell_counts_by_day(limit=10),
         "supported_streams_in_contract": ["LATE"],
         "message": "Recent IMERG Late cells are cached and used for rainfall screening." if ready else "No fresh IMERG Late cache is installed; field assessment falls back to NASA POWER where available.",
         "next_steps": [] if ready else [
