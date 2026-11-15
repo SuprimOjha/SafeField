@@ -325,7 +325,7 @@ export default function SafeFieldNepalApp() {
     } finally {
       if (requestId === requestSequence.current) setLoading(false);
     }
-  }, [selectedLat, selectedLon, fertilizerType, cropStage, sandPercentOverride, selectedFieldPolygon, assessmentData, startTransition, updateSession]);
+  }, [selectedLat, selectedLon, fertilizerType, cropStage, sandPercentOverride, assessmentData, startTransition, updateSession]);
 
   const handleRunAssessment = useCallback(() => {
     void refreshAssessment();
