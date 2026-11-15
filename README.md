@@ -1,8 +1,6 @@
 <p align="center">
-  <img src="aassets/SFD.png" alt="Safe Field Nepal logo" width="180" />
+  <img src="aassets/SFD.png" alt="Safe Field Nepal logo" width="500" />
 </p>
-
-<h1 align="center">Safe Field Nepal</h1>
 
 <p align="center">
   A Nepal-focused agricultural research prototype built for the
@@ -15,9 +13,6 @@
   <img alt="Interface languages" src="https://img.shields.io/badge/languages-English%20%7C%20Nepali-168B5B?style=flat-square" />
 </p>
 
-> - **Live prototype:** https://safefieldnp.netlify.app
-> - **Canva presentation:** https://canva.link/oef8hx002ollo33
-
 ---
 
 ## Overview
@@ -26,7 +21,10 @@
 
 The project is designed around Nepal's agricultural context. A farmer can select a location using the map, GPS or a district workflow, review the available field conditions, and see a transparent screening result rather than an unexplained recommendation.
 
-The interface supports **English and Nepali**.
+> - **Live prototype:** https://safefieldnp.netlify.app
+> - **Canva presentation:** https://canva.link/oef8hx002ollo33
+
+The interface supports **English and Nepali language**.
 
 ## Challenge context
 
@@ -107,15 +105,6 @@ The assessment is designed to preserve data provenance. The displayed result sho
 | [ISRIC SoilGrids](https://soilgrids.org/) | Predicted soil texture fractions | 250 m prediction for 0–5 cm topsoil; not a plot-level soil test. |
 | [Open-Meteo Elevation API](https://open-meteo.com/en/docs/elevation-api) (Copernicus DEM GLO-90; primary) and [Open-Elevation](https://open-elevation.com/) (fallback) | Elevation and slope context | Slope is estimated from a local 3×3 elevation stencil. The Open-Elevation fallback's DEM lineage and resolution are not independently verified. |
 | [OpenFreeMap](https://openfreemap.org/) and [Esri World Imagery](https://www.esri.com/) | Map display and optional imagery layer | Map providers have their own attribution, availability and usage terms. Imagery availability does not guarantee field-level detail. |
-
-**Data transparency:** The live assessment's data receipt is the best place to confirm which rainfall source supplied a particular result. The backend currently prefers a fresh IMERG cache and then tries Open-Meteo past-days reanalysis; NASA POWER rainfall remains regional context if a local-scale rainfall value is unavailable. Some older repository notes describe the fallback differently and should be kept synchronized with `backend/app/api/routes.py`.
-
-### Data not currently connected to the field-assessment endpoint
-
-- GPM IMERG Final
-- SMAP soil-moisture observations
-- NASADEM
-
 The project does not claim these datasets are integrated into the current assessment.
 
 ## Technology stack
@@ -128,45 +117,6 @@ The project does not claim these datasets are integrated into the current assess
 | Scientific analysis | NumPy, SciPy, pymannkendall, statsmodels |
 | IMERG ingestion and geospatial processing | earthaccess, xarray, netCDF4, Shapely, pyproj, SQLite cache |
 | External data services | NASA POWER, NASA GPM IMERG, Open-Meteo, ISRIC SoilGrids, Open-Elevation |
-
-## Run locally
-
-### Prerequisites
-
-- Python 3.11 or later
-- Node.js and npm
-- Git
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/SuprimOjha/safefield-nepal-spaceapps-2026.git
-cd safefield-nepal-spaceapps-2026
-```
-
-### 2. Start the backend
-
-On Windows PowerShell:
-
-```powershell
-cd backend
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-```
-
-### 3. Start the frontend
-
-Open a second terminal from the repository root:
-
-```powershell
-cd frontend
-npm install
-npm run dev
-```
-
-Open **http://localhost:3000** in your browser. Set `NEXT_PUBLIC_API_BASE_URL` when the backend is not available at the frontend's default local API address.
 
 ### 4. Optional: install GPM IMERG Late rainfall data
 
@@ -223,14 +173,6 @@ These commands are provided for local verification. Their presence in this READM
 - [Basemap provider notes](docs/ESRI_AND_BASEMAP_NOTES.md)
 - [Judge demonstration checklist](docs/DEMO_AND_JUDGE_CHECKLIST.md)
 
-## Brand assets
-
-| Asset | File | Intended use |
-|---|---|---|
-| Primary project logo | `aassets/SFL.png` | Main Safe Field Nepal logo displayed at the top of this README |
-| Transparent logo artwork | `aassets/SFT.png` | Alternate logo artwork for suitable backgrounds |
-| NASA Space Apps Challenge artwork | `aassets/image.png` | Event identity / presentation material |
-
 Keep asset paths and filename capitalization exactly as shown. GitHub paths are case-sensitive.
 
 ## Limitations and responsible use
@@ -257,7 +199,6 @@ Safe Field Nepal is an independent team project. It is **not affiliated with, pr
 
 ---
 
-<p align="center">
-  <strong>From Earth data to clearer field context.</strong><br />
-  Safe Field Nepal · NASA Space Apps Challenge 2026
+  <p align="center">
+  <img src="aassets/image.png" alt="Safe Field Nepal logo" width="500" />
 </p>
