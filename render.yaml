@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: safefield-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: APP_ENV
+        value: production
+      - key: DATA_REFRESH_ENABLED
+        value: "true"
+      - key: DATA_REFRESH_STARTUP_DELAY_SECONDS
+        value: "60"
+      - key: DATA_REFRESH_INTERVAL_HOURS
+        value: "6"
+      - key: IMERG_REFRESH_DAYS
+        value: "3"
+      - key: IMERG_RETENTION_DAYS
+        value: "30"
+      - key: API_CACHE_RETENTION_DAYS
+        value: "30"
+      - key: SIGNAL_RETENTION_DAYS
+        value: "120"
+      - key: SUPABASE_STORAGE_BUCKET
+        value: safefield-data
+      - key: SUPABASE_RESTORE_ON_STARTUP
+        value: "true"
+      # Secrets are entered in the Render dashboard and never stored here.
+      - key: EARTHDATA_USERNAME
+        sync: false
+      - key: EARTHDATA_PASSWORD
+        sync: false
+      - key: SUPABASE_DB_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false

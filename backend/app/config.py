@@ -1,5 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import urlsplit
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -84,3 +86,26 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def redact_secrets(message: str, settings: Settings) -> str:
+    """Remove credentials from an error message before it is logged or stored."""
+    secrets = [
+        settings.earthdata_token,
+        settings.earthdata_username,
+        settings.earthdata_password,
+        settings.supabase_service_role_key,
+    ]
+    if settings.supabase_db_url:
+        secrets.append(settings.supabase_db_url)
+        try:
+            password = urlsplit(settings.supabase_db_url).password
+        except ValueError:
+            password = None
+        if password:
+            secrets.append(password)
+    redacted = message
+    for secret in secrets:
+        if secret and len(secret) >= 3:
+            redacted = redacted.replace(secret, "[redacted]")
+    return redacted

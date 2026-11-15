@@ -19,20 +19,29 @@ async def lifespan(app: FastAPI):
     scheduler = None
     task = None
     running_tests = bool(os.environ.get("PYTEST_CURRENT_TEST")) or settings.app_env == "test"
-    if settings.supabase_storage_enabled and settings.supabase_restore_on_startup:
-        from app.storage.sync import restore_from_storage
+    if settings.postgres_cache_enabled or settings.supabase_storage_enabled:
+        from app.storage.bootstrap import initialize_data_storage
 
         try:
-            report = await asyncio.to_thread(restore_from_storage, settings)
-            if report.status == "error":
-                logger.warning("Supabase Storage restore failed: %s", report.error)
+            report = await asyncio.to_thread(initialize_data_storage, settings)
+            app.state.data_storage = report.model_dump()
+            if report.error:
+                logger.warning("Supabase initialization: %s", report.error)
             else:
                 logger.info(
-                    "Supabase Storage restore downloaded %s file(s).",
-                    report.downloaded_files,
+                    "Supabase ready (postgres=%s, storage=%s, restored=%s file(s)).",
+                    report.postgres,
+                    report.storage,
+                    report.restored_files,
                 )
         except Exception:  # startup must not fail because a remote copy is unavailable
-            logger.exception("Supabase Storage restore failed")
+            logger.exception("Supabase initialization failed")
+            app.state.data_storage = {
+                "postgres": "error",
+                "storage": "error",
+                "restored_files": 0,
+                "error": "initialization raised an unexpected error",
+            }
     if settings.data_refresh_enabled and not running_tests:
         from app.ingest.scheduler import DataRefreshScheduler
 

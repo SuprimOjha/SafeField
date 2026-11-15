@@ -11,6 +11,7 @@ from app.cache.postgres_cache import (
     PgConnection,
     PostgresCache,
     PostgresImergGridCache,
+    qualify_tables,
     to_pg_placeholders,
 )
 from app.cache.sqlite_cache import SQLiteCache
@@ -18,6 +19,7 @@ from app.config import Settings
 from app.ingest.automation import run_data_refresh
 from app.services.imerg.grid_cache import ImergGridCache
 from app.storage import sync as storage_sync
+from app.storage.bootstrap import initialize_data_storage
 from app.storage.supabase_storage import SupabaseStorage, SupabaseStorageError
 from app.storage.sync import (
     StorageSyncReport,
@@ -115,6 +117,20 @@ def test_pg_placeholders_are_translated():
     )
 
 
+def test_pg_tables_are_schema_qualified_for_transaction_poolers():
+    sql = qualify_tables(
+        "INSERT INTO api_cache (cache_key) VALUES (?) "
+        "ON CONFLICT (cache_key) DO UPDATE SET payload_json = ?"
+    )
+    assert "INTO safefield.api_cache" in sql
+    assert qualify_tables("CREATE INDEX i ON imerg_daily_cells(latitude)") == (
+        "CREATE INDEX i ON safefield.imerg_daily_cells(latitude)"
+    )
+    assert qualify_tables("SELECT * FROM safefield.api_cache") == (
+        "SELECT * FROM safefield.api_cache"
+    )
+
+
 def test_insert_dialects_use_the_native_upsert():
     sqlite_sql = object.__new__(ImergGridCache)._insert_cells_sql()
     postgres_sql = object.__new__(PostgresImergGridCache)._insert_cells_sql()
@@ -157,7 +173,7 @@ def test_pg_connection_translates_placeholders_and_commits(tmp_path, monkeypatch
 
     assert "CREATE SCHEMA IF NOT EXISTS safefield" in raw.calls[0][0]
     assert "SET search_path TO safefield, public" in raw.calls[1][0]
-    insert_calls = [call for call in raw.calls if "INSERT INTO api_cache" in call[0]]
+    insert_calls = [call for call in raw.calls if "INSERT INTO safefield.api_cache" in call[0]]
     assert insert_calls and "%s" in insert_calls[0][0]
     assert "?" not in insert_calls[0][0]
     assert raw.commits >= 2
@@ -445,3 +461,102 @@ def test_storage_failure_does_not_hide_installed_data(tmp_path):
     assert report.storage.status == "error"
     assert "503" in (report.storage.error or "")
     assert settings.earthdata_password not in (report.storage.error or "")
+
+
+def test_status_json_is_mirrored_and_restored(tmp_path, monkeypatch):
+    signals = tmp_path / "signals"
+    incoming = tmp_path / "incoming"
+    raw = tmp_path / "raw"
+    incoming.mkdir(parents=True)
+    raw.mkdir()
+    status_file = tmp_path / "status.json"
+    status_file.write_text('{"sources": {}}', encoding="utf-8")
+    monkeypatch.setenv("SAFEFIELD_INCOMING_DIR", str(incoming))
+    monkeypatch.setattr(storage_sync, "status_path", lambda: status_file)
+    storage = FakeStorage()
+    settings = bare_settings(tmp_path)
+
+    uploaded = sync_up(settings, root=signals, raw_dir=raw, storage=storage)
+
+    assert uploaded.status == "ok"
+    assert uploaded.uploaded_files == 1
+    assert "status.json" in storage.objects
+
+    status_file.unlink()
+    restored = restore_down(settings, root=signals, storage=storage)
+
+    assert restored.downloaded_files == 1
+    assert status_file.exists()
+
+
+def test_initialize_data_storage_reports_disabled(tmp_path):
+    report = initialize_data_storage(bare_settings(tmp_path), restore=False)
+
+    assert report.postgres == "disabled"
+    assert report.storage == "disabled"
+    assert report.error is None
+
+
+def test_initialize_data_storage_redacts_postgres_secret(tmp_path, monkeypatch):
+    secret = "supersecret-value"
+    settings = bare_settings(
+        tmp_path, supabase_db_url=f"postgresql://user:{secret}@db.example/postgres"
+    )
+
+    def explode(_settings):
+        raise RuntimeError(
+            f"could not connect to postgresql://user:{secret}@db.example/postgres"
+        )
+
+    monkeypatch.setattr("app.storage.bootstrap.create_cache", explode)
+
+    report = initialize_data_storage(settings, restore=False)
+
+    assert report.postgres == "error"
+    assert secret not in (report.error or "")
+    assert "[redacted]" in (report.error or "")
+
+
+def test_initialize_data_storage_reports_restore_error(tmp_path, monkeypatch):
+    settings = bare_settings(
+        tmp_path,
+        supabase_url="https://project.supabase.co",
+        supabase_service_role_key="service-role-value",
+    )
+    monkeypatch.setattr(
+        "app.storage.bootstrap.restore_from_storage",
+        lambda _settings: StorageSyncReport(status="error", error="HTTP 403 for bucket"),
+    )
+
+    report = initialize_data_storage(settings)
+
+    assert report.storage == "error"
+    assert "HTTP 403" in (report.error or "")
+
+
+def test_initialize_data_storage_checks_bucket_without_restore(tmp_path, monkeypatch):
+    settings = bare_settings(
+        tmp_path,
+        supabase_url="https://project.supabase.co",
+        supabase_service_role_key="service-role-value",
+    )
+
+    class BucketStorage:
+        def __init__(self):
+            self.checked = 0
+            self.closed = 0
+
+        def ensure_bucket(self):
+            self.checked += 1
+
+        def close(self):
+            self.closed += 1
+
+    storage = BucketStorage()
+    monkeypatch.setattr("app.storage.bootstrap.get_storage", lambda _settings: storage)
+
+    report = initialize_data_storage(settings, restore=False)
+
+    assert report.storage == "ok"
+    assert storage.checked == 1
+    assert storage.closed == 1

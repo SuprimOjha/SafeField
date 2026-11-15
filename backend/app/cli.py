@@ -80,6 +80,10 @@ def main() -> int:
     subparsers.add_parser(
         "storage-restore", help="Download snapshot and staged JSON files missing from local disk"
     )
+    subparsers.add_parser(
+        "storage-check",
+        help="Create/verify the Supabase tables and bucket, then print a redacted status",
+    )
     args = parser.parse_args()
 
     if args.command == "status":
@@ -241,6 +245,14 @@ def main() -> int:
         report = restore_down()
         print(json.dumps(asdict(report), indent=2, ensure_ascii=False))
         return 0 if report.status == "ok" else 1
+
+    if args.command == "storage-check":
+        from app.storage.bootstrap import initialize_data_storage
+
+        report = initialize_data_storage(restore=False)
+        print(json.dumps(report.model_dump(), indent=2, ensure_ascii=False))
+        failed = "error" in (report.postgres, report.storage)
+        return 1 if failed else 0
 
     if args.command == "validate-content":
         report = validate_content()

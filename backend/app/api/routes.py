@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Request
 import json
 import math
 from pydantic import BaseModel, Field
+from app.config import get_settings
 from app.schemas import PowerSummaryResponse, SatelliteObservationStatus
 from app.services.power_client import NasaPowerClient
 from app.services.cmr_gibs_client import NasaCmrGibsClient
@@ -194,6 +195,32 @@ async def get_imerg_automation_status() -> dict[str, object]:
     return {
         "status": "NOT_RUN" if payload is None else payload.get("status"),
         "last_run": payload,
+    }
+
+
+@router.get("/integrations/data-storage")
+async def get_data_storage_status(request: Request) -> dict[str, object]:
+    """Report Supabase readiness and retention windows without exposing secrets."""
+    settings = get_settings()
+    report = getattr(request.app.state, "data_storage", None) or {}
+    return {
+        "postgres": {
+            "enabled": settings.postgres_cache_enabled,
+            "status": report.get("postgres", "unknown"),
+        },
+        "storage": {
+            "enabled": settings.supabase_storage_enabled,
+            "bucket": settings.supabase_storage_bucket if settings.supabase_storage_enabled else None,
+            "status": report.get("storage", "unknown"),
+            "restored_files": report.get("restored_files", 0),
+        },
+        "retention_windows": {
+            "imerg_refresh_days": settings.imerg_refresh_days,
+            "imerg_retention_days": settings.imerg_retention_days,
+            "api_cache_retention_days": settings.api_cache_retention_days,
+            "signal_retention_days": settings.signal_retention_days,
+        },
+        "error": report.get("error"),
     }
 
 

@@ -23,10 +23,15 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.cache import create_cache, create_imerg_cache
 from app.cache.sqlite_cache import SQLiteCache
-from app.config import Settings, get_settings
-from app.ingest.raw import incoming_dir
-from app.ingest.shared import prune_snapshots_older_than
+from app.config import Settings, get_settings, redact_secrets
+from app.ingest.raw import RawSnapshotAdapter, incoming_dir
+from app.ingest.shared import (
+    latest_snapshot_date,
+    prune_snapshots_older_than,
+    update_source_status,
+)
 from app.services.imerg.grid_cache import ImergGridCache
+from app.signals.snapshots import source_dir
 from app.storage.sync import get_storage, prune_remote, sync_up
 
 AUTOMATION_SCHEMA_VERSION = 1
@@ -66,6 +71,16 @@ class PruneSection(BaseModel):
     error: str | None = None
 
 
+class SnapshotSection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["ok", "skipped", "error"] = "skipped"
+    installed_files: int = 0
+    skipped_files: int = 0
+    installed: dict[str, int] = Field(default_factory=dict)
+    error: str | None = None
+
+
 class StorageSection(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -87,6 +102,7 @@ class AutomationStatus(BaseModel):
     duration_seconds: float | None = None
     imerg: RefreshSection
     prune: PruneSection
+    snapshots: SnapshotSection = Field(default_factory=SnapshotSection)
     storage: StorageSection = Field(default_factory=StorageSection)
     windows: dict[str, int] = Field(default_factory=dict)
 
@@ -184,15 +200,7 @@ def has_earthdata_credentials(settings: Settings) -> bool:
 
 
 def _redact(message: str, settings: Settings) -> str:
-    redacted = message
-    for secret in (
-        settings.earthdata_token,
-        settings.earthdata_username,
-        settings.earthdata_password,
-    ):
-        if secret and len(secret) >= 3:
-            redacted = redacted.replace(secret, "[redacted]")
-    return redacted[:2000]
+    return redact_secrets(message, settings)[:2000]
 
 
 def _prune_raw_granules(directory: Path, cutoff: date) -> int:
@@ -320,6 +328,89 @@ def _run_prune(
     return section
 
 
+def _scrub_paths(message: str, settings: Settings, source: str, root: Path | None) -> str:
+    for path in (incoming_dir(source), source_dir(source, root)):
+        message = message.replace(str(path), source)
+    return _redact(message, settings)
+
+
+def _run_snapshot_ingest(settings: Settings, *, root: Path | None = None) -> SnapshotSection:
+    """Install staged raw snapshots that a verified reader has produced.
+
+    Only files already present in ``data/incoming/<source>`` are considered;
+    this job never downloads or invents SMAP/LST/vegetation values. Days that
+    are already installed are skipped, so a corrected raw file still requires
+    the explicit ``ingest --force`` path instead of silently rewriting history.
+    """
+    section = SnapshotSection()
+    staged_files = 0
+    errors: list[str] = []
+
+    for source in SNAPSHOT_SOURCES:
+        directory = incoming_dir(source)
+        if not directory.exists():
+            continue
+        days: list[date] = []
+        for path in sorted(directory.glob("*.json")):
+            try:
+                days.append(date.fromisoformat(path.stem))
+            except ValueError:
+                continue
+        if not days:
+            continue
+
+        staged_files += len(days)
+        adapter = RawSnapshotAdapter(source)
+        installed_dir = source_dir(source, root)
+        source_errors: list[str] = []
+        for day in days:
+            if (installed_dir / f"{day.isoformat()}.json").exists():
+                section.skipped_files += 1
+                continue
+            try:
+                _, granule_ids, coverage = adapter.ingest_day(day, root=root)
+            except Exception as exc:  # keep other sources and days moving
+                source_errors.append(
+                    _scrub_paths(
+                        f"{source} {day.isoformat()}: {type(exc).__name__}: {exc}",
+                        settings,
+                        source,
+                        root,
+                    )
+                )
+                continue
+            update_source_status(
+                source,
+                state="ok",
+                latest_data_date=latest_snapshot_date(source, root) or day,
+                product=adapter.product,
+                version=adapter.version,
+                coverage=coverage,
+                granule_ids=granule_ids,
+                root=root,
+            )
+            section.installed_files += 1
+            section.installed[source] = section.installed.get(source, 0) + 1
+
+        if source_errors:
+            errors.extend(source_errors)
+            update_source_status(
+                source,
+                state="error",
+                last_error="; ".join(source_errors)[:2000],
+                root=root,
+            )
+
+    if staged_files == 0:
+        section.status = "skipped"
+    elif errors:
+        section.status = "error"
+        section.error = "; ".join(errors)[:500]
+    else:
+        section.status = "ok"
+    return section
+
+
 def _run_storage_sync(
     settings: Settings,
     *,
@@ -424,6 +515,7 @@ def run_data_refresh(
     try:
         grid_cache = create_imerg_cache(settings)
         imerg_section = _run_imerg(settings, refresh_days, grid_cache, fetch_fn)
+        snapshot_section = _run_snapshot_ingest(settings, root=root)
         prune_section = (
             _run_prune(
                 settings,
@@ -462,6 +554,8 @@ def run_data_refresh(
 
         if storage_section.status == "error" and overall == "ok":
             overall = "partial"
+        if snapshot_section.status == "error" and overall == "ok":
+            overall = "partial"
 
         installed = len(imerg_section.installed_dates)
         pruned_total = (
@@ -482,13 +576,26 @@ def run_data_refresh(
         elif overall == "skipped_no_credentials":
             message = str(imerg_section.error)
         elif overall == "partial":
-            message = (
-                f"Refresh partially completed: {imerg_section.error or prune_section.error}"
+            issues = [
+                f"IMERG: {imerg_section.error}" if imerg_section.error else "",
+                f"prune: {prune_section.error}" if prune_section.error else "",
+                f"snapshots: {snapshot_section.error}" if snapshot_section.error else "",
+            ]
+            message = "Refresh partially completed: " + (
+                "; ".join(item for item in issues if item) or "see section statuses."
             )
         else:
-            message = (
-                f"Refresh failed: {imerg_section.error or prune_section.error}"
+            issues = [
+                f"IMERG: {imerg_section.error}" if imerg_section.error else "",
+                f"prune: {prune_section.error}" if prune_section.error else "",
+                f"snapshots: {snapshot_section.error}" if snapshot_section.error else "",
+            ]
+            message = "Refresh failed: " + (
+                "; ".join(item for item in issues if item) or "see section statuses."
             )
+
+        if snapshot_section.installed_files:
+            message += f" Installed {snapshot_section.installed_files} staged snapshot day(s)."
 
         if storage_section.status == "error":
             message += f" Supabase Storage sync failed: {storage_section.error}"
@@ -510,6 +617,7 @@ def run_data_refresh(
             duration_seconds=round((finished_at - started_at).total_seconds(), 3),
             imerg=imerg_section,
             prune=prune_section,
+            snapshots=snapshot_section,
             storage=storage_section,
             windows=windows,
         )

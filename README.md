@@ -190,7 +190,7 @@ python -m app.cli status                    # installed snapshot state
 
 ### What is automated, honestly
 
-Only **NASA GPM IMERG rainfall** is installed automatically. SMAP soil moisture, land-surface temperature and vegetation snapshots are **pruned** by the retention job but are **not downloaded automatically**; they still need the existing manual ingest commands. When data is missing, the interface says so instead of substituting another product. If Earthdata credentials are absent, the refresh records `skipped_no_credentials` and the app keeps whatever it already has, clearly labelled by age.
+Only **NASA GPM IMERG rainfall** is downloaded automatically. A verified raw snapshot placed in `backend/data/incoming/<source>/YYYY-MM-DD.json` (or restored from Supabase Storage) is installed automatically by the same refresh job. This repository does **not** ship numeric readers for SMAP, land-surface temperature or NDVI/EVI granules, so it never downloads or invents those values itself; until a verified reader stages them, the interface reports the signal as unavailable. Missing data is never replaced with another product. If Earthdata credentials are absent, the refresh records `skipped_no_credentials` and the app keeps whatever it already has, clearly labelled by age.
 
 ## Optional Supabase Storage
 
@@ -199,7 +199,7 @@ SQLite and the local `backend/data/` directories remain the default and work wit
 | Data | Where it goes | Notes |
 |---|---|---|
 | Cached live API responses, IMERG grid cells | Supabase Postgres, private `safefield` schema | Tables are created automatically; `SUPABASE_DB_URL` |
-| Satellite snapshots, staged provider JSON, raw IMERG granules | Supabase Storage bucket (`safefield-data`) | Private bucket, created on first run; `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` |
+| Satellite snapshots, staged provider JSON, raw IMERG granules, `status.json` | Supabase Storage bucket (`safefield-data`) | Private bucket, created on first run; `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` |
 
 Setup:
 
@@ -212,7 +212,8 @@ Behaviour:
 
 - The cache backend keeps the same interface and SQL as the SQLite cache, so no API route changes.
 - Tables live in a separate `safefield` schema, not `public`. Supabase's PostgREST API exposes only `public`, so the anon key cannot read the cache.
-- The local disk is still the fast read/write path. After a refresh, files are mirrored up; on startup, missing snapshots and staged JSON are restored from Storage (`SUPABASE_RESTORE_ON_STARTUP=false` disables this). Raw IMERG granules are mirrored but not auto-restored because they can be re-downloaded.
+- On startup the backend creates the tables and bucket if needed, restores missing files, and reports readiness at `GET /api/integrations/data-storage`. Startup still succeeds if Supabase is temporarily unreachable; the next refresh retries.
+- The local disk is still the fast read/write path. After a refresh, files are mirrored up; on startup, missing snapshots, staged JSON and `status.json` are restored from Storage (`SUPABASE_RESTORE_ON_STARTUP=false` disables the file restore). Raw IMERG granules are mirrored but not auto-restored because they can be re-downloaded.
 - The same retention windows apply remotely: expired files are deleted from the bucket in the refresh job.
 - Storage failures are reported as `status: error` in the automation status and turn the run `partial`; they never hide a successful install. Error messages include the HTTP status and object path, never the key.
 - Field boundaries are still never uploaded. Only provider/satellite data is stored.
@@ -221,9 +222,10 @@ Manual commands:
 
 ```bash
 cd backend
+python -m app.cli storage-check            # create/verify tables and bucket, print redacted status
 python -m app.cli storage-sync             # mirror local data files up
 python -m app.cli storage-sync --force     # re-upload even when sizes match
-python -m app.cli storage-restore          # restore missing snapshots/staged JSON
+python -m app.cli storage-restore          # restore missing snapshots/staged JSON/status.json
 ```
 
 For GitHub Actions, add `SUPABASE_DB_URL`, `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` as repository secrets; the workflow passes them through when they exist.
@@ -253,6 +255,23 @@ The content validator (`python -m app.cli validate-content`) checks the source a
 - **Vercel:** the `safefieldnp.vercel.app` project currently serves an earlier build. Its Git connection and production branch need to be corrected in the Vercel dashboard before it will reflect this repository.
 
 The frontend can be built with `npm run build` and served by any Node host. The backend works with no cloud account on a host with a persistent disk for the SQLite cache and IMERG files. With the optional Supabase settings above, cached data and data files live in Supabase instead, so an ephemeral disk is enough.
+
+### Render backend
+
+`render.yaml` is a blueprint for a Python web service running `backend/` with `/api/health` as its health check. If the service already exists, add the same variables in **Render → your service → Environment** instead of creating a new blueprint.
+
+| Variable | Purpose |
+|---|---|
+| `EARTHDATA_USERNAME`, `EARTHDATA_PASSWORD` | NASA Earthdata Login used by the automatic IMERG refresh (mark as secret) |
+| `SUPABASE_DB_URL` | Supabase Postgres connection string for the API cache and IMERG cells (mark as secret) |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Supabase Storage URL and service-role key (mark the key as secret) |
+| `SUPABASE_STORAGE_BUCKET` | Bucket name, default `safefield-data` |
+| `DATA_REFRESH_ENABLED` | `true` to run the in-process scheduler |
+| `IMERG_RETENTION_DAYS`, `API_CACHE_RETENTION_DAYS`, `SIGNAL_RETENTION_DAYS` | How long data is kept before automatic deletion |
+
+On first start the backend creates the Postgres tables and the private bucket, then restores files. The scheduler then installs newly published IMERG days, ingests any staged snapshots, deletes data outside the retention windows locally, in Postgres and in Storage, and mirrors the result back to Supabase. Confirm the wiring with `GET /api/integrations/data-storage`.
+
+Render's free web instances sleep when idle, which pauses the in-process scheduler; the next request wakes the service and the scheduled refresh resumes. For updates while the service is idle, either use an always-on instance or keep the GitHub Actions workflow enabled with the same Supabase and Earthdata repository secrets.
 
 ## Current Scope and Limitations
 

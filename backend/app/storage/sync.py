@@ -1,10 +1,10 @@
 """Mirror local data files to Supabase Storage and restore them on startup.
 
 The backend keeps writing to the local data directories. Supabase Storage is a
-durable copy: snapshots, staged raw JSON and downloaded IMERG granules are
-uploaded after a refresh, removed remotely when their retention window ends,
-and restored into an empty working directory on startup. Local disk therefore
-stays a cache rather than the only copy.
+durable copy: snapshots, staged raw JSON, downloaded IMERG granules and
+``status.json`` are uploaded after a refresh, removed remotely when their
+retention window ends, and restored into an empty working directory on startup.
+Local disk therefore stays a cache rather than the only copy.
 
 No field geometry is mirrored; these directories contain satellite and
 provider data only.
@@ -25,6 +25,7 @@ import httpx
 from app.config import Settings, get_settings
 from app.ingest.raw import incoming_dir
 from app.signals.snapshots import source_dir
+from app.signals.status import status_path
 from app.storage.supabase_storage import (
     SupabaseStorage,
     SupabaseStorageError,
@@ -32,6 +33,7 @@ from app.storage.supabase_storage import (
 )
 
 SNAPSHOT_SOURCES = ("smap", "lst", "vegetation")
+STATUS_OBJECT = "status.json"
 GRANULE_DATE = re.compile(r"\.(\d{8})-S\d{6}")
 JSON_DAY = re.compile(r"^(\d{4}-\d{2}-\d{2})\.json$")
 
@@ -91,6 +93,49 @@ def upload_directory(
             continue
         storage.upload_bytes(key, path.read_bytes(), content_type_for(key))
         report.uploaded_files += 1
+
+
+def upload_file(
+    storage: SupabaseStorage,
+    local_path: Path,
+    key: str,
+    report: StorageSyncReport,
+    *,
+    force: bool = False,
+) -> None:
+    if not local_path.exists():
+        return
+    remote = storage.list_names("")
+    size = local_path.stat().st_size
+    if not force and remote.get(key) == size:
+        return
+    storage.upload_bytes(key, local_path.read_bytes(), content_type_for(key))
+    report.uploaded_files += 1
+
+
+def restore_file(
+    storage: SupabaseStorage,
+    local_path: Path,
+    key: str,
+    report: StorageSyncReport,
+) -> None:
+    if local_path.exists():
+        return
+    if key not in storage.list_names(""):
+        return
+    local_path.parent.mkdir(parents=True, exist_ok=True)
+    data = storage.download_bytes(key)
+    with tempfile.NamedTemporaryFile(
+        "wb", dir=local_path.parent, prefix=local_path.name + ".", suffix=".tmp", delete=False
+    ) as handle:
+        handle.write(data)
+        temporary = Path(handle.name)
+    try:
+        os.replace(temporary, local_path)
+    except OSError:
+        temporary.unlink(missing_ok=True)
+        raise
+    report.downloaded_files += 1
 
 
 def restore_directory(
@@ -197,6 +242,7 @@ def sync_up(
             upload_directory(client, source_dir(source, root), f"signals/{source}", report, force=force)
             upload_directory(client, incoming_dir(source), f"incoming/{source}", report, force=force)
         upload_directory(client, raw_dir or default_raw_dir(), "imerg/raw", report, force=force)
+        upload_file(client, status_path(), STATUS_OBJECT, report, force=force)
 
     return _run(action, resolved, storage)
 
@@ -213,6 +259,7 @@ def restore_down(
         for source in SNAPSHOT_SOURCES:
             restore_directory(client, source_dir(source, root), f"signals/{source}", report)
             restore_directory(client, incoming_dir(source), f"incoming/{source}", report)
+        restore_file(client, status_path(), STATUS_OBJECT, report)
 
     return _run(action, settings or get_settings(), storage)
 
@@ -249,6 +296,7 @@ def restore_from_storage(settings: Settings | None = None) -> StorageSyncReport:
 
 __all__ = [
     "SNAPSHOT_SOURCES",
+    "STATUS_OBJECT",
     "StorageSyncReport",
     "delete_remote_before",
     "default_raw_dir",
@@ -256,7 +304,9 @@ __all__ = [
     "prune_remote",
     "restore_directory",
     "restore_down",
+    "restore_file",
     "restore_from_storage",
     "sync_up",
     "upload_directory",
+    "upload_file",
 ]

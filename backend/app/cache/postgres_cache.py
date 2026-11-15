@@ -11,6 +11,7 @@ exactly what the SQLite cache stores.
 
 from __future__ import annotations
 
+import re
 import threading
 from typing import Any, Iterable, Sequence
 
@@ -44,6 +45,14 @@ API_CACHE_TABLE_DDL = """
         ttl_seconds INTEGER NOT NULL
     )
 """
+
+
+_QUALIFIED_TABLES = re.compile(r"(?<![\w.])(api_cache|imerg_daily_cells)(?![\w])")
+
+
+def qualify_tables(sql: str) -> str:
+    """Qualify cache tables so a transaction-mode pooler cannot lose search_path."""
+    return _QUALIFIED_TABLES.sub(r"safefield.\1", sql)
 
 
 def to_pg_placeholders(sql: str) -> str:
@@ -114,13 +123,14 @@ class PgConnection:
             raise
 
     def execute(self, sql: str, params: Sequence[Any] | None = None):
+        statement = qualify_tables(sql)
         if params is None or len(params) == 0:
-            return self._conn.execute(sql)
-        return self._conn.execute(to_pg_placeholders(sql), params)
+            return self._conn.execute(statement)
+        return self._conn.execute(to_pg_placeholders(statement), params)
 
     def executemany(self, sql: str, rows: Iterable[Sequence[Any]]):
         with self._conn.cursor() as cursor:
-            cursor.executemany(to_pg_placeholders(sql), rows)
+            cursor.executemany(to_pg_placeholders(qualify_tables(sql)), rows)
             return cursor
 
     def commit(self) -> None:
