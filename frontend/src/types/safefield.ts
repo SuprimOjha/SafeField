@@ -17,8 +17,124 @@ export interface DailyWeatherRecord {
   date: string;
   precip_mm: number | null;
   temp_c: number | null;
+  temp_max_c?: number | null;
+  temp_min_c?: number | null;
   surface_soil_wetness: number | null;
   root_soil_wetness: number | null;
+}
+
+export type SignalName =
+  | "rain"
+  | "soil_moisture_surface"
+  | "soil_moisture_root"
+  | "heat_air"
+  | "heat_surface"
+  | "ndvi"
+  | "evi";
+
+export type SignalKind =
+  | "observation"
+  | "model"
+  | "forecast"
+  | "fallback"
+  | "cached"
+  | "farmer_input"
+  | "assumption";
+
+export type SignalStatus = "available" | "partial" | "stale" | "unavailable" | "not_installed";
+
+export type VsNormal = "much_below" | "below" | "near_normal" | "above" | "much_above" | "unknown";
+
+export interface SignalProvenance {
+  source_name: string;
+  product: string;
+  version: string;
+  kind: SignalKind;
+  is_nasa: boolean;
+  valid_date: string | null;
+  observed_start: string | null;
+  observed_end: string | null;
+  fetched_at: string;
+  spatial_resolution: string;
+  latency_note: string;
+  granule_ids?: string[];
+  coverage_fraction?: number | null;
+  model_only?: boolean | null;
+  source_key?: string | null;
+  caveat: string;
+}
+
+export interface SignalValue {
+  name: SignalName;
+  status: SignalStatus;
+  value: number | null;
+  unit: string | null;
+  vs_normal: VsNormal;
+  anomaly: number | null;
+  baseline: number | null;
+  baseline_years: number;
+  provenance: SignalProvenance | null;
+  unavailable_reason: string | null;
+  quality_note: string | null;
+}
+
+export interface SignalBundle {
+  latitude: number;
+  longitude: number;
+  generated_at: string;
+  signals: Partial<Record<SignalName, SignalValue>>;
+  warnings: string[];
+}
+
+export type AgreementState = "agree" | "partial" | "disagree" | "insufficient_sources" | "not_comparable";
+
+export interface AgreementSource {
+  source_name: string;
+  amount_mm: number;
+  kind: SignalKind;
+  is_nasa: boolean;
+  window_hours: number;
+  observed_end_date: string;
+  spatial_resolution: string | null;
+}
+
+export interface SourceAgreement {
+  topic: "rain" | "soil_moisture";
+  state: AgreementState;
+  sources: AgreementSource[];
+  spread_mm: number | null;
+  tolerance_note: string;
+  summary: string;
+  assumption_note: string;
+}
+
+export type RainImpactClass = "heavy_recent" | "heavy_forecast" | "none" | "unknown";
+
+export interface RainImpact {
+  classification: RainImpactClass;
+  rain_24h_mm: number | null;
+  rain_72h_mm: number | null;
+  forecast_48h_mm: number | null;
+  thresholds: Record<string, number>;
+  summary: string;
+  assumption_note: string;
+}
+
+export type StressFactorName = "water" | "heat" | "vegetation" | "rain";
+export type FactorState = "watch" | "no_watch" | "unknown";
+
+export interface StressFactor {
+  factor: StressFactorName;
+  state: FactorState;
+  evidence: string[];
+  reason: string;
+}
+
+export interface StressWatch {
+  overall: FactorState;
+  factors: StressFactor[];
+  summary: string;
+  disclaimer: string;
 }
 
 export interface PowerSummaryResponse {
@@ -204,4 +320,9 @@ export interface FieldAssessmentResponse {
   forecast: ForecastResponse;
   decision: DecisionResult;
   climate_trend: TrendAnalysisResult;
+  /** Present on responses built by this app; older backends omit it. */
+  signals?: SignalBundle;
+  rain_agreement?: SourceAgreement;
+  rain_impact?: RainImpact;
+  stress_watch?: StressWatch;
 }

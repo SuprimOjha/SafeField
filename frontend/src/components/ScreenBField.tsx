@@ -7,6 +7,10 @@ import { getDict, type Lang } from "@/i18n";
 import FreshnessStrip from "@/components/FreshnessStrip";
 import DataReceiptDrawer from "@/components/DataReceiptDrawer";
 import FarmerLogbook from "@/components/FarmerLogbook";
+import SignalTiles from "@/components/SignalTiles";
+import SourceAgreementBadge from "@/components/SourceAgreementBadge";
+import StressWatchBanner from "@/components/StressWatchBanner";
+import DataClock from "@/components/DataClock";
 
 interface ScreenBFieldProps {
   data: FieldAssessmentResponse | null;
@@ -110,6 +114,11 @@ export default function ScreenBField({
         </div>
         <span className="hidden rounded-full bg-soft px-2.5 py-1 text-[11px] font-semibold text-ink-soft md:inline">{t.freshnessLatency} {power_summary.freshness.typical_latency}</span>
       </div>
+
+      {data.stress_watch ? <StressWatchBanner watch={data.stress_watch} lang={lang} /> : null}
+      {data.signals ? <SignalTiles bundle={data.signals} lang={lang} /> : null}
+      {data.rain_agreement ? <SourceAgreementBadge agreement={data.rain_agreement} lang={lang} /> : null}
+      <DataClock data={data} lang={lang} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Local rainfall observation */}

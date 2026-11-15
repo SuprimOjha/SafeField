@@ -29,6 +29,8 @@ class DailyWeatherRecord(BaseModel):
     date: str
     precip_mm: float | None
     temp_c: float | None
+    temp_max_c: float | None = None
+    temp_min_c: float | None = None
     surface_soil_wetness: float | None
     root_soil_wetness: float | None
 
