@@ -4,6 +4,8 @@ import React from "react";
 import { FieldAssessmentResponse } from "@/types/safefield";
 import { CloudRain, Droplets, Thermometer, Mountain, CheckCircle2, RefreshCw, ArrowRight } from "lucide-react";
 import { getDict, type Lang } from "@/i18n";
+import FreshnessStrip from "@/components/FreshnessStrip";
+import DataReceiptDrawer from "@/components/DataReceiptDrawer";
 
 interface ScreenBFieldProps {
   data: FieldAssessmentResponse | null;
@@ -89,6 +91,8 @@ export default function ScreenBField({
 
   return (
     <div className="space-y-6">
+      <FreshnessStrip rainfall={rainfall} lang={lang} />
+      <div className="flex justify-start"><DataReceiptDrawer data={data} lang={lang} /></div>
       {/* Freshness banner */}
       <div className="flex items-center justify-between rounded-lg border border-leaf bg-action-soft p-4 text-xs text-forest">
         <div className="flex items-center gap-2">
