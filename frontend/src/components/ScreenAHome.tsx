@@ -15,7 +15,7 @@ import type { Feature, FeatureCollection, Geometry, Polygon, MultiPolygon } from
 import "maplibre-gl/dist/maplibre-gl.css";
 import { createMap, addSatelliteLayer, setSatellite, isSatelliteSourceError } from "@/lib/basemap";
 import { getDict, type Lang } from "@/i18n";
-import { averageFixes, type GpsFix } from "@/lib/gps-average";
+import { averageFixes, type Fix } from "@/lib/gps-average";
 import { polygonSelfIntersects, pointInDistricts } from "@/lib/field-geometry";
 import { FIELD_SURVEY_CONFIG } from "@/config/field-survey";
 import {
@@ -135,7 +135,7 @@ export default function ScreenAHome({
   const [surveyCollecting, setSurveyCollecting] = useState(false);
   const [surveyFixCount, setSurveyFixCount] = useState(0);
   const surveyWatchRef = useRef<number|null>(null);
-  const surveyFixesRef = useRef<GpsFix[]>([]);
+  const surveyFixesRef = useRef<Fix[]>([]);
   const surveyPointIdRef = useRef(0);
   const surveyTriggerRef = useRef<HTMLButtonElement>(null);
   const surveyDialogRef = useRef<HTMLElement>(null);
@@ -802,13 +802,34 @@ export default function ScreenAHome({
     if (!navigator.geolocation) { setMapError(copyRef.current.errorGeolocationUnsupported); return; }
     stopSurveyCollection(); surveyFixesRef.current = []; setSurveyFixCount(0); setPendingSurveyFix(null); setSurveyCollecting(true);
     surveyWatchRef.current = navigator.geolocation.watchPosition((position) => {
-      surveyFixesRef.current = [...surveyFixesRef.current, {latitude:position.coords.latitude,longitude:position.coords.longitude,accuracy:position.coords.accuracy,timestamp:position.timestamp}];
+      surveyFixesRef.current = [...surveyFixesRef.current, {lat:position.coords.latitude,lon:position.coords.longitude,accuracyM:position.coords.accuracy,timestamp:position.timestamp}];
       setSurveyFixCount(surveyFixesRef.current.length);
       if (surveyFixesRef.current.length < FIELD_SURVEY_CONFIG.gpsFixCount) return;
-      const result = averageFixes(surveyFixesRef.current,{maxAccuracyMeters:FIELD_SURVEY_CONFIG.maxGpsAccuracyMeters}); stopSurveyCollection();
-      if (result.usedCount < FIELD_SURVEY_CONFIG.minGoodGpsFixes || result.latitude === null || result.longitude === null || result.accuracy === null) { setMapError(lang === "ne" ? "पर्याप्त राम्रो GPS फिक्स प्राप्त भएन। खुला आकाश भएको ठाउँमा पुनः प्रयास गर्नुहोस्।" : "Not enough good GPS fixes. Move to open sky and try again."); return; }
-      if (result.latitude < 26.3 || result.latitude > 30.5 || result.longitude < 80 || result.longitude > 88.3) { setMapError(copyRef.current.errorGpsOutside); return; }
-      setPendingSurveyFix({lat:result.latitude,lon:result.longitude,accuracy:result.accuracy,used:result.usedCount,rejected:result.rejectedCount}); setMapError(null);
+      const result = averageFixes(surveyFixesRef.current, {
+        maxAccuracyM: FIELD_SURVEY_CONFIG.maxGpsAccuracyMeters,
+        minFixes: FIELD_SURVEY_CONFIG.minGoodGpsFixes,
+        madK: FIELD_SURVEY_CONFIG.madK,
+        madFloorM: FIELD_SURVEY_CONFIG.madFloorM,
+        goodM: FIELD_SURVEY_CONFIG.goodM,
+        fairM: FIELD_SURVEY_CONFIG.fairM,
+      });
+      stopSurveyCollection();
+      if (!result) {
+        setMapError(lang === "ne" ? "पर्याप्त राम्रो GPS फिक्स प्राप्त भएन। खुला आकाश भएको ठाउँमा पुनः प्रयास गर्नुहोस्।" : "Not enough good GPS fixes. Move to open sky and try again.");
+        return;
+      }
+      if (result.lat < 26.3 || result.lat > 30.5 || result.lon < 80 || result.lon > 88.3) {
+        setMapError(copyRef.current.errorGpsOutside);
+        return;
+      }
+      setPendingSurveyFix({
+        lat: result.lat,
+        lon: result.lon,
+        accuracy: result.estimatedErrorM,
+        used: result.usedFixes,
+        rejected: result.rejectedFixes,
+      });
+      setMapError(null);
     }, (error) => { stopSurveyCollection(); setMapError(error.code === error.PERMISSION_DENIED ? copyRef.current.errorGpsDenied : copyRef.current.errorGpsUnavailable); }, {enableHighAccuracy:true,maximumAge:0,timeout:30000});
   };
   const saveSurveyPoint = (type: SurveyPointType) => {
