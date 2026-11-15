@@ -434,6 +434,7 @@ export default function SafeFieldNepalApp() {
                 selectedLon={selectedLon}
                 onLocationSelect={handleLocationChange}
                 onFieldPolygonSelect={handlePolygonChange}
+                onSandOverrideChange={handleSandOverrideChange}
                 fieldPolygon={selectedFieldPolygon}
                 onProceedToField={handleProceedToField}
                 lang={lang}
