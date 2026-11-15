@@ -117,6 +117,7 @@ export const en = {
   receiptSpatialMethod: "Spatial method",
   rainDataFreshness: "Rain data freshness",
   rainDataCovers: "Rain data covers {date}.",
+  rainDataAge: "About {hours} hours old.",
   observedNotForecast: "Observed, not a forecast.",
   dataKindLabel: "Data kind",
   rainFreshnessUnavailable: "Rain observation date is unavailable.",
