@@ -17,6 +17,10 @@ class SignalGates(BaseModel):
 
     # Software freshness/completeness gates (not NASA quality flags).
     max_snapshot_age_days: int = Field(default=5, ge=1, le=30)
+    # Composite products are published less often than daily products.
+    source_max_age_days: dict[str, int] = Field(
+        default_factory=lambda: {"smap": 3, "lst": 5, "vegetation": 25}
+    )
     min_clear_sky_fraction: float = Field(default=0.5, ge=0, le=1)
     min_snapshot_coverage: float = Field(default=0.8, ge=0, le=1)
     anomaly_window_days: int = Field(default=7, ge=1, le=31)
@@ -41,6 +45,9 @@ class SignalGates(BaseModel):
     @property
     def assumption_note(self) -> str:
         return ASSUMPTION_NOTE
+
+    def max_age_days_for(self, source: str) -> int:
+        return self.source_max_age_days.get(source, self.max_snapshot_age_days)
 
 
 def _gates_path() -> Path:

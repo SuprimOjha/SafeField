@@ -1,7 +1,7 @@
 import json
 import math
 import os
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Literal, TypeVar
 
@@ -33,7 +33,7 @@ class SmapSnapshot(BaseModel):
     product: str = Field(min_length=3)
     version: str = Field(min_length=1)
     data_date: date
-    fetched_at: str
+    fetched_at: datetime
     resolution_km: float = Field(gt=0)
     model_only: bool = False
     coverage_fraction: float | None = Field(default=None, ge=0, le=1)
@@ -54,7 +54,7 @@ class LstSnapshot(BaseModel):
     product: str = Field(min_length=3)
     version: str = Field(min_length=1)
     data_date: date
-    fetched_at: str
+    fetched_at: datetime
     resolution_km: float = Field(gt=0)
     granule_ids: list[str] = Field(default_factory=list)
     cells: list[LstCell] = Field(default_factory=list)
@@ -73,7 +73,7 @@ class VegSnapshot(BaseModel):
     version: str = Field(min_length=1)
     composite_start: date
     composite_end: date
-    fetched_at: str
+    fetched_at: datetime
     resolution_m: float = Field(gt=0)
     granule_ids: list[str] = Field(default_factory=list)
     cells: list[VegCell] = Field(default_factory=list)
@@ -104,6 +104,25 @@ def snapshot_dates(source: str, root: Path | None = None) -> list[date]:
         except ValueError:
             continue
     return sorted(dates)
+
+
+def load_snapshot_on(
+    source: str,
+    model: type[SnapshotModel],
+    day: date,
+    root: Path | None = None,
+) -> SnapshotModel | None:
+    path = source_dir(source, root) / f"{day.isoformat()}.json"
+    if not path.exists():
+        return None
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SnapshotFormatError(f"{path.name}: {exc}") from exc
+    try:
+        return model.model_validate(raw)
+    except ValidationError as exc:
+        raise SnapshotFormatError(f"{path.name}: {exc}") from exc
 
 
 def load_latest_snapshot(

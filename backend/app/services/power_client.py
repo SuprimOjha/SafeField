@@ -58,7 +58,7 @@ class NasaPowerClient:
         end_str = today_utc.strftime("%Y%m%d")
 
         params = {
-            "parameters": "PRECTOTCORR,T2M,GWETTOP,GWETROOT",
+            "parameters": "PRECTOTCORR,T2M,T2M_MAX,T2M_MIN,GWETTOP,GWETROOT",
             "community": "AG",
             "longitude": lon_r,
             "latitude": lat_r,
@@ -121,6 +121,8 @@ class NasaPowerClient:
         param_block = raw_json.get("properties", {}).get("parameter", {})
         precip_map: dict[str, Any] = param_block.get("PRECTOTCORR", {})
         temp_map: dict[str, Any] = param_block.get("T2M", {})
+        temp_max_map: dict[str, Any] = param_block.get("T2M_MAX", {})
+        temp_min_map: dict[str, Any] = param_block.get("T2M_MIN", {})
         gwettop_map: dict[str, Any] = param_block.get("GWETTOP", {})
         gwetroot_map: dict[str, Any] = param_block.get("GWETROOT", {})
 
@@ -130,6 +132,8 @@ class NasaPowerClient:
         for d_str in all_dates:
             p_val = _clean_power_val(precip_map.get(d_str))
             t_val = _clean_power_val(temp_map.get(d_str))
+            t_max_val = _clean_power_val(temp_max_map.get(d_str))
+            t_min_val = _clean_power_val(temp_min_map.get(d_str))
             top_val = _clean_power_val(gwettop_map.get(d_str))
             root_val = _clean_power_val(gwetroot_map.get(d_str))
 
@@ -142,6 +146,8 @@ class NasaPowerClient:
                     date=_format_yyyymmdd_to_iso(d_str),
                     precip_mm=p_val,
                     temp_c=t_val,
+                    temp_max_c=t_max_val,
+                    temp_min_c=t_min_val,
                     surface_soil_wetness=top_val,
                     root_soil_wetness=root_val,
                 )
