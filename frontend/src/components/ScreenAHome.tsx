@@ -129,6 +129,7 @@ export default function ScreenAHome({
   const [surveyPointsLoaded, setSurveyPointsLoaded] = useState(false);
   const [pendingSurveyFix, setPendingSurveyFix] = useState<{lat:number;lon:number;accuracy:number;used:number;rejected:number}|null>(null);
   const [surveyCollecting, setSurveyCollecting] = useState(false);
+  const [surveyFixCount, setSurveyFixCount] = useState(0);
   const surveyWatchRef = useRef<number|null>(null);
   const surveyFixesRef = useRef<GpsFix[]>([]);
   const surveyPointIdRef = useRef(0);
@@ -788,12 +789,13 @@ export default function ScreenAHome({
 
   const startStandSurvey = () => {
     if (!navigator.geolocation) { setMapError(copyRef.current.errorGeolocationUnsupported); return; }
-    stopSurveyCollection(); surveyFixesRef.current = []; setPendingSurveyFix(null); setSurveyCollecting(true);
+    stopSurveyCollection(); surveyFixesRef.current = []; setSurveyFixCount(0); setPendingSurveyFix(null); setSurveyCollecting(true);
     surveyWatchRef.current = navigator.geolocation.watchPosition((position) => {
       surveyFixesRef.current = [...surveyFixesRef.current, {latitude:position.coords.latitude,longitude:position.coords.longitude,accuracy:position.coords.accuracy,timestamp:position.timestamp}];
+      setSurveyFixCount(surveyFixesRef.current.length);
       if (surveyFixesRef.current.length < FIELD_SURVEY_CONFIG.gpsFixCount) return;
       const result = averageFixes(surveyFixesRef.current,{maxAccuracyMeters:FIELD_SURVEY_CONFIG.maxGpsAccuracyMeters}); stopSurveyCollection();
-      if (result.latitude === null || result.longitude === null || result.accuracy === null) { setMapError(lang === "ne" ? "GPS कमजोर छ। खुला आकाश भएको ठाउँमा पुनः प्रयास गर्नुहोस्।" : "Weak GPS signal. Move to open sky and try again."); return; }
+      if (result.usedCount < FIELD_SURVEY_CONFIG.minGoodGpsFixes || result.latitude === null || result.longitude === null || result.accuracy === null) { setMapError(lang === "ne" ? "पर्याप्त राम्रो GPS फिक्स प्राप्त भएन। खुला आकाश भएको ठाउँमा पुनः प्रयास गर्नुहोस्।" : "Not enough good GPS fixes. Move to open sky and try again."); return; }
       if (result.latitude < 26.3 || result.latitude > 30.5 || result.longitude < 80 || result.longitude > 88.3) { setMapError(copyRef.current.errorGpsOutside); return; }
       setPendingSurveyFix({lat:result.latitude,lon:result.longitude,accuracy:result.accuracy,used:result.usedCount,rejected:result.rejectedCount}); setMapError(null);
     }, (error) => { stopSurveyCollection(); setMapError(error.code === error.PERMISSION_DENIED ? copyRef.current.errorGpsDenied : copyRef.current.errorGpsUnavailable); }, {enableHighAccuracy:true,maximumAge:0,timeout:30000});
@@ -980,7 +982,7 @@ export default function ScreenAHome({
           <div className="mt-3 rounded-xl border border-divider bg-white p-3">
             <p className="text-sm font-bold text-forest">{t.surveyStandTitle}</p>
             <p className="mt-1 text-sm text-ink-soft">{t.surveyStandHelp}</p>
-            <button ref={surveyTriggerRef} type="button" onClick={startStandSurvey} disabled={surveyCollecting} className="mt-3 inline-flex min-h-12 items-center gap-2 rounded-full bg-action px-5 text-sm font-bold text-white disabled:opacity-50">{surveyCollecting ? <Loader2 className="h-4 w-4 animate-spin"/> : <LocateFixed className="h-4 w-4"/>}{surveyCollecting ? t.surveyCollecting : t.surveyStartCapture}</button>
+            <button ref={surveyTriggerRef} type="button" onClick={startStandSurvey} disabled={surveyCollecting} className="mt-3 inline-flex min-h-12 items-center gap-2 rounded-full bg-action px-5 text-sm font-bold text-white disabled:opacity-50">{surveyCollecting ? <Loader2 className="h-4 w-4 animate-spin"/> : <LocateFixed className="h-4 w-4"/>}{surveyCollecting ? `${t.surveyCollecting} ${surveyFixCount}/${FIELD_SURVEY_CONFIG.gpsFixCount}` : t.surveyStartCapture}</button>
             {surveyPoints.length>0 && <p className="mt-2 text-base text-ink-soft">{t.surveyOtherPoints}: {surveyPoints.length}</p>}
             {gpsReceipt && <details className="mt-2 text-sm text-ink-soft"><summary className="min-h-12 cursor-pointer py-3 font-semibold">{t.surveyGpsReceipt}</summary><p>{t.surveyFixesUsed}: {gpsReceipt.used} · {t.surveyFixesRejected}: {gpsReceipt.rejected}</p></details>}
           </div>
