@@ -11,6 +11,7 @@ import SignalTiles from "@/components/SignalTiles";
 import SourceAgreementBadge from "@/components/SourceAgreementBadge";
 import StressWatchBanner from "@/components/StressWatchBanner";
 import DataClock from "@/components/DataClock";
+import AgrochemicalSafety from "@/components/AgrochemicalSafety";
 
 interface ScreenBFieldProps {
   hasField: boolean;
@@ -313,6 +314,8 @@ export default function ScreenBField({
           </button>
         </div>
       </div>
+
+      <AgrochemicalSafety lang={lang} initialProduct={fertilizerType} />
     </div>
   );
 }

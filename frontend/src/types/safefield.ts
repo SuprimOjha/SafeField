@@ -300,11 +300,30 @@ export interface HomeRemedy {
   reviewer: string | null;
 }
 
+export interface SafetyMeasure {
+  textEn: string;
+  textNe: string;
+  basis: "source" | "assumption";
+  sourceKey: string | null;
+  section: string | null;
+}
+
+export interface AgrochemicalSafetyRecord {
+  id: string;
+  productClass: "fertilizer" | "insecticide" | "fungicide" | "herbicide";
+  products: string[];
+  measures: SafetyMeasure[];
+  verified: boolean;
+  reviewStatus: "not-expert-reviewed" | "expert-reviewed";
+  reviewer: string | null;
+}
+
 export interface FarmerContentResponse {
   status: "ok" | "partial" | "error";
   sources: Record<string, ContentSource>;
   fertilizer_references: FertilizerReference[];
   home_remedies: HomeRemedy[];
+  agrochemical_safety?: AgrochemicalSafetyRecord[];
   conversions: { unit: "ropani" | "bigha" | "kattha" | "hectare"; toHectare: number | null; sourceKey: string; verified: boolean }[];
   skipped: Record<string, number>;
   warnings: string[];

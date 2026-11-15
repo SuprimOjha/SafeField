@@ -13,10 +13,19 @@ backend/app/cache/*.db-journal
 backend/data/imerg/raw/
 backend/data/imerg/processed/
 
-# Generated signal snapshots and status.json are persisted to the data branch,
-# never committed as application code.
-backend/data/signals/
-backend/data/status.json
+# New signal snapshots are persisted to the data branch, not committed daily.
+# One verified baseline snapshot per source ships with the app so a fresh
+# deployment resolves every field signal without a download step.
+backend/data/signals/*
+!backend/data/signals/lst/
+!backend/data/signals/smap/
+!backend/data/signals/vegetation/
+backend/data/signals/lst/*
+!backend/data/signals/lst/2026-11-02.json
+backend/data/signals/smap/*
+!backend/data/signals/smap/2026-11-12.json
+backend/data/signals/vegetation/*
+!backend/data/signals/vegetation/2026-11-08.json
 
 # Automatic refresh status and lock are runtime state, not source code.
 backend/data/automation-status.json

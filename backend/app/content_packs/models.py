@@ -59,6 +59,47 @@ class AreaConversion(BaseModel):
     verified: bool
 
 
+class SafetyMeasure(BaseModel):
+    """One handling-safety line for a fertilizer or pesticide group.
+
+    ``basis`` keeps the project's provenance rule: a measure is either a close
+    paraphrase of a cited official source or an explicit design assumption.
+    Application rates are never stored here.
+    """
+
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+    textEn: str = Field(min_length=5)
+    textNe: str = Field(min_length=2)
+    basis: Literal["source", "assumption"]
+    sourceKey: str | None = None
+    section: str | None = None
+
+    @model_validator(mode="after")
+    def source_requires_citation(self):
+        if self.basis == "source" and not self.sourceKey:
+            raise ValueError("source-backed safety measure requires sourceKey")
+        if self.basis == "assumption" and self.sourceKey:
+            raise ValueError("assumption safety measure cannot cite a sourceKey")
+        return self
+
+
+class AgrochemicalSafetyRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+    id: str = Field(min_length=3)
+    productClass: Literal["fertilizer", "insecticide", "fungicide", "herbicide"]
+    products: list[str] = Field(min_length=1)
+    measures: list[SafetyMeasure] = Field(min_length=1)
+    verified: bool
+    reviewStatus: Literal["not-expert-reviewed", "expert-reviewed"]
+    reviewer: str | None = None
+
+    @model_validator(mode="after")
+    def expert_review_requires_reviewer(self):
+        if self.reviewStatus == "expert-reviewed" and not self.reviewer:
+            raise ValueError("expert-reviewed safety record requires reviewer")
+        return self
+
+
 class HomeRemedy(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
     id: str

@@ -9,9 +9,11 @@ import ScreenBField from "@/components/ScreenBField";
 import ScreenCDecision from "@/components/ScreenCDecision";
 import ScreenDTrends from "@/components/ScreenDTrends";
 import ScreenEMethods from "@/components/ScreenEMethods";
+import ScreenFIrrigation from "@/components/ScreenFIrrigation";
 import AskAssistant from "@/components/AskAssistant";
 import ScreenAskHub from "@/components/ScreenAskHub";
 import {
+  Droplets,
   Ellipsis,
   Home,
   MapPinned,
@@ -22,7 +24,7 @@ import {
 } from "lucide-react";
 import { getDict, type Lang } from "@/i18n";
 
-type TabId = "home" | "field" | "decision" | "trends" | "ask" | "methods";
+type TabId = "home" | "field" | "irrigation" | "decision" | "trends" | "ask" | "methods";
 
 function subscribeToLanguage(onChange: () => void) {
   if (typeof window === "undefined") return () => {};
@@ -77,6 +79,7 @@ function getServerOnlineStatus() {
 const NAV_ITEMS = [
   { id: "home", labelEn: "Today", shortEn: "Today", labelNe: "आज", shortNe: "आज", icon: Home },
   { id: "field", labelEn: "My field", shortEn: "Field", labelNe: "मेरो खेत", shortNe: "खेत", icon: MapPinned },
+  { id: "irrigation", labelEn: "Irrigation", shortEn: "Water", labelNe: "सिँचाइ", shortNe: "सिँचाइ", icon: Droplets },
   { id: "trends", labelEn: "Climate trends", shortEn: "Trends", labelNe: "जलवायु प्रवृत्ति", shortNe: "प्रवृत्ति", icon: TrendingUp },
   { id: "ask", labelEn: "Ask", shortEn: "Ask", labelNe: "सोध्नुहोस्", shortNe: "सोध", icon: MessageCircleQuestion },
   { id: "methods", labelEn: "More", shortEn: "More", labelNe: "थप", shortNe: "थप", icon: Ellipsis },
@@ -489,8 +492,19 @@ export default function SafeFieldNepalApp() {
               />
             )}
 
-            {activeTab === "decision" && (
-              <ScreenCDecision
+            {activeTab === "irrigation" && (
+              <ScreenFIrrigation
+                hasField={hasField}
+                onSelectField={handleSelectField}
+                data={assessmentData}
+                loading={loading}
+                error={assessmentError}
+                onRunAssessment={handleRunAssessment}
+                lang={lang}
+              />
+            )}
+
+            {activeTab === "decision" && (              <ScreenCDecision
                 data={assessmentData}
                 onProceedToTrends={() => selectTab("trends")}
                 lang={lang}
@@ -520,7 +534,7 @@ export default function SafeFieldNepalApp() {
         aria-label="Mobile navigation"
         className="fixed inset-x-0 bottom-0 z-[60] flex justify-center px-4 pb-[max(env(safe-area-inset-bottom),12px)] lg:hidden"
       >
-        <div className="glass-bottomnav shadow-float grid w-full max-w-md grid-cols-5 gap-0.5 rounded-2xl p-1.5">
+        <div className="glass-bottomnav shadow-float grid w-full max-w-md grid-cols-6 gap-0.5 rounded-2xl p-1.5">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;

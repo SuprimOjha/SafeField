@@ -293,7 +293,11 @@ def _scaled(dataset: Any) -> tuple[np.ndarray, np.ndarray, float]:
     fill = attributes.get("_FillValue", attributes.get("fill_value"))
     finite = np.isfinite(raw)
     if fill is not None:
-        finite &= raw != float(fill)
+        # HDF5 attributes may hold a scalar or an array of fill values. Exclude
+        # every declared fill value instead of assuming a single scalar.
+        for value in np.atleast_1d(np.asarray(fill, dtype=float)).reshape(-1):
+            if np.isfinite(value):
+                finite &= raw != value
     return raw * scale + offset, finite, scale
 
 

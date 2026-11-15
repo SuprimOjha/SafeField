@@ -28,14 +28,35 @@ def fertilizer(source_key="official-guide"):
     }
 
 
-def write_pack(tmp_path, sources=None, fertilizer_records=None, conversion_records=None, remedy_records=None):
+def write_pack(tmp_path, sources=None, fertilizer_records=None, conversion_records=None, remedy_records=None, safety_records=None):
     (tmp_path / "sources.json").write_text(json.dumps(sources if sources is not None else {"official-guide": source(), "_example": source()}), encoding="utf-8")
     for filename, records in [
         ("fertilizer_reference.json", fertilizer_records or []),
         ("conversions.json", conversion_records or []),
         ("home_remedies.json", remedy_records or []),
+        ("agrochemical_safety.json", safety_records or []),
     ]:
         (tmp_path / filename).write_text(json.dumps({"records": records, "_example": {"ignored": True}}), encoding="utf-8")
+
+
+def safety(source_key=None, text="Keep the product in its original labelled container.", basis="source"):
+    return {
+        "id": "safety-test",
+        "productClass": "insecticide",
+        "products": ["Test product"],
+        "measures": [
+            {
+                "textEn": text,
+                "textNe": "उत्पादनलाई मूल लेबल भएको भाँडामै राख्नुहोस्।",
+                "basis": basis,
+                "sourceKey": source_key,
+                "section": "Storage",
+            }
+        ],
+        "verified": True,
+        "reviewStatus": "not-expert-reviewed",
+        "reviewer": None,
+    }
 
 
 def test_empty_drop_in_templates_load_without_advice(tmp_path):
@@ -44,6 +65,7 @@ def test_empty_drop_in_templates_load_without_advice(tmp_path):
     assert report["status"] == "ok"
     assert report["fertilizer_references"] == 0
     assert report["home_remedies"] == 0
+    assert report["agrochemical_safety_records"] == 0
 
 
 def test_fertilizer_requires_verified_official_source(tmp_path):
@@ -151,3 +173,51 @@ def test_non_array_content_records_are_rejected(tmp_path):
     report = validate_content(tmp_path)
     assert report["home_remedies"] == 0
     assert report["status"] == "partial"
+
+
+def test_safety_measures_load_with_source_and_assumption(tmp_path):
+    records = [
+        safety("official-guide"),
+        safety(None, text="Wash hands after handling.", basis="assumption"),
+    ]
+    write_pack(tmp_path, safety_records=records)
+    report = validate_content(tmp_path)
+    assert report["status"] == "ok"
+    assert report["agrochemical_safety_records"] == 2
+    assert report["skipped"]["safety"] == 0
+
+
+def test_safety_source_measure_requires_a_known_official_source(tmp_path):
+    write_pack(tmp_path, safety_records=[safety("missing-source")])
+    report = validate_content(tmp_path)
+    assert report["agrochemical_safety_records"] == 0
+    assert report["skipped"]["safety"] == 1
+
+
+def test_safety_text_rejects_dose_like_quantities(tmp_path):
+    write_pack(
+        tmp_path,
+        safety_records=[
+            safety("official-guide", text="Mix 2 kg per ropani before use.")
+        ],
+    )
+    report = validate_content(tmp_path)
+    assert report["agrochemical_safety_records"] == 0
+    assert report["skipped"]["safety"] == 1
+
+
+def test_repository_safety_pack_is_valid_without_doses():
+    report = validate_content()
+    assert report["status"] == "ok"
+    assert report["agrochemical_safety_records"] == 4
+    assert report["skipped"]["safety"] == 0
+    assert {record["productClass"] for record in report["agrochemical_safety"]} == {
+        "fertilizer",
+        "insecticide",
+        "fungicide",
+        "herbicide",
+    }
+    for record in report["agrochemical_safety"]:
+        for measure in record["measures"]:
+            assert measure["textEn"]
+            assert measure["textNe"]

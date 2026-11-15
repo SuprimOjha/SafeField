@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 from pydantic import ValidationError
 from app.content_packs.models import (
-    AreaConversion, FertilizerReference, HomeRemedy, SourceRecord,
+    AgrochemicalSafetyRecord, AreaConversion, FertilizerReference, HomeRemedy, SourceRecord,
 )
 
 CONTENT_DIR = Path(__file__).resolve().parents[2] / "content"
@@ -23,8 +23,10 @@ def validate_content(content_dir: Path = CONTENT_DIR) -> dict[str, Any]:
     """Load verified records only; invalid records are skipped and counted."""
     report: dict[str, Any] = {
         "status": "ok", "sources": 0, "fertilizer_references": 0,
-        "conversions": 0, "home_remedies": 0, "skipped": {}, "warnings": [],
-        "fertilizer": [], "remedies": [], "conversions_data": [], "source_records": {},
+        "conversions": 0, "home_remedies": 0, "agrochemical_safety_records": 0,
+        "skipped": {}, "warnings": [],
+        "fertilizer": [], "remedies": [], "conversions_data": [],
+        "agrochemical_safety": [], "source_records": {},
     }
     try:
         raw_sources = _read_json(content_dir / "sources.json")
@@ -65,9 +67,10 @@ def validate_content(content_dir: Path = CONTENT_DIR) -> dict[str, Any]:
                 record = model.model_validate(item)
                 if not record.verified:
                     raise ValueError("verified must be true")
-                if record.sourceKey not in sources:
-                    raise ValueError(f"unknown sourceKey: {record.sourceKey}")
-                source = sources[record.sourceKey]
+                if kind != "safety":
+                    if record.sourceKey not in sources:
+                        raise ValueError(f"unknown sourceKey: {record.sourceKey}")
+                    source = sources[record.sourceKey]
                 if kind == "fertilizer":
                     if not source.official:
                         raise ValueError("fertilizer references require an official source")
@@ -104,6 +107,22 @@ def validate_content(content_dir: Path = CONTENT_DIR) -> dict[str, Any]:
                         report["warnings"].append(f"{filename}[{index}]: quantity hidden because its source is not official")
                         record.quantitiesAsPrinted = None
                         record.preparationNotesAsPrinted = None
+                elif kind == "safety":
+                    for measure in record.measures:
+                        if DOSE_PATTERN.search(measure.textEn) or DOSE_PATTERN.search(measure.textNe):
+                            raise ValueError(
+                                "safety text must not contain a dose, rate or quantity"
+                            )
+                        if measure.basis == "source":
+                            cited = sources.get(measure.sourceKey or "")
+                            if cited is None:
+                                raise ValueError(
+                                    f"unknown safety sourceKey: {measure.sourceKey}"
+                                )
+                            if not cited.official:
+                                raise ValueError(
+                                    "source-backed safety measure requires an official source"
+                                )
                 valid.append(record.model_dump())
             except (ValidationError, ValueError) as exc:
                 skipped += 1
@@ -116,7 +135,11 @@ def validate_content(content_dir: Path = CONTENT_DIR) -> dict[str, Any]:
     report["fertilizer"] = load_records("fertilizer_reference.json", FertilizerReference, "fertilizer")
     report["conversions_data"] = load_records("conversions.json", AreaConversion, "conversion")
     report["remedies"] = load_records("home_remedies.json", HomeRemedy, "remedy")
+    report["agrochemical_safety"] = load_records(
+        "agrochemical_safety.json", AgrochemicalSafetyRecord, "safety"
+    )
     report["fertilizer_references"] = len(report["fertilizer"])
     report["conversions"] = len(report["conversions_data"])
     report["home_remedies"] = len(report["remedies"])
+    report["agrochemical_safety_records"] = len(report["agrochemical_safety"])
     return report

@@ -7,5 +7,50 @@
     "accessed": "2026-11-14",
     "official": false,
     "language": "en"
+  },
+  "epa_ppe": {
+    "title": "Personal Protective Equipment for Pesticide Handlers",
+    "authority": "U.S. Environmental Protection Agency",
+    "year": 2026,
+    "url": "https://www.epa.gov/pesticide-worker-safety/personal-protective-equipment-pesticide-handlers",
+    "accessed": "2026-11-15",
+    "official": true,
+    "language": "en"
+  },
+  "epa_storage": {
+    "title": "Storing Pesticides Safely",
+    "authority": "U.S. Environmental Protection Agency",
+    "year": 2026,
+    "url": "https://www.epa.gov/safepestcontrol/storing-pesticides-safely",
+    "accessed": "2026-11-15",
+    "official": true,
+    "language": "en"
+  },
+  "fao_who_pesticide_code": {
+    "title": "International Code of Conduct on Pesticide Management",
+    "authority": "Food and Agriculture Organization of the United Nations and World Health Organization",
+    "year": 2014,
+    "url": "https://www.fao.org/fileadmin/templates/agphome/documents/Pests_Pesticides/Code/CODE_2014Sep_ENG.pdf",
+    "accessed": "2026-11-15",
+    "official": true,
+    "language": "en"
+  },
+  "nepal_pesticides_act": {
+    "title": "Pesticides Management Act, 2076 (Act No. 7 of 2019)",
+    "authority": "Government of Nepal",
+    "year": 2019,
+    "url": "https://npponepal.gov.np/rules/Pesticides-Act-1701156048.pdf",
+    "accessed": "2026-11-15",
+    "official": true,
+    "language": "en"
+  },
+  "fao_fertilizer_code": {
+    "title": "International Code of Conduct for the Sustainable Use and Management of Fertilizers",
+    "authority": "Food and Agriculture Organization of the United Nations",
+    "year": 2019,
+    "url": "https://openknowledge.fao.org/server/api/core/bitstreams/0d5bdeb3-7a9f-43c0-b610-e2c1e55b0678/content",
+    "accessed": "2026-11-15",
+    "official": true,
+    "language": "en"
   }
 }

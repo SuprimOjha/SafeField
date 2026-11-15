@@ -88,6 +88,7 @@ def get_farmer_content() -> dict[str, object]:
         "sources": report["source_records"],
         "fertilizer_references": report["fertilizer"],
         "home_remedies": report["remedies"],
+        "agrochemical_safety": report["agrochemical_safety"],
         "conversions": report["conversions_data"],
         "skipped": report["skipped"],
         "warnings": report["warnings"],

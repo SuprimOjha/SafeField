@@ -276,7 +276,7 @@ def main() -> int:
 
     if args.command == "validate-content":
         report = validate_content()
-        print(json.dumps({key: value for key, value in report.items() if key not in {"fertilizer", "remedies", "conversions_data"}}, indent=2, ensure_ascii=False))
+        print(json.dumps({key: value for key, value in report.items() if key not in {"fertilizer", "remedies", "conversions_data", "agrochemical_safety"}}, indent=2, ensure_ascii=False))
         return 0 if report["status"] == "ok" and not any(report["skipped"].values()) else 1
     return 2
 

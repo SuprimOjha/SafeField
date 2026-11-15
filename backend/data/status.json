@@ -1,0 +1,67 @@
+{
+  "generated_at": "2026-11-15T15:54:36Z",
+  "schema_version": 1,
+  "sources": {
+    "lst": {
+      "coverage": null,
+      "files": [
+        "2026-11-02.json"
+      ],
+      "granule_ids": [
+        "VNP21A1D.A2026306.h24v05.002.2026307134314",
+        "VNP21A1D.A2026306.h24v06.002.2026307134313",
+        "VNP21A1D.A2026306.h25v05.002.2026307135716",
+        "VNP21A1D.A2026306.h25v06.002.2026307134311"
+      ],
+      "last_error": null,
+      "last_success_at": "2026-11-15T15:54:36Z",
+      "latest_data_date": "2026-11-02",
+      "product": "VNP21A1D",
+      "source": "lst",
+      "status": "ok",
+      "version": "002"
+    },
+    "smap": {
+      "coverage": 1.0,
+      "files": [
+        "2026-11-12.json"
+      ],
+      "granule_ids": [
+        "SMAP_L4_SM_gph_20261112T013000_Vv8013_001.h5_u9loH5HD",
+        "SMAP_L4_SM_gph_20261112T043000_Vv8013_001.h5_u9loH5HD",
+        "SMAP_L4_SM_gph_20261112T073000_Vv8013_001.h5_u9loH5HD",
+        "SMAP_L4_SM_gph_20261112T103000_Vv8013_001.h5_u9loH5HD",
+        "SMAP_L4_SM_gph_20261112T133000_Vv8013_001.h5_u9loH5HD",
+        "SMAP_L4_SM_gph_20261112T163000_Vv8013_001.h5_u9loH5HD",
+        "SMAP_L4_SM_gph_20261112T193000_Vv8013_001.h5_u9loH5HD",
+        "SMAP_L4_SM_gph_20261112T223000_Vv8013_001.h5_u9loH5HD"
+      ],
+      "last_error": null,
+      "last_success_at": "2026-11-15T15:54:36Z",
+      "latest_data_date": "2026-11-12",
+      "product": "SPL4SMGP",
+      "source": "smap",
+      "status": "ok",
+      "version": "008"
+    },
+    "vegetation": {
+      "coverage": null,
+      "files": [
+        "2026-11-08.json"
+      ],
+      "granule_ids": [
+        "VNP13A1.A2026297.h24v05.002.2026309112359",
+        "VNP13A1.A2026297.h24v06.002.2026309112354",
+        "VNP13A1.A2026297.h25v05.002.2026309112404",
+        "VNP13A1.A2026297.h25v06.002.2026309112407"
+      ],
+      "last_error": null,
+      "last_success_at": "2026-11-15T15:54:36Z",
+      "latest_data_date": "2026-11-08",
+      "product": "VNP13A1",
+      "source": "vegetation",
+      "status": "ok",
+      "version": "002"
+    }
+  }
+}

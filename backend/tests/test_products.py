@@ -194,6 +194,24 @@ def test_read_vegetation_scales_ndvi_and_evi(tmp_path, monkeypatch):
     assert all(cell.evi == pytest.approx(0.3) for cell in approved)
 
 
+def test_scaled_reads_array_valued_fill_attribute(tmp_path):
+    """VNP13A1 declares fill values as an HDF5 array, not one scalar."""
+    import h5py
+
+    path = tmp_path / "array-fill.h5"
+    with h5py.File(path, "w") as handle:
+        dataset = handle.create_dataset(
+            "NDVI", data=np.array([[1.0, -3000.0], [2.0, -2000.0]], dtype=np.float32)
+        )
+        dataset.attrs["scale_factor"] = 0.5
+        dataset.attrs["_FillValue"] = np.array([-3000.0, -2000.0], dtype=np.float32)
+        values, finite, scale = products._scaled(dataset)
+
+    assert scale == 0.5
+    assert finite.tolist() == [[True, False], [True, False]]
+    assert values.tolist() == [[0.5, -1500.0], [1.0, -1000.0]]
+
+
 def ref(granule_id: str, begin: str, end: str) -> GranuleRef:
     return GranuleRef(
         granule_id=granule_id,

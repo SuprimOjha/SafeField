@@ -525,6 +525,79 @@ export const en = {
   fieldNoAssessmentTitle: "No assessment run yet",
   fieldNoAssessmentBody:
     "Run the assessment to load weather, soil and terrain for this field. Until then, no values are shown.",
+
+  // Screen F — Irrigation
+  navIrrigation: "Irrigation",
+  irrigationTitle: "When to irrigate",
+  irrigationSubtitle:
+    "A screening check that combines root-zone soil moisture, recent rain and the 48-hour forecast. It never prescribes how much water to apply.",
+  irrigationNeedsFieldTitle: "No field selected yet",
+  irrigationNeedsFieldBody:
+    "The irrigation check runs for the field you marked. Go to the map and tap your land, use GPS, or walk the corners first.",
+  irrigationNeedsFieldCta: "Open the field map",
+  irrigationNoAssessmentTitle: "No assessment run yet",
+  irrigationNoAssessmentBody:
+    "Run the assessment to load soil moisture and forecast data for this field. Until then, no irrigation status is shown.",
+  irrigationStatusTitle: "Irrigation check",
+  irrigationStatusIrrigate: "Soil looks dry — check before irrigating",
+  irrigationStatusWaitRain: "Soil looks dry, but rain is forecast",
+  irrigationStatusMonitor: "Watch the soil moisture",
+  irrigationStatusAdequate: "No dry-zone signal",
+  irrigationStatusUnknown: "Cannot check irrigation timing",
+  irrigationReasonDryNoRain:
+    "Root-zone soil moisture is below the dry threshold and little rain is expected in the next 48 hours. Walk the field and check the soil by hand before irrigating.",
+  irrigationReasonDryRainComing:
+    "Root-zone soil moisture is below the dry threshold, but the forecast expects rain within 48 hours. Recheck the soil after that rain instead of irrigating now.",
+  irrigationReasonWatch:
+    "Root-zone soil moisture is between the dry and adequate thresholds. Recheck in the next few days.",
+  irrigationReasonAdequate:
+    "Root-zone soil moisture is above the adequate threshold. No dry-zone signal at this time.",
+  irrigationReasonNoSignal:
+    "Root-zone soil moisture is not available for this field, so no irrigation status can be given. Missing data is never treated as wet.",
+  irrigationRootMoisture: "Root-zone moisture",
+  irrigationSurfaceMoisture: "Surface moisture",
+  irrigationRecentRain: "Rain, past 72 h",
+  irrigationForecast48h: "Rain forecast, next 48 h",
+  irrigationNoData: "No data",
+  irrigationNoForecast: "No forecast",
+  irrigationThresholdsTitle: "Thresholds used",
+  irrigationThresholdDry: "Dry root zone: below {value} m³/m³",
+  irrigationThresholdAdequate: "Adequate root zone: above {value} m³/m³",
+  irrigationThresholdRain: "Rain expected: at least {value} mm in 48 h",
+  irrigationAssumptionNote:
+    "All three thresholds are design assumptions, not crop-specific or locally calibrated values. They classify a screening state only.",
+  irrigationNoAmount:
+    "This screen does not say how much water to apply. Decide the amount with your own field check, water availability and local extension advice.",
+  irrigationSource: "Source",
+  irrigationValidDate: "Valid",
+  irrigationRecheck: "Recheck after the next assessment.",
+  irrigationSignalNote:
+    "Root-zone moisture comes from NASA SMAP L4 (model with satellite observations), not a field probe.",
+
+  // Agrochemical safety
+  safetyPanelTitle: "Fertilizer and pesticide safety",
+  safetyBody:
+    "Safety measures for the product you selected. Choose the fertilizer or pesticide you plan to use.",
+  safetySelectLabel: "Product",
+  safetyFertilizerGroup: "Fertilizers",
+  safetyInsecticideGroup: "Insecticides",
+  safetyFungicideGroup: "Fungicides",
+  safetyHerbicideGroup: "Herbicides",
+  safetyClassFertilizer: "Fertilizer",
+  safetyClassInsecticide: "Insecticide",
+  safetyClassFungicide: "Fungicide",
+  safetyClassHerbicide: "Herbicide",
+  safetySourceLabel: "Official guidance",
+  safetyGeneralLabel: "General practice",
+  safetyNoDose:
+    "No dose, mixing rate or application quantity is shown on this screen. Follow the product label printed for Nepal and the instruction from your local agriculture office.",
+  safetyLabelAuthority:
+    "The label on the product you buy is the legal instruction for that product; if this screen and the label differ, follow the label.",
+  safetyLoading: "Loading safety measures…",
+  safetyUnreviewed: "These measures have not yet been reviewed by a crop-protection expert.",
+  safetyNoRecord: "No safety record is installed for this product.",
+  safetyUnavailable:
+    "Safety measures could not be loaded right now. Use the product label and ask your local agriculture office.",
 };
 
 export type Dictionary = typeof en;

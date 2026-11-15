@@ -527,4 +527,77 @@ export const ne: Dictionary = {
   fieldNoAssessmentTitle: "अझै मूल्याङ्कन चलेको छैन",
   fieldNoAssessmentBody:
     "यो खेतका लागि मौसम, माटो र भू-आकृति लोड गर्न मूल्याङ्कन चलाउनुहोस्। नचलाएसम्म कुनै मान देखाइँदैन।",
+
+  // Screen F — Irrigation
+  navIrrigation: "सिँचाइ",
+  irrigationTitle: "कहिले सिँचाइ गर्ने",
+  irrigationSubtitle:
+    "जरा क्षेत्रको माटोको नमी, हालैको वर्षा र ४८ घण्टाको पूर्वानुमान मिलाएर गरिने प्रारम्भिक जाँच। यसले कति पानी हाल्ने भनेर बताउँदैन।",
+  irrigationNeedsFieldTitle: "अहिलेसम्म खेत छानिएको छैन",
+  irrigationNeedsFieldBody:
+    "सिँचाइ जाँच तपाईंले मार्क गर्नुभएको खेतका लागि चल्छ। पहिले नक्सामा जानुहोस् र आफ्नो जमिन थिच्नुहोस्, GPS प्रयोग गर्नुहोस् वा कुना हिँडेर मार्क गर्नुहोस्।",
+  irrigationNeedsFieldCta: "खेत नक्सा खोल्नुहोस्",
+  irrigationNoAssessmentTitle: "अझै मूल्याङ्कन चलेको छैन",
+  irrigationNoAssessmentBody:
+    "यो खेतको माटोको नमी र पूर्वानुमान लोड गर्न मूल्याङ्कन चलाउनुहोस्। नचलाएसम्म सिँचाइको अवस्था देखाइँदैन।",
+  irrigationStatusTitle: "सिँचाइ जाँच",
+  irrigationStatusIrrigate: "माटो सुक्खा देखिन्छ — सिँचाइ गर्नुअघि जाँच्नुहोस्",
+  irrigationStatusWaitRain: "माटो सुक्खा देखिन्छ, तर वर्षाको पूर्वानुमान छ",
+  irrigationStatusMonitor: "माटोको नमी हेरिरहनुहोस्",
+  irrigationStatusAdequate: "सुक्खा क्षेत्रको संकेत छैन",
+  irrigationStatusUnknown: "सिँचाइको समय जाँच्न सकिएन",
+  irrigationReasonDryNoRain:
+    "जरा क्षेत्रको माटोको नमी सुक्खा सीमाभन्दा तल छ र अर्को ४८ घण्टामा वर्षा कम मात्रा मात्र अपेक्षित छ। सिँचाइ गर्नुअघि खेतमा गएर माटो हातले जाँच्नुहोस्।",
+  irrigationReasonDryRainComing:
+    "जरा क्षेत्रको माटोको नमी सुक्खा सीमाभन्दा तल छ, तर ४८ घण्टाभित्र वर्षाको पूर्वानुमान छ। अहिले सिँचाइ नगरी त्यो वर्षापछि माटो फेरि जाँच्नुहोस्।",
+  irrigationReasonWatch:
+    "जरा क्षेत्रको माटोको नमी सुक्खा र पर्याप्त सीमाबीच छ। अबको केही दिनमा फेरि जाँच्नुहोस्।",
+  irrigationReasonAdequate:
+    "जरा क्षेत्रको माटोको नमी पर्याप्त सीमाभन्दा माथि छ। अहिले सुक्खा क्षेत्रको संकेत छैन।",
+  irrigationReasonNoSignal:
+    "यो खेतको जरा क्षेत्रको माटोको नमी उपलब्ध छैन, त्यसैले सिँचाइको अवस्था दिन सकिँदैन। डाटा नभएको अवस्थालाई ओसिलो मानिँदैन।",
+  irrigationRootMoisture: "जरा क्षेत्रको नमी",
+  irrigationSurfaceMoisture: "सतहको नमी",
+  irrigationRecentRain: "वर्षा, पछिल्लो ७२ घण्टा",
+  irrigationForecast48h: "वर्षा पूर्वानुमान, अर्को ४८ घण्टा",
+  irrigationNoData: "डाटा छैन",
+  irrigationNoForecast: "पूर्वानुमान छैन",
+  irrigationThresholdsTitle: "प्रयोग गरिएका सीमा",
+  irrigationThresholdDry: "सुक्खा जरा क्षेत्र: {value} m³/m³ भन्दा तल",
+  irrigationThresholdAdequate: "पर्याप्त जरा क्षेत्र: {value} m³/m³ भन्दा माथि",
+  irrigationThresholdRain: "वर्षा अपेक्षित: ४८ घण्टामा कम्तीमा {value} मिमी",
+  irrigationAssumptionNote:
+    "यी तीनै सीमा डिजाइन मान्यता हुन्; बालीअनुसार वा स्थानीय रूपमा क्यालिब्रेट गरिएका मान होइनन्। यीले प्रारम्भिक अवस्था मात्र वर्गीकरण गर्छन्।",
+  irrigationNoAmount:
+    "यो स्क्रिनले कति पानी हाल्ने भनेर बताउँदैन। मात्रा आफ्नो खेत जाँच, पानीको उपलब्धता र स्थानीय कृषि सल्लाहका आधारमा तय गर्नुहोस्।",
+  irrigationSource: "स्रोत",
+  irrigationValidDate: "मान्य",
+  irrigationRecheck: "अर्को मूल्याङ्कनपछि फेरि जाँच्नुहोस्।",
+  irrigationSignalNote:
+    "जरा क्षेत्रको नमी NASA SMAP L4 (उपग्रह अवलोकन मिसाइएको मोडेल) बाट आउँछ, खेतको सेन्सरबाट होइन।",
+
+  // Agrochemical safety
+  safetyPanelTitle: "मल र कीटनाशकको सुरक्षा",
+  safetyBody:
+    "तपाईंले छान्नुभएको उत्पादनका सुरक्षा उपाय। तपाईंले प्रयोग गर्न लाग्नुभएको मल वा कीटनाशक छान्नुहोस्।",
+  safetySelectLabel: "उत्पादन",
+  safetyFertilizerGroup: "मल",
+  safetyInsecticideGroup: "कीटनाशक",
+  safetyFungicideGroup: "ढुसीनाशक",
+  safetyHerbicideGroup: "झारनाशक",
+  safetyClassFertilizer: "मल",
+  safetyClassInsecticide: "कीटनाशक",
+  safetyClassFungicide: "ढुसीनाशक",
+  safetyClassHerbicide: "झारनाशक",
+  safetySourceLabel: "आधिकारिक निर्देशन",
+  safetyGeneralLabel: "सामान्य अभ्यास",
+  safetyNoDose:
+    "यो स्क्रिनमा कुनै मात्रा, मिसाउने अनुपात वा हाल्ने परिमाण देखाइँदैन। नेपालका लागि छापिएको उत्पादनको लेबल र स्थानीय कृषि कार्यालयको निर्देशन पालना गर्नुहोस्।",
+  safetyLabelAuthority:
+    "तपाईंले किन्नुभएको उत्पादनको लेबल नै त्यस उत्पादनको कानुनी निर्देशन हो; यो स्क्रिन र लेबल फरक परे लेबल पालना गर्नुहोस्।",
+  safetyLoading: "सुरक्षा उपाय लोड हुँदैछन्…",
+  safetyUnreviewed: "यी उपाय अझै बाली संरक्षण विशेषज्ञबाट समीक्षा भएका छैनन्।",
+  safetyNoRecord: "यो उत्पादनका लागि सुरक्षा विवरण जोडिएको छैन।",
+  safetyUnavailable:
+    "सुरक्षा उपाय अहिले लोड गर्न सकिएन। उत्पादनको लेबल प्रयोग गर्नुहोस् र स्थानीय कृषि कार्यालयसँग सोध्नुहोस्।",
 };

@@ -13,6 +13,7 @@ def test_content_endpoint_reports_installed_packs():
     assert isinstance(body["sources"], dict)
     assert isinstance(body["fertilizer_references"], list)
     assert isinstance(body["home_remedies"], list)
+    assert isinstance(body["agrochemical_safety"], list)
     assert isinstance(body["conversions"], list)
     assert isinstance(body["skipped"], dict)
     assert isinstance(body["warnings"], list)
@@ -34,8 +35,9 @@ def test_content_endpoint_maps_verified_records(monkeypatch):
         },
         "fertilizer": [{"id": "ref-1", "verified": True, "sourceKey": "src"}],
         "remedies": [{"id": "rem-1", "verified": True, "sourceKey": "src"}],
+        "agrochemical_safety": [{"id": "safety-1", "verified": True, "productClass": "fertilizer"}],
         "conversions_data": [{"unit": "ropani", "toHectare": 0.0508, "sourceKey": "src", "verified": True}],
-        "skipped": {"fertilizer": 0, "conversion": 0, "remedy": 0},
+        "skipped": {"fertilizer": 0, "conversion": 0, "remedy": 0, "safety": 0},
         "warnings": [],
     }
     monkeypatch.setattr(routes, "validate_content", lambda: report)
@@ -46,4 +48,5 @@ def test_content_endpoint_maps_verified_records(monkeypatch):
     assert body["sources"] == report["source_records"]
     assert body["fertilizer_references"] == report["fertilizer"]
     assert body["home_remedies"] == report["remedies"]
+    assert body["agrochemical_safety"] == report["agrochemical_safety"]
     assert body["conversions"] == report["conversions_data"]

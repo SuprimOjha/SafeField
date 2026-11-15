@@ -1,0 +1,332 @@
+{
+  "records": [
+    {
+      "id": "safety-fertilizer",
+      "productClass": "fertilizer",
+      "products": [
+        "Urea",
+        "DAP",
+        "Muriate of Potash (MOP)",
+        "NPK compound",
+        "Compost / Farmyard manure"
+      ],
+      "measures": [
+        {
+          "textEn": "Use fertilizer as part of a nutrient plan that protects food safety, soil and water.",
+          "textNe": "खाद्य सुरक्षा, माटो र पानीको संरक्षण गर्ने पोषक तत्व योजनाको भागका रूपमा मल प्रयोग गर्नुहोस्।",
+          "basis": "source",
+          "sourceKey": "fao_fertilizer_code",
+          "section": "Sustainable use and management of fertilizers"
+        },
+        {
+          "textEn": "Read the bag label and follow local extension advice; this app does not recommend an amount.",
+          "textNe": "बोराको लेबल पढ्नुहोस् र स्थानीय कृषि सल्लाह पालना गर्नुहोस्; यो एपले मात्रा सिफारिस गर्दैन।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        },
+        {
+          "textEn": "Keep bags closed and dry, off the ground, away from food, feed, seed, children and animals.",
+          "textNe": "बोरा बन्द र सुख्खा राख्नुहोस्, जमिनबाट माथि, खाद्यान्न, पशुखाद्य, बीउ, बालबालिका र पशुबाट अलग राख्नुहोस्।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        },
+        {
+          "textEn": "Wear gloves and eye protection when handling, avoid breathing dust, and wash hands and exposed skin afterwards.",
+          "textNe": "मल छुँदा पञ्जा र आँखाको सुरक्षा लगाउनुहोस्, धुलो सासमा नलिनुहोस् र पछि हात तथा खुला छाला धुनुहोस्।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        },
+        {
+          "textEn": "Do not store fertilizer where rain or irrigation water can wash it into streams, ponds or wells.",
+          "textNe": "वर्षा वा सिँचाइको पानीले खोला, पोखरी वा इनारमा बगाउन सक्ने ठाउँमा मल नराख्नुहोस्।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        },
+        {
+          "textEn": "Keep fertilizer away from fuel, pesticides and other chemicals, and never put it in a drink or food container.",
+          "textNe": "मललाई इन्धन, कीटनाशक र अन्य रसायनबाट अलग राख्नुहोस्; पेय वा खाद्य भाँडामा कहिल्यै नराख्नुहोस्।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        },
+        {
+          "textEn": "If fertilizer gets in the eyes or on the skin, rinse with clean water and seek advice if irritation continues.",
+          "textNe": "मल आँखा वा छालामा परे सफा पानीले धुनुहोस् र जलन रहिरहे सल्लाह लिनुहोस्।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        },
+        {
+          "textEn": "This app gives no fertilizer dose; use a soil test and local recommendation before applying.",
+          "textNe": "यो एपले मलको मात्रा दिँदैन; प्रयोग गर्नुअघि माटो परीक्षण र स्थानीय सिफारिस लिनुहोस्।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        }
+      ],
+      "verified": true,
+      "reviewStatus": "not-expert-reviewed",
+      "reviewer": null
+    },
+    {
+      "id": "safety-insecticide",
+      "productClass": "insecticide",
+      "products": [
+        "Chlorpyrifos",
+        "Cypermethrin"
+      ],
+      "measures": [
+        {
+          "textEn": "Wear the personal protective equipment the product label requires, and check it for damage before each day of use.",
+          "textNe": "लेबलले तोकेको व्यक्तिगत सुरक्षा सामग्री लगाउनुहोस् र प्रत्येक दिन प्रयोग गर्नुअघि त्यसको अवस्था जाँच्नुहोस्।",
+          "basis": "source",
+          "sourceKey": "epa_ppe",
+          "section": "Personal protective equipment"
+        },
+        {
+          "textEn": "Keep the pesticide in its original labelled container and never pour it into a drink bottle or another unlabelled container.",
+          "textNe": "कीटनाशकलाई मूल लेबल भएको भाँडामै राख्नुहोस्; पेय पदार्थको बोतल वा लेबल नभएको अन्य भाँडामा कहिल्यै नहाल्नुहोस्।",
+          "basis": "source",
+          "sourceKey": "epa_storage",
+          "section": "Storing pesticides safely"
+        },
+        {
+          "textEn": "Store it out of reach of children and animals, away from food, animal feed and medicine.",
+          "textNe": "बालबालिका र पशुहरूको पहुँचबाट टाढा, खाद्यान्न, पशुखाद्य र औषधिबाट अलग राख्नुहोस्।",
+          "basis": "source",
+          "sourceKey": "epa_storage",
+          "section": "Storing pesticides safely"
+        },
+        {
+          "textEn": "Use pesticides only as part of sound pest management, with care for human health and the environment.",
+          "textNe": "कीटनाशकको प्रयोग मानव स्वास्थ्य र वातावरणको ख्याल गर्दै, उचित कीट व्यवस्थापनको भागका रूपमा मात्र गर्नुहोस्।",
+          "basis": "source",
+          "sourceKey": "fao_who_pesticide_code",
+          "section": "Objectives of the Code of Conduct"
+        },
+        {
+          "textEn": "Pesticide registration, sale and use are regulated in Nepal; use a registered product and follow its label.",
+          "textNe": "नेपालमा कीटनाशकको दर्ता, बिक्री र प्रयोग नियमन गरिएको छ; दर्ता भएको उत्पादन मात्र प्रयोग गर्नुहोस् र लेबल पालना गर्नुहोस्।",
+          "basis": "source",
+          "sourceKey": "nepal_pesticides_act",
+          "section": "Registration and regulation of pesticides"
+        },
+        {
+          "textEn": "Never mix two products unless the label explicitly allows it; mixing can increase exposure and damage the crop.",
+          "textNe": "लेबलले स्पष्ट रूपमा अनुमति नदिएसम्म दुई उत्पादन मिसाउनु हुँदैन; मिसाउँदा जोखिम बढ्न र बाली बिग्रन सक्छ।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        },
+        {
+          "textEn": "Keep children, pregnant women and animals away during handling and until the label's re-entry period has passed.",
+          "textNe": "उपचार गर्दा र लेबलमा तोकिएको पुनःप्रवेश समय नबितेसम्म बालबालिका, गर्भवती महिला र पशुहरूलाई टाढा राख्नुहोस्।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        },
+        {
+          "textEn": "Do not spray when the wind is strong or rain is likely; spray can drift onto people, animals, water and other crops.",
+          "textNe": "हावा तीव्र भएको वा पानी पर्ने सम्भावना हुँदा छर्नु हुँदैन; छर्किएको पदार्थ मानिस, पशु, पानी र अन्य बालीमा पुग्न सक्छ।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        },
+        {
+          "textEn": "Stop and get medical help if anyone feels unwell after handling, and take the product label with you.",
+          "textNe": "उपचार गरेपछि कसैलाई अस्वस्थ महसुस भए रोक्नुहोस् र चिकित्सकीय सहयोग लिनुहोस्; उत्पादनको लेबल साथ लैजानुहोस्।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        },
+        {
+          "textEn": "This app gives no dose, spray rate or mixing ratio; follow the product label or ask a local agriculture worker.",
+          "textNe": "यो एपले मात्रा, छर्ने दर वा मिसाउने अनुपात दिँदैन; उत्पादनको लेबल पालना गर्नुहोस् वा स्थानीय कृषि कर्मचारीलाई सोध्नुहोस्।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        }
+      ],
+      "verified": true,
+      "reviewStatus": "not-expert-reviewed",
+      "reviewer": null
+    },
+    {
+      "id": "safety-fungicide",
+      "productClass": "fungicide",
+      "products": [
+        "Mancozeb",
+        "Carbendazim"
+      ],
+      "measures": [
+        {
+          "textEn": "Wear the personal protective equipment the product label requires, and check it for damage before each day of use.",
+          "textNe": "लेबलले तोकेको व्यक्तिगत सुरक्षा सामग्री लगाउनुहोस् र प्रत्येक दिन प्रयोग गर्नुअघि त्यसको अवस्था जाँच्नुहोस्।",
+          "basis": "source",
+          "sourceKey": "epa_ppe",
+          "section": "Personal protective equipment"
+        },
+        {
+          "textEn": "Keep the pesticide in its original labelled container and never pour it into a drink bottle or another unlabelled container.",
+          "textNe": "कीटनाशकलाई मूल लेबल भएको भाँडामै राख्नुहोस्; पेय पदार्थको बोतल वा लेबल नभएको अन्य भाँडामा कहिल्यै नहाल्नुहोस्।",
+          "basis": "source",
+          "sourceKey": "epa_storage",
+          "section": "Storing pesticides safely"
+        },
+        {
+          "textEn": "Store it out of reach of children and animals, away from food, animal feed and medicine.",
+          "textNe": "बालबालिका र पशुहरूको पहुँचबाट टाढा, खाद्यान्न, पशुखाद्य र औषधिबाट अलग राख्नुहोस्।",
+          "basis": "source",
+          "sourceKey": "epa_storage",
+          "section": "Storing pesticides safely"
+        },
+        {
+          "textEn": "Use pesticides only as part of sound pest management, with care for human health and the environment.",
+          "textNe": "कीटनाशकको प्रयोग मानव स्वास्थ्य र वातावरणको ख्याल गर्दै, उचित कीट व्यवस्थापनको भागका रूपमा मात्र गर्नुहोस्।",
+          "basis": "source",
+          "sourceKey": "fao_who_pesticide_code",
+          "section": "Objectives of the Code of Conduct"
+        },
+        {
+          "textEn": "Pesticide registration, sale and use are regulated in Nepal; use a registered product and follow its label.",
+          "textNe": "नेपालमा कीटनाशकको दर्ता, बिक्री र प्रयोग नियमन गरिएको छ; दर्ता भएको उत्पादन मात्र प्रयोग गर्नुहोस् र लेबल पालना गर्नुहोस्।",
+          "basis": "source",
+          "sourceKey": "nepal_pesticides_act",
+          "section": "Registration and regulation of pesticides"
+        },
+        {
+          "textEn": "Never mix two products unless the label explicitly allows it; mixing can increase exposure and damage the crop.",
+          "textNe": "लेबलले स्पष्ट रूपमा अनुमति नदिएसम्म दुई उत्पादन मिसाउनु हुँदैन; मिसाउँदा जोखिम बढ्न र बाली बिग्रन सक्छ।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        },
+        {
+          "textEn": "Keep children, pregnant women and animals away during handling and until the label's re-entry period has passed.",
+          "textNe": "उपचार गर्दा र लेबलमा तोकिएको पुनःप्रवेश समय नबितेसम्म बालबालिका, गर्भवती महिला र पशुहरूलाई टाढा राख्नुहोस्।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        },
+        {
+          "textEn": "Do not spray when the wind is strong or rain is likely; spray can drift onto people, animals, water and other crops.",
+          "textNe": "हावा तीव्र भएको वा पानी पर्ने सम्भावना हुँदा छर्नु हुँदैन; छर्किएको पदार्थ मानिस, पशु, पानी र अन्य बालीमा पुग्न सक्छ।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        },
+        {
+          "textEn": "Stop and get medical help if anyone feels unwell after handling, and take the product label with you.",
+          "textNe": "उपचार गरेपछि कसैलाई अस्वस्थ महसुस भए रोक्नुहोस् र चिकित्सकीय सहयोग लिनुहोस्; उत्पादनको लेबल साथ लैजानुहोस्।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        },
+        {
+          "textEn": "This app gives no dose, spray rate or mixing ratio; follow the product label or ask a local agriculture worker.",
+          "textNe": "यो एपले मात्रा, छर्ने दर वा मिसाउने अनुपात दिँदैन; उत्पादनको लेबल पालना गर्नुहोस् वा स्थानीय कृषि कर्मचारीलाई सोध्नुहोस्।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        }
+      ],
+      "verified": true,
+      "reviewStatus": "not-expert-reviewed",
+      "reviewer": null
+    },
+    {
+      "id": "safety-herbicide",
+      "productClass": "herbicide",
+      "products": [
+        "Glyphosate",
+        "Pendimethalin"
+      ],
+      "measures": [
+        {
+          "textEn": "Wear the personal protective equipment the product label requires, and check it for damage before each day of use.",
+          "textNe": "लेबलले तोकेको व्यक्तिगत सुरक्षा सामग्री लगाउनुहोस् र प्रत्येक दिन प्रयोग गर्नुअघि त्यसको अवस्था जाँच्नुहोस्।",
+          "basis": "source",
+          "sourceKey": "epa_ppe",
+          "section": "Personal protective equipment"
+        },
+        {
+          "textEn": "Keep the pesticide in its original labelled container and never pour it into a drink bottle or another unlabelled container.",
+          "textNe": "कीटनाशकलाई मूल लेबल भएको भाँडामै राख्नुहोस्; पेय पदार्थको बोतल वा लेबल नभएको अन्य भाँडामा कहिल्यै नहाल्नुहोस्।",
+          "basis": "source",
+          "sourceKey": "epa_storage",
+          "section": "Storing pesticides safely"
+        },
+        {
+          "textEn": "Store it out of reach of children and animals, away from food, animal feed and medicine.",
+          "textNe": "बालबालिका र पशुहरूको पहुँचबाट टाढा, खाद्यान्न, पशुखाद्य र औषधिबाट अलग राख्नुहोस्।",
+          "basis": "source",
+          "sourceKey": "epa_storage",
+          "section": "Storing pesticides safely"
+        },
+        {
+          "textEn": "Use pesticides only as part of sound pest management, with care for human health and the environment.",
+          "textNe": "कीटनाशकको प्रयोग मानव स्वास्थ्य र वातावरणको ख्याल गर्दै, उचित कीट व्यवस्थापनको भागका रूपमा मात्र गर्नुहोस्।",
+          "basis": "source",
+          "sourceKey": "fao_who_pesticide_code",
+          "section": "Objectives of the Code of Conduct"
+        },
+        {
+          "textEn": "Pesticide registration, sale and use are regulated in Nepal; use a registered product and follow its label.",
+          "textNe": "नेपालमा कीटनाशकको दर्ता, बिक्री र प्रयोग नियमन गरिएको छ; दर्ता भएको उत्पादन मात्र प्रयोग गर्नुहोस् र लेबल पालना गर्नुहोस्।",
+          "basis": "source",
+          "sourceKey": "nepal_pesticides_act",
+          "section": "Registration and regulation of pesticides"
+        },
+        {
+          "textEn": "Keep the spray away from other crops, gardens and water bodies; herbicides can damage plants they were not meant for.",
+          "textNe": "छर्किएको झारनाशक अन्य बाली, करेसाबारी र पानीका स्रोतबाट टाढा राख्नुहोस्; झारनाशकले नचाहिएका बिरुवा पनि बिगार्न सक्छ।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        },
+        {
+          "textEn": "Never mix two products unless the label explicitly allows it; mixing can increase exposure and damage the crop.",
+          "textNe": "लेबलले स्पष्ट रूपमा अनुमति नदिएसम्म दुई उत्पादन मिसाउनु हुँदैन; मिसाउँदा जोखिम बढ्न र बाली बिग्रन सक्छ।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        },
+        {
+          "textEn": "Keep children, pregnant women and animals away during handling and until the label's re-entry period has passed.",
+          "textNe": "उपचार गर्दा र लेबलमा तोकिएको पुनःप्रवेश समय नबितेसम्म बालबालिका, गर्भवती महिला र पशुहरूलाई टाढा राख्नुहोस्।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        },
+        {
+          "textEn": "Do not spray when the wind is strong or rain is likely; spray can drift onto people, animals, water and other crops.",
+          "textNe": "हावा तीव्र भएको वा पानी पर्ने सम्भावना हुँदा छर्नु हुँदैन; छर्किएको पदार्थ मानिस, पशु, पानी र अन्य बालीमा पुग्न सक्छ।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        },
+        {
+          "textEn": "Stop and get medical help if anyone feels unwell after handling, and take the product label with you.",
+          "textNe": "उपचार गरेपछि कसैलाई अस्वस्थ महसुस भए रोक्नुहोस् र चिकित्सकीय सहयोग लिनुहोस्; उत्पादनको लेबल साथ लैजानुहोस्।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        },
+        {
+          "textEn": "This app gives no dose, spray rate or mixing ratio; follow the product label or ask a local agriculture worker.",
+          "textNe": "यो एपले मात्रा, छर्ने दर वा मिसाउने अनुपात दिँदैन; उत्पादनको लेबल पालना गर्नुहोस् वा स्थानीय कृषि कर्मचारीलाई सोध्नुहोस्।",
+          "basis": "assumption",
+          "sourceKey": null,
+          "section": null
+        }
+      ],
+      "verified": true,
+      "reviewStatus": "not-expert-reviewed",
+      "reviewer": null
+    }
+  ]
+}
