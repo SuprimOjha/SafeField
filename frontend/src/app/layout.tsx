@@ -36,7 +36,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#174b35",
+  themeColor: "#087bfa",
   width: "device-width",
   initialScale: 1,
 };
@@ -48,8 +48,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ne" className={`${inter.variable} ${notoDevanagari.variable}`}>
-      <body className="bg-warm text-ink antialiased selection:bg-mint selection:text-forest">
-        <a href="#main-content" className="sr-only focus:not-sr-only focus:p-3 focus:bg-forest focus:text-white">
+      <body className="bg-canvas text-ink antialiased selection:bg-brand-blue-soft selection:text-brand-blue-deep">
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:p-3 focus:bg-brand-blue-deep focus:text-white">
           Skip to main content
         </a>
         {children}

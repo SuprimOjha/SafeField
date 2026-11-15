@@ -159,8 +159,8 @@ function LanguageToggle({ lang, setLang }: { lang: Lang; setLang: (next: Lang) =
         type="button"
         onClick={() => setLang("en")}
         aria-pressed={lang === "en"}
-        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
-          lang === "en" ? "bg-forest text-white" : "text-ink-soft hover:text-ink"
+        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+          lang === "en" ? "bg-brand-blue-deep text-white shadow-card" : "text-ink-soft hover:text-ink"
         }`}
       >
         EN
@@ -169,8 +169,8 @@ function LanguageToggle({ lang, setLang }: { lang: Lang; setLang: (next: Lang) =
         type="button"
         onClick={() => setLang("ne")}
         aria-pressed={lang === "ne"}
-        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
-          lang === "ne" ? "bg-forest text-white" : "text-ink-soft hover:text-ink"
+        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+          lang === "ne" ? "bg-brand-blue-deep text-white shadow-card" : "text-ink-soft hover:text-ink"
         }`}
       >
         ने
@@ -349,10 +349,10 @@ export default function SafeFieldNepalApp() {
   };
 
   return (
-    <main id="main-content" tabIndex={-1} className="flex min-h-screen flex-col bg-warm text-ink">
-      <a href="#main-content" className="sr-only z-[100] rounded-full bg-white px-4 py-3 font-semibold text-forest focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:shadow-float focus:ring-2 focus:ring-action">Skip to main content</a>
+    <main id="main-content" tabIndex={-1} className="flex min-h-screen flex-col bg-canvas text-ink">
+      <a href="#main-content" className="sr-only z-[100] rounded-full bg-white px-4 py-3 font-semibold text-brand-blue-deep focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:shadow-float focus:ring-2 focus:ring-brand-blue">Skip to main content</a>
       {!isOnline && (
-        <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 bg-danger px-4 py-2.5 text-center text-xs font-semibold text-white">
+        <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 border-b border-warning bg-warning-soft px-4 py-2.5 text-center text-xs font-semibold text-amber-ink">
           <WifiOff className="h-4 w-4 shrink-0" />
           <span>{t.offlineBanner}</span>
         </div>
@@ -387,9 +387,9 @@ export default function SafeFieldNepalApp() {
                   type="button"
                   onClick={() => selectTab(item.id)}
                   aria-current={isActive ? "page" : undefined}
-                  className={`flex min-h-[46px] items-center gap-3 rounded-lg px-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+                  className={`flex min-h-[46px] items-center gap-3 rounded-lg border border-transparent px-3 text-sm font-semibold transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
                     isActive
-                      ? "bg-mint text-forest"
+                      ? "bg-brand-blue-soft text-brand-blue-deep border-[#C7E0FF]"
                       : "text-ink-soft hover:bg-soft hover:text-ink"
                   }`}
                 >
@@ -409,7 +409,7 @@ export default function SafeFieldNepalApp() {
 
         <div className="flex min-w-0 flex-1 flex-col">
           {/* Mobile top header — light glass over scrolling content */}
-          <header className="glass-surface sticky top-0 z-50 border-x-0 border-t-0 lg:hidden">
+          <header className="glass-topbar sticky top-0 z-50 lg:hidden">
             <div className="flex min-h-[64px] items-center justify-between gap-3 px-4">
               <button
                 type="button"
@@ -485,13 +485,13 @@ export default function SafeFieldNepalApp() {
         </div>
       </div>
 
-        {/* Floating bottom navigation capsule — restrained dark-green glass,
-            per the mobile reference and design.md section 7.2 */}
+        {/* Floating bottom navigation capsule — white liquid glass with blue
+            active states, per the Blue Horizon mobile spec */}
       <nav
         aria-label="Mobile navigation"
         className="fixed inset-x-0 bottom-0 z-[60] flex justify-center px-4 pb-[max(env(safe-area-inset-bottom),12px)] lg:hidden"
       >
-        <div className="glass-surface-dark grid w-full max-w-md grid-cols-5 gap-0.5 rounded-full p-1.5">
+        <div className="glass-bottomnav shadow-float grid w-full max-w-md grid-cols-5 gap-0.5 rounded-2xl p-1.5">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -502,12 +502,12 @@ export default function SafeFieldNepalApp() {
                 onClick={() => selectTab(item.id)}
                 aria-current={isActive ? "page" : undefined}
                 className={`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-full px-1 py-1.5 text-[11px] leading-tight font-semibold transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
-                  isActive ? "text-white" : "text-white/60 hover:text-white"
+                  isActive ? "text-brand-blue-deep" : "text-ink-muted hover:text-ink"
                 }`}
               >
                 <span
                   className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
-                    isActive ? "bg-action text-white" : "text-white/70"
+                    isActive ? "bg-brand-blue-soft text-brand-blue-deep" : "text-ink-muted"
                   }`}
                 >
                   <Icon className="h-[17px] w-[17px]" aria-hidden="true" />

@@ -126,15 +126,15 @@ export default function FarmerLogbook({
   return (
     <section className="space-y-5 rounded-xl border border-divider bg-white p-4 shadow-float sm:p-6" aria-labelledby="farmer-logbook-title">
       <div className="flex items-start gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-action-soft text-forest"><BookOpen className="h-5 w-5" /></span>
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-action-soft text-brand-blue-deep"><BookOpen className="h-5 w-5" /></span>
         <div>
-          <h3 id="farmer-logbook-title" className="text-lg font-extrabold text-forest">{t.farmerLogbookTitle}</h3>
+          <h3 id="farmer-logbook-title" className="text-lg font-bold text-ink">{t.farmerLogbookTitle}</h3>
           <p className="mt-1 text-sm leading-5 text-ink-soft">{t.farmerLogbookIntro}</p>
         </div>
       </div>
 
       <div className="rounded-lg border border-divider bg-soft p-4">
-        <div className="mb-3 flex items-center gap-2 text-sm font-bold text-forest"><Sprout className="h-4 w-4" />{t.farmerCropSetup}</div>
+        <div className="mb-3 flex items-center gap-2 text-sm font-bold text-ink"><Sprout className="h-4 w-4" />{t.farmerCropSetup}</div>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block text-xs font-semibold text-ink-soft">
             {t.farmerCrop}
@@ -168,23 +168,23 @@ export default function FarmerLogbook({
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-lg border border-info/30 bg-info-soft p-3">
           <div className="flex items-center gap-2 text-xs font-semibold text-info"><CloudRain className="h-4 w-4" />{t.farmerRainImpact}</div>
-          <p className="mt-2 text-2xl font-extrabold text-ink">{rainfallLabel}</p>
+          <p className="mt-2 text-2xl font-bold text-ink">{rainfallLabel}</p>
           <p className="mt-1 text-xs leading-5 text-ink-soft">{rainfallSource}</p>
         </div>
         <div className="rounded-lg border border-divider bg-soft p-3">
           <div className="flex items-center gap-2 text-xs font-semibold text-ink-soft"><Droplets className="h-4 w-4" />{t.farmerIrrigationEntries}</div>
-          <p className="mt-2 text-2xl font-extrabold text-ink">{irrigationCount}</p>
+          <p className="mt-2 text-2xl font-bold text-ink">{irrigationCount}</p>
           <p className="mt-1 text-xs text-ink-muted">{t.farmerManualCountOnly}</p>
         </div>
         <div className="rounded-lg border border-divider bg-soft p-3">
           <div className="flex items-center gap-2 text-xs font-semibold text-ink-soft"><CloudRain className="h-4 w-4" />{t.farmerRainEntries}</div>
-          <p className="mt-2 text-2xl font-extrabold text-ink">{farmerRainCount}</p>
+          <p className="mt-2 text-2xl font-bold text-ink">{farmerRainCount}</p>
           <p className="mt-1 text-xs text-ink-muted">{t.farmerManualCountOnly}</p>
         </div>
       </div>
 
       <div className="rounded-lg border border-divider p-4">
-        <h4 className="mb-3 text-sm font-bold text-forest">{t.farmerAddLog}</h4>
+        <h4 className="mb-3 text-sm font-bold text-ink">{t.farmerAddLog}</h4>
         <form onSubmit={addLog} className="grid gap-3 sm:grid-cols-2">
           <label className="block text-xs font-semibold text-ink-soft">
             {t.farmerLogType}
@@ -208,14 +208,14 @@ export default function FarmerLogbook({
             <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={240} placeholder={t.farmerLogNotePlaceholder} className="mt-1.5 min-h-11 w-full rounded-lg border border-line bg-white px-3 text-sm text-ink" />
           </label>
           <div className="sm:col-span-2">
-            <button type="submit" disabled={!date} className="inline-flex min-h-11 items-center justify-center rounded-full bg-action px-5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{t.farmerSaveLog}</button>
+            <button type="submit" disabled={!date} className="inline-flex min-h-11 items-center justify-center rounded-full bg-action px-5 text-sm font-bold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50">{t.farmerSaveLog}</button>
           </div>
         </form>
       </div>
 
       <div>
         <div className="mb-2 flex items-center justify-between gap-3">
-          <h4 className="text-sm font-bold text-forest">{t.farmerRecentLogs}</h4>
+          <h4 className="text-sm font-bold text-ink">{t.farmerRecentLogs}</h4>
           <span className="text-xs text-ink-muted">{logs.length} / 100</span>
         </div>
         {logs.length === 0 ? (
@@ -226,7 +226,7 @@ export default function FarmerLogbook({
               <li key={item.id} className="flex items-start justify-between gap-3 rounded-lg border border-divider p-3">
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-ink">{kindLabel[item.kind]} <span className="ml-1 font-normal text-ink-muted">{item.date}</span></p>
-                  {item.amount && <p className="mt-1 text-xs font-semibold text-forest">{item.amount} {item.kind === "rain" ? "mm" : item.kind === "irrigation" ? t.farmerWaterUnit : ""}</p>}
+                  {item.amount && <p className="mt-1 text-xs font-semibold text-ink-soft">{item.amount} {item.kind === "rain" ? "mm" : item.kind === "irrigation" ? t.farmerWaterUnit : ""}</p>}
                   {item.note && <p className="mt-1 break-words text-sm text-ink-soft">{item.note}</p>}
                   <p className="mt-1 text-[11px] text-ink-muted">{t.farmerEntryIsInput}</p>
                 </div>

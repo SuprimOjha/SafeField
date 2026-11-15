@@ -32,7 +32,7 @@ export default function ScreenCDecision({
 
   if (!data) {
     return (
-      <div className="rounded-xl border border-line bg-white p-8 text-center text-ink-soft shadow-float">
+      <div className="rounded-2xl border border-line bg-white p-8 text-center text-ink-soft shadow-card">
         {t.selectFirst}
       </div>
     );
@@ -50,7 +50,7 @@ export default function ScreenCDecision({
 
 
       {/* 5-Day Non-NASA Rain Outlook Strip */}
-      <div className="rounded-xl border border-line bg-white p-6 shadow-float">
+      <div className="rounded-2xl border border-line bg-white p-6 shadow-card">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
           <div className="flex items-center gap-2">
             <CloudRain className="w-5 h-5 text-info" />
@@ -65,7 +65,7 @@ export default function ScreenCDecision({
         {forecast.forecast_days.length > 0 ? (
           <>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-soft">
-              <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${forecast.freshness.status === "LIVE" ? "bg-action-soft text-forest" : "bg-amber-soft text-amber-ink"}`}>
+              <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${forecast.freshness.status === "LIVE" ? "bg-action-soft text-brand-blue-deep" : "bg-amber-soft text-amber-ink"}`}>
                 {forecast.freshness.status === "LIVE" ? t.liveForecast : t.cachedForecast}
               </span>
               <span className="tnum">{t.fetchedAt} {new Date(forecast.freshness.fetched_at_utc).toLocaleString()}</span>
@@ -120,21 +120,21 @@ export default function ScreenCDecision({
       </div>
 
       {/* Transparent "Why?" Drawer */}
-      <div className="overflow-hidden rounded-xl border border-divider bg-white shadow-float">
+      <div className="overflow-hidden rounded-2xl border border-line bg-white shadow-card">
         <button
           aria-expanded={whyOpen}
           aria-controls="decision-explanation"
           onClick={() => setWhyOpen(!whyOpen)}
-          className="flex w-full items-center justify-between bg-action-soft/70 px-6 py-4 text-left transition hover:bg-action-soft"
+          className="flex w-full items-center justify-between bg-action-soft/70 px-6 py-4 text-left transition hover:bg-action-soft active:scale-[0.98]"
         >
           <div className="flex items-center gap-2.5">
-            <ShieldCheck className="w-5 h-5 text-leaf" />
-            <span className="text-base font-bold text-forest">{t.whyDecision}</span>
+            <ShieldCheck className="w-5 h-5 text-brand-blue-deep" />
+            <span className="text-base font-bold text-brand-blue-deep">{t.whyDecision}</span>
           </div>
           {whyOpen ? (
-            <ChevronUp className="w-5 h-5 text-leaf" />
+            <ChevronUp className="w-5 h-5 text-brand-blue-deep" />
           ) : (
-            <ChevronDown className="w-5 h-5 text-leaf" />
+            <ChevronDown className="w-5 h-5 text-brand-blue-deep" />
           )}
         </button>
 
@@ -160,7 +160,7 @@ export default function ScreenCDecision({
                   </div>
                   <span
                     className={`self-start rounded-full px-2.5 py-1 text-[11px] font-semibold sm:self-center shrink-0 ${
-                      isRisky ? "bg-danger-soft text-danger" : "bg-action-soft text-forest"
+                      isRisky ? "bg-danger-soft text-danger" : "bg-action-soft text-brand-blue-deep"
                     }`}
                   >
                     {rule.impact}
@@ -177,21 +177,21 @@ export default function ScreenCDecision({
 
       <FarmerContentPanel lang={lang} />
 
-      <section className="space-y-3 rounded-xl border border-leaf bg-action-soft p-5">
-        <div className="flex items-center gap-2 text-forest"><ShieldCheck className="h-5 w-5" /><h3 className="font-extrabold">{t.safetyTitle}</h3></div>
-        <ul className="grid gap-2 text-sm text-forest sm:grid-cols-2">
+      <section className="space-y-3 rounded-2xl border border-[#D7E9FF] bg-surface-blue p-5">
+        <div className="flex items-center gap-2 text-brand-blue-deep"><ShieldCheck className="h-5 w-5" /><h3 className="font-bold">{t.safetyTitle}</h3></div>
+        <ul className="grid gap-2 text-sm text-ink-soft sm:grid-cols-2">
           {t.safetyBullets.map((bullet, index) => (
             <li key={index}>• {bullet}</li>
           ))}
         </ul>
-        <p className="text-xs leading-5 text-forest">{t.safetyNote}</p>
+        <p className="text-xs leading-5 text-ink-soft">{t.safetyNote}</p>
       </section>
 
       {/* Next Step Navigation */}
       <div className="flex justify-end">
         <button
           onClick={onProceedToTrends}
-          className="flex items-center gap-2 rounded-full bg-action px-8 py-4 font-bold text-lg text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex items-center gap-2 rounded-full bg-action px-8 py-4 font-bold text-lg text-white transition hover:bg-action-pressed active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {t.nextTrends}
           <ArrowRight className="w-5 h-5" />

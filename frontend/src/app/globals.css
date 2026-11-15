@@ -1,71 +1,115 @@
 @import "tailwindcss";
 
 /*
- * Crop Compass — Apple-Inspired Liquid Glass design system (design.md v1.0),
- * applied to Safe Field Nepal. Natural greens, clean neutral surfaces,
- * restrained blue for GPS/information, amber for selected boundaries,
- * red reserved for urgent alerts.
+ * Crop Compass — Blue Horizon × Liquid Glass design system (design.md v1.0)
+ * applied to Safe Field Nepal.
+ *
+ * Sources:
+ *  - "Crop Compass — Blue Horizon Design System": logo-derived palette
+ *    (cyan-to-electric-blue field, lime-to-deep-green arrow, cool neutral
+ *    surfaces), Inter typography with tight display tracking, 6/9/12/16/20/26
+ *    radius scale, cool navy shadows.
+ *  - Apple Liquid Glass material language: frosted translucent chrome
+ *    (saturate + blur), hairline separators, restrained elevation,
+ *    scale-press micro-interactions.
+ *
+ * Balance: 65–75% neutral surfaces, 15–25% blue brand surfaces, 5–10%
+ * green growth accents. Green never competes with blue for primary
+ * navigation; gradients are reserved for selected brand moments.
  */
 @theme {
-  /* Brand */
-  --color-forest: #174b35;
-  --color-primary: #174b35;
-  --color-leaf: #238b50;
-  --color-growth: #67b85b;
-  --color-lime: #b8d96a;
-  --color-mint: #e8f4e8;
+  /* Brand blues — derived from the logo's cyan-to-electric-blue field */
+  --color-brand-blue: #087bfa;
+  --color-brand-blue-deep: #0755e8;
+  --color-brand-cyan: #16c9e8;
+  --color-brand-blue-soft: #eaf4ff;
+  --color-brand-blue-pale: #f4f9ff;
+  --color-brand-blue-focus: #3b91ff;
+  --color-brand-blue-on-dark: #69b8ff;
 
-  /* Actions and states */
-  --color-action: #238b50;
-  --color-action-pressed: #1d6f40;
-  --color-action-soft: #edf6ec;
-  --color-water: #1677d2;
-  --color-info: #1677d2;
-  --color-info-soft: #edf5fc;
-  --color-brand-cyan: #42bfc4;
+  /* Agriculture greens — derived from the compass arrow */
+  --color-growth: #39d80b;
+  --color-growth-deep: #079447;
+  --color-growth-soft: #eaf9e8;
+  --color-growth-pale: #f4fcf1;
+  --color-growth-on-dark: #83e86a;
 
-  /* Attention and danger */
-  --color-amber: #f2c65d;
-  --color-amber-soft: #fbf3da;
+  /* Neutral surfaces — cool, slightly blue-tinted */
+  --color-canvas: #f7f9fc;
+  --color-warm: #f7f9fc;
+  --color-cream: #f4f9ff;
+  --color-soft: #f1f5fa;
+  --color-surface-blue: #edf5ff;
+  --color-surface-green: #f0f9ed;
+  --color-map-dark: #101b2d;
+  --color-charcoal: #101b2d;
+
+  /* Text */
+  --color-ink: #142033;
+  --color-ink-soft: #344256;
+  --color-ink-muted: #718096;
+  --color-body-subtle: #94a0b2;
+  --color-on-dark: #f7faff;
+  --color-muted-on-dark: #aab8ca;
+
+  /* Borders and separators */
+  --color-line: #e3eaf2;
+  --color-border-strong: #cbd7e5;
+  --color-divider: #eaf0f6;
+  --color-focus-ring: #8cc4ff;
+
+  /* Semantic status — independent of the brand palette */
+  --color-success: #168a45;
+  --color-success-soft: #eaf8ef;
+  --color-warning: #c98212;
+  --color-warning-soft: #fff6e5;
+  --color-danger: #d64545;
+  --color-danger-soft: #fff0f0;
+  --color-info: #1479d5;
+  --color-info-soft: #eaf4ff;
+  --color-disabled: #aab5c3;
+  --color-disabled-surface: #eef2f6;
+
+  /* Interactive action — Brand Blue carries every primary interaction */
+  --color-action: #087bfa;
+  --color-action-pressed: #0755e8;
+  --color-action-soft: #eaf4ff;
+
+  /* Water / information accent */
+  --color-water: #087bfa;
+
+  /* Attention — semantic warning amber (map boundary no longer uses amber;
+     field polygons are agricultural overlays rendered in growth green) */
+  --color-amber: #c98212;
+  --color-amber-soft: #fff6e5;
   --color-amber-ink: #7a5208;
-  --color-danger: #d94b52;
-  --color-danger-soft: #fcebea;
-  --color-success: #238b50;
-  --color-warning: #b7791f;
 
   /* Earth accents (kept for legacy semantics) */
   --color-earth: #76563c;
   --color-soil: #76563c;
 
-  /* Surfaces */
-  --color-canvas: #f4f7f3;
-  --color-warm: #f4f7f3;
-  --color-cream: #f7f7f1;
-  --color-soft: #f7faf7;
-  --color-map-dark: #101c19;
-  --color-charcoal: #101c19;
+  /* Legacy bridge — class names from the previous forest theme, remapped
+     to Blue Horizon values so un-migrated markup keeps rendering while
+     screens are progressively re-themed. */
+  --color-forest: #0755e8; /* brand dark — deep blue */
+  --color-leaf: #079447; /* readable green — growth deep */
+  --color-mint: #eaf4ff; /* blue-soft */
+  --color-lime: #a7f51a; /* growth gradient start */
 
-  /* Text and borders */
-  --color-ink: #17231d;
-  --color-ink-soft: #637168;
-  --color-ink-muted: #6f7d72;
-  --color-divider: #e2e9e2;
-  --color-line: #e2e9e2;
-
-  /* Radii per design.md section 5.2. rounded-xl cards read as the 18px
-     standard card; rounded-2xl panels read as 24px large panels. */
+  /* Radii — Blue Horizon scale (6/9/12/16/20/26) */
   --radius-xs: 6px;
-  --radius-sm: 8px;
+  --radius-sm: 9px;
   --radius-md: 12px;
-  --radius-lg: 14px;
-  --radius-xl: 18px;
-  --radius-2xl: 24px;
-  --radius-panel: 24px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 26px;
+  --radius-panel: 20px;
 
-  /* Elevation per design.md section 6 */
-  --shadow-card: 0 2px 10px rgba(20, 45, 30, 0.05);
-  --shadow-float: 0 8px 28px rgba(20, 45, 30, 0.12);
-  --shadow-sheet: 0 16px 48px rgba(10, 25, 18, 0.18);
+  /* Elevation — cool navy shadows, restrained per Apple discipline */
+  --shadow-subtle: 0 1px 2px rgba(20, 32, 51, 0.04);
+  --shadow-card: 0 4px 14px rgba(20, 45, 80, 0.06);
+  --shadow-float: 0 10px 30px rgba(20, 45, 80, 0.12);
+  --shadow-sheet: 0 16px 40px rgba(20, 32, 51, 0.16);
 
   --font-sans: var(--font-inter), var(--font-noto-devanagari), system-ui, -apple-system, "Segoe UI", sans-serif;
 }
@@ -74,21 +118,49 @@
    navigation, bottom sheets and compact field-information overlays.
    Never applied to page backgrounds, dense tables or every content card. */
 .glass-surface {
-  background: rgba(255, 255, 255, 0.72);
-  -webkit-backdrop-filter: blur(22px) saturate(160%);
-  backdrop-filter: blur(22px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.68);
+  background: rgba(255, 255, 255, 0.75);
+  -webkit-backdrop-filter: blur(20px) saturate(170%);
+  backdrop-filter: blur(20px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
   box-shadow:
-    0 8px 28px rgba(18, 38, 28, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+    0 10px 30px rgba(20, 45, 80, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .glass-surface-dark {
-  background: rgba(12, 27, 25, 0.76);
-  -webkit-backdrop-filter: blur(22px) saturate(145%);
-  backdrop-filter: blur(22px) saturate(145%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(16, 27, 45, 0.78);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 10px 32px rgba(0, 0, 0, 0.22);
+}
+
+/* Apple frosted chrome — translucent top bar and bottom navigation.
+   Per Blue Horizon component spec: white surfaces at 88% / 94% alpha. */
+.glass-topbar {
+  background: rgba(255, 255, 255, 0.88);
+  -webkit-backdrop-filter: saturate(160%) blur(16px);
+  backdrop-filter: saturate(160%) blur(16px);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.glass-bottomnav {
+  background: rgba(255, 255, 255, 0.94);
+  -webkit-backdrop-filter: saturate(160%) blur(16px);
+  backdrop-filter: saturate(160%) blur(16px);
+  border-top: 1px solid var(--color-line);
+}
+
+/* Brand gradient moments — used sparingly: primary CTA fills, welcome
+   panels, selected dashboard highlights. Not for every card or nav row. */
+.bg-gradient-brand {
+  background-image: linear-gradient(135deg, #16c9e8 0%, #087bfa 52%, #0755e8 100%);
+}
+.bg-gradient-brand-deep {
+  background-image: linear-gradient(145deg, #087bfa 0%, #0755e8 100%);
+}
+.bg-gradient-growth {
+  background-image: linear-gradient(135deg, #a7f51a 0%, #39d80b 48%, #079447 100%);
 }
 
 /* Solid fallback for browsers without backdrop-filter support */
@@ -97,7 +169,13 @@
     background: rgba(255, 255, 255, 0.95);
   }
   .glass-surface-dark {
-    background: rgba(15, 30, 26, 0.96);
+    background: rgba(16, 27, 45, 0.96);
+  }
+  .glass-topbar {
+    background: #ffffff;
+  }
+  .glass-bottomnav {
+    background: #ffffff;
   }
 }
 
@@ -140,21 +218,21 @@ small {
 }
 
 :focus-visible {
-  outline: 3px solid var(--color-action);
+  outline: 3px solid var(--color-brand-blue-focus);
   outline-offset: 3px;
 }
 
 /* Slim, quiet scrollbars for scroll panels and long lists */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #c7d2c5 transparent;
+  scrollbar-color: #b9c6d6 transparent;
 }
 *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 *::-webkit-scrollbar-thumb {
-  background: #c7d2c5;
+  background: #b9c6d6;
   border-radius: 9999px;
 }
 *::-webkit-scrollbar-track {

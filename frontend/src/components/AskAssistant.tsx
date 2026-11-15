@@ -133,7 +133,7 @@ function AnswerBubble({ turn, lang, t, speechSupported, speakingId, onSpeak, onO
 
   return (
     <div className="flex flex-col items-start gap-1">
-      <p className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-forest px-4 py-2.5 text-sm font-medium text-white">
+      <p className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-brand-blue-deep px-4 py-2.5 text-sm font-medium text-white">
         {turn.question[lang]}
       </p>
       <div
@@ -144,7 +144,7 @@ function AnswerBubble({ turn, lang, t, speechSupported, speakingId, onSpeak, onO
           <p className="mb-2">
             <span
               className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
-                isMedical ? "bg-danger text-white" : "bg-amber text-amber-ink"
+                isMedical || isRefusal ? "bg-danger-soft text-danger" : "bg-soft text-ink-muted"
               }`}
             >
               {tagText}
@@ -156,7 +156,9 @@ function AnswerBubble({ turn, lang, t, speechSupported, speakingId, onSpeak, onO
           <p className="mb-2">
             <span
               className={`inline-block rounded-full px-3 py-1 text-xs font-bold ${
-                response.level === SUITABLE_LEVEL ? "bg-action text-white" : "bg-amber text-amber-ink"
+                response.level === SUITABLE_LEVEL
+                  ? "bg-success-soft text-success"
+                  : "bg-warning-soft text-amber-ink"
               }`}
             >
               {response.level}
@@ -181,7 +183,7 @@ function AnswerBubble({ turn, lang, t, speechSupported, speakingId, onSpeak, onO
         )}
 
         {response.facts.length > 0 && (
-          <details className="mt-3 rounded-lg border border-divider bg-canvas px-3 py-2">
+          <details className="mt-3 rounded-lg border border-line bg-soft px-3 py-2">
             <summary className="cursor-pointer text-xs font-semibold text-ink-soft">
               {t.askFactsTitle}
             </summary>
@@ -209,7 +211,7 @@ function AnswerBubble({ turn, lang, t, speechSupported, speakingId, onSpeak, onO
                 key={option.id}
                 type="button"
                 onClick={() => onOption(option.intent, option.slot ?? {}, option.label)}
-                className="flex min-h-11 w-full items-center rounded-xl border border-line bg-canvas px-3 py-2 text-left text-sm font-medium text-ink transition hover:bg-mint hover:text-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+                className="flex min-h-11 w-full items-center rounded-xl border border-border-strong bg-white px-3 py-2 text-left text-sm font-medium text-ink-soft transition active:scale-[0.98] hover:bg-action-soft hover:text-brand-blue-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
               >
                 {option.label[lang]}
               </button>
@@ -222,7 +224,9 @@ function AnswerBubble({ turn, lang, t, speechSupported, speakingId, onSpeak, onO
             type="button"
             onClick={() => onSpeak(turn.id, response.text)}
             aria-pressed={speaking}
-            className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-white px-4 text-xs font-semibold text-ink-soft transition hover:bg-mint hover:text-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+            className={`mt-3 inline-flex min-h-11 items-center gap-2 rounded-full border border-line px-4 text-xs font-semibold transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+              speaking ? "bg-brand-blue-soft text-brand-blue-deep" : "bg-soft text-ink-soft"
+            }`}
           >
             {speaking ? (
               <SquareX className="h-4 w-4" aria-hidden="true" />
@@ -388,7 +392,7 @@ export default function AskAssistant({ lang, context }: AskAssistantProps) {
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={t.askOpenAria}
-        className="fixed bottom-[calc(env(safe-area-inset-bottom)+96px)] right-4 z-[65] flex h-14 items-center gap-2 rounded-full bg-forest px-5 text-white shadow-float transition hover:bg-action-pressed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 lg:bottom-6 lg:right-6"
+        className="fixed bottom-[calc(env(safe-area-inset-bottom)+96px)] right-4 z-[65] flex h-14 items-center gap-2 rounded-full bg-gradient-brand-deep px-5 text-white shadow-float transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 lg:bottom-6 lg:right-6"
       >
         <MessageCircleQuestion className="h-5 w-5" aria-hidden="true" />
         <span className="text-sm font-semibold">{t.askOpen}</span>
@@ -413,11 +417,11 @@ export default function AskAssistant({ lang, context }: AskAssistantProps) {
                 closeAssistant();
               }
             }}
-            className="absolute inset-x-0 bottom-0 flex max-h-[88dvh] flex-col overflow-hidden rounded-t-2xl bg-white shadow-float outline-none sm:inset-y-0 sm:left-auto sm:right-0 sm:h-full sm:w-[420px] sm:max-w-[94vw] sm:max-h-none sm:rounded-t-none sm:rounded-l-2xl"
+            className="absolute inset-x-0 bottom-0 flex max-h-[88dvh] flex-col overflow-hidden rounded-t-2xl bg-white shadow-sheet outline-none sm:inset-y-0 sm:left-auto sm:right-0 sm:h-full sm:w-[420px] sm:max-w-[94vw] sm:max-h-none sm:rounded-t-none sm:rounded-l-2xl"
           >
             <div className="flex items-start justify-between gap-3 border-b border-divider px-4 py-3">
               <div className="min-w-0">
-                <h2 id="ask-title" className="text-base font-bold text-forest">
+                <h2 id="ask-title" className="text-base font-bold text-ink">
                   {t.askTitle}
                 </h2>
                 <p className="mt-0.5 text-xs text-ink-soft">{t.askSubtitle}</p>
@@ -426,7 +430,7 @@ export default function AskAssistant({ lang, context }: AskAssistantProps) {
                 type="button"
                 onClick={closeAssistant}
                 aria-label={t.askClose}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-soft transition hover:bg-canvas hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-soft transition active:scale-[0.98] hover:bg-canvas hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
               >
                 <X className="h-5 w-5" aria-hidden="true" />
               </button>
@@ -450,7 +454,7 @@ export default function AskAssistant({ lang, context }: AskAssistantProps) {
                       key={intent}
                       type="button"
                       onClick={() => askQuestion(intent, {}, INTENT_LABELS[intent])}
-                      className="flex min-h-11 items-center rounded-xl border border-line bg-white px-3 py-2 text-left text-sm font-medium text-ink transition hover:bg-mint hover:text-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+                      className="flex min-h-11 items-center rounded-xl border border-border-strong bg-white px-3 py-2 text-left text-sm font-medium text-ink-soft transition active:scale-[0.98] hover:bg-action-soft hover:text-brand-blue-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
                     >
                       {INTENT_LABELS[intent][lang]}
                     </button>
@@ -460,14 +464,14 @@ export default function AskAssistant({ lang, context }: AskAssistantProps) {
                   <button
                     type="button"
                     onClick={() => askQuestion("unknown", {}, INTENT_LABELS.unknown)}
-                    className="flex min-h-11 w-full items-center rounded-xl border border-dashed border-line bg-white px-3 py-2 text-left text-sm font-medium text-ink-soft transition hover:bg-canvas hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+                    className="flex min-h-11 w-full items-center rounded-xl border border-dashed border-line bg-white px-3 py-2 text-left text-sm font-medium text-ink-soft transition active:scale-[0.98] hover:bg-canvas hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
                   >
                     {INTENT_LABELS.unknown[lang]}
                   </button>
                   <button
                     type="button"
                     onClick={askMedical}
-                    className="flex min-h-11 w-full items-center rounded-xl border border-danger/30 bg-danger-soft px-3 py-2 text-left text-sm font-semibold text-danger transition hover:bg-danger hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+                    className="flex min-h-11 w-full items-center rounded-xl border border-danger/30 bg-danger-soft px-3 py-2 text-left text-sm font-semibold text-danger transition active:scale-[0.98] hover:bg-danger hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
                   >
                     {t.askFeelingUnwell}
                   </button>
@@ -504,7 +508,7 @@ export default function AskAssistant({ lang, context }: AskAssistantProps) {
                 type="button"
                 onClick={clearConversation}
                 disabled={turns.length === 0}
-                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold text-ink-soft transition enabled:hover:bg-canvas enabled:hover:text-ink disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
+                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold text-ink-soft transition active:scale-[0.98] enabled:hover:bg-canvas enabled:hover:text-ink disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action"
               >
                 <Eraser className="h-4 w-4" aria-hidden="true" />
                 {t.askClear}
@@ -512,7 +516,7 @@ export default function AskAssistant({ lang, context }: AskAssistantProps) {
               <button
                 type="button"
                 onClick={closeAssistant}
-                className="inline-flex min-h-11 items-center rounded-full bg-forest px-4 text-sm font-semibold text-white transition hover:bg-leaf focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+                className="inline-flex min-h-11 items-center rounded-full bg-action px-4 text-sm font-semibold text-white transition active:scale-[0.98] hover:bg-action-pressed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
               >
                 {t.askClose}
               </button>

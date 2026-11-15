@@ -10,13 +10,13 @@ interface DataReceiptDrawerProps { data: FieldAssessmentResponse; lang: Lang; }
 function MetadataRow({ label, value }: { label: string; value: string | number | null | undefined }) {
   return <div className="grid grid-cols-[minmax(7rem,0.8fr)_minmax(0,1.2fr)] gap-3 border-b border-divider py-2 last:border-0">
     <dt className="text-sm text-ink-soft">{label}</dt>
-    <dd className="break-words text-sm font-semibold text-ink">{value === null || value === undefined || value === "" ? "—" : String(value)}</dd>
+    <dd className="tnum break-words text-sm font-semibold text-ink">{value === null || value === undefined || value === "" ? "—" : String(value)}</dd>
   </div>;
 }
 
 function SourceReceipt({ title, source, t }: { title: string; source: FreshnessBadgeData; t: ReturnType<typeof getDict> }) {
   return <section className="rounded-xl border border-divider bg-white p-4">
-    <h3 className="mb-2 text-base font-bold text-forest">{title}</h3>
+    <h3 className="mb-2 text-base font-bold text-ink">{title}</h3>
     <dl>
       <MetadataRow label={t.receiptDataset} value={source.dataset_name} />
       <MetadataRow label={t.receiptVersion} value={t.receiptNotExposed} />
@@ -56,18 +56,18 @@ export default function DataReceiptDrawer({ data, lang }: DataReceiptDrawerProps
   }, [open]);
   const rainfall = data.rainfall_observation;
   return <>
-    <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-line bg-white px-5 py-3 text-base font-bold text-forest hover:bg-soft focus-visible:outline-offset-4">
+    <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-line bg-white px-5 py-3 text-base font-bold text-brand-blue-deep hover:bg-soft focus-visible:outline-offset-4">
       <Database aria-hidden="true" className="h-5 w-5" />{t.showDataReceipt}
     </button>
     {open && <div className="fixed inset-0 z-[100] flex items-end justify-center bg-charcoal/55 sm:items-center sm:p-5" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
-      <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="data-receipt-title" className="max-h-[88dvh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border border-divider bg-cream p-5 shadow-sheet sm:rounded-2xl sm:p-6">
-        <div className="sticky top-0 z-10 -mx-1 mb-4 flex items-center justify-between gap-3 bg-cream px-1 py-2">
-          <div><h2 id="data-receipt-title" className="text-xl font-extrabold text-ink">{t.dataReceiptTitle}</h2><p className="text-base text-ink-soft">{t.dataReceiptIntro}</p></div>
+      <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="data-receipt-title" className="max-h-[88dvh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border border-divider bg-white p-5 shadow-sheet sm:rounded-2xl sm:p-6">
+        <div className="sticky top-0 z-10 -mx-1 mb-4 flex items-center justify-between gap-3 border-b border-divider bg-white px-1 py-2">
+          <div><h2 id="data-receipt-title" className="text-xl font-bold text-ink">{t.dataReceiptTitle}</h2><p className="text-base text-ink-soft">{t.dataReceiptIntro}</p></div>
           <button type="button" autoFocus onClick={() => setOpen(false)} aria-label={t.close} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-line bg-white text-ink"><X aria-hidden="true" className="h-5 w-5" /></button>
         </div>
         <div className="space-y-3">
           {rainfall.provenance ? <section className="rounded-xl border border-divider bg-white p-4">
-            <h3 className="mb-2 text-base font-bold text-forest">{t.rainfallReceipt}</h3>
+            <h3 className="mb-2 text-base font-bold text-ink">{t.rainfallReceipt}</h3>
             <dl>
               <MetadataRow label={t.receiptSource} value={rainfall.provenance.source_name} />
               <MetadataRow label={t.receiptNasa} value={t.receiptNotProvided} />

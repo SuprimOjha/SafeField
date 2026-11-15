@@ -26,9 +26,9 @@ export default function DecisionCard({ decision, lang }: DecisionCardProps) {
       ? lang === "ne" ? t.signalWaitNe : t.signalWait
       : lang === "ne" ? t.signalReviewNe : t.signalReview;
   const tone = suitable
-    ? "border-action bg-action-soft text-forest"
+    ? "border-success bg-success-soft text-success"
     : waiting
-      ? "border-amber bg-amber-soft text-amber-ink"
+      ? "border-warning bg-warning-soft text-amber-ink"
       : "border-danger bg-danger-soft text-danger";
   const Icon = suitable ? CheckCircle2 : waiting ? Clock : AlertTriangle;
 
@@ -42,7 +42,7 @@ export default function DecisionCard({ decision, lang }: DecisionCardProps) {
         <Icon aria-hidden="true" className="mt-1 h-9 w-9 shrink-0" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold">{t.fieldWorkToday}</p>
-          <h2 className="mt-1 text-2xl font-extrabold leading-tight sm:text-3xl">
+          <h2 className="mt-1 text-2xl font-bold leading-tight tracking-tight sm:text-3xl">
             {label}
           </h2>
           {decision.primary_reason ? (

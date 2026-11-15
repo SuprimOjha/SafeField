@@ -41,9 +41,9 @@ export default function ScreenBField({
 
   if (loading) {
     return (
-      <div role="status" aria-live="polite" className="rounded-xl border border-divider bg-white p-12 text-center shadow-float space-y-4">
-        <RefreshCw className="w-10 h-10 text-leaf animate-spin mx-auto" />
-        <h3 className="text-xl font-bold text-forest">{t.loadingAssessment}</h3>
+      <div role="status" aria-live="polite" className="rounded-2xl border border-line bg-white p-12 text-center shadow-card space-y-4">
+        <RefreshCw className="w-10 h-10 text-action animate-spin mx-auto" />
+        <h3 className="text-xl font-bold text-ink">{t.loadingAssessment}</h3>
         <p className="text-ink-soft text-sm">{t.loadingAssessmentBody}</p>
       </div>
     );
@@ -51,7 +51,7 @@ export default function ScreenBField({
 
   if (!data) {
     return (
-      <div role="alert" aria-live="assertive" className="rounded-xl border border-amber bg-white p-8 text-center shadow-float space-y-4 sm:p-12">
+      <div role="alert" aria-live="assertive" className="rounded-2xl border border-amber bg-white p-8 text-center shadow-card space-y-4 sm:p-12">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-soft text-amber-ink">
           <RefreshCw className="h-6 w-6" />
         </div>
@@ -62,7 +62,7 @@ export default function ScreenBField({
         <button
           type="button"
           onClick={onRunAssessment}
-          className="inline-flex items-center justify-center gap-2 rounded-full bg-action px-6 py-3 font-semibold text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-action px-6 py-3 font-semibold text-white transition hover:bg-action-pressed active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <RefreshCw className="h-4 w-4" />
           {t.retryAssessment}
@@ -95,9 +95,9 @@ export default function ScreenBField({
       <FreshnessStrip rainfall={rainfall} lang={lang} />
       <div className="flex justify-start"><DataReceiptDrawer data={data} lang={lang} /></div>
       {/* Freshness banner */}
-      <div className="flex items-center justify-between rounded-lg border border-leaf bg-action-soft p-4 text-xs text-forest">
+      <div className="flex items-center justify-between rounded-lg border border-[#D7E9FF] bg-surface-blue p-4 text-xs text-ink-soft">
         <div className="flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-leaf shrink-0" />
+          <CheckCircle2 className="w-4 h-4 text-info shrink-0" />
           <span>
             <strong>{power_summary.freshness.dataset_name}</strong> | {t.freshnessLatest} {power_summary.freshness.latest_observation_date || "N/A"} ({power_summary.freshness.status})
           </span>
@@ -107,7 +107,7 @@ export default function ScreenBField({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Local rainfall observation */}
-        <div className="flex flex-col justify-between rounded-xl border border-line bg-white p-4 shadow-card">
+        <div className="flex flex-col justify-between rounded-2xl border border-line bg-white p-4 shadow-card">
           <div className="flex items-center justify-between mb-3">
             <span className="text-[11px] font-medium text-ink-soft">{t.localRainfall}</span>
             <CloudRain className="w-6 h-6 text-info" />
@@ -145,10 +145,10 @@ export default function ScreenBField({
         </div>
 
         {/* Soil Wetness */}
-        <div className="flex flex-col justify-between rounded-xl border border-line bg-white p-4 shadow-card">
+        <div className="flex flex-col justify-between rounded-2xl border border-line bg-white p-4 shadow-card">
           <div className="flex items-center justify-between mb-3">
             <span className="text-[11px] font-medium text-ink-soft">{t.wetnessCard}</span>
-            <Droplets className="w-6 h-6 text-leaf" />
+            <Droplets className="w-6 h-6 text-info" />
           </div>
           <div>
             <span className="tnum text-3xl font-bold text-ink">
@@ -160,10 +160,10 @@ export default function ScreenBField({
         </div>
 
         {/* Temperature */}
-        <div className="flex flex-col justify-between rounded-xl border border-line bg-white p-4 shadow-card">
+        <div className="flex flex-col justify-between rounded-2xl border border-line bg-white p-4 shadow-card">
           <div className="flex items-center justify-between mb-3">
             <span className="text-[11px] font-medium text-ink-soft">{t.temperatureCard}</span>
-            <Thermometer className="w-6 h-6 text-amber" />
+            <Thermometer className="w-6 h-6 text-info" />
           </div>
           <div>
             <span className="tnum text-3xl font-bold text-ink">{power_summary.latest_temp_c ?? "N/A"}</span>
@@ -173,14 +173,14 @@ export default function ScreenBField({
         </div>
 
         {/* Slope & Terrain */}
-        <div className="flex flex-col justify-between rounded-xl border border-line bg-white p-4 shadow-card">
+        <div className="flex flex-col justify-between rounded-2xl border border-line bg-white p-4 shadow-card">
           <div className="flex items-center justify-between mb-3">
             <span className="text-[11px] font-medium text-ink-soft">{t.terrainCard}</span>
             <Mountain className="w-6 h-6 text-ink-soft" />
           </div>
           <div>
             <span className="tnum text-3xl font-bold text-ink">{elevation.slope_percent ?? "N/A"}%</span>
-            <span className="mt-1 block text-xs font-semibold text-forest">{elevation.terrain_category}</span>
+            <span className="mt-1 block text-xs font-semibold text-ink-soft">{elevation.terrain_category}</span>
           </div>
           <span className="mt-2 text-xs text-ink-muted">{t.terrainNote}</span>
         </div>
@@ -191,8 +191,8 @@ export default function ScreenBField({
       <FarmerLogbook lang={lang} rainfall={rainfall} latitude={data.latitude} longitude={data.longitude} />
 
       {/* Input Configuration Card */}
-      <div className="space-y-6 rounded-xl border border-divider bg-white p-6 shadow-float">
-        <h3 className="text-xl font-bold text-forest">{t.selectFertilizer}</h3>
+      <div className="space-y-6 rounded-2xl border border-line bg-white p-6 shadow-card">
+        <h3 className="text-xl font-bold text-ink">{t.selectFertilizer}</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Fertilizer Type */}
@@ -251,7 +251,7 @@ export default function ScreenBField({
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-divider pt-4">
           <button
             onClick={onRunAssessment}
-            className="flex items-center gap-2 rounded-full border border-line bg-white px-6 py-3 font-semibold text-forest transition hover:bg-soft"
+            className="flex items-center gap-2 rounded-full border border-border-strong bg-white px-6 py-3 font-semibold text-brand-blue-deep transition hover:bg-soft active:scale-[0.98]"
           >
             <RefreshCw className="w-4 h-4" />
             {t.rerunAssessment}
@@ -259,7 +259,7 @@ export default function ScreenBField({
 
           <button
             onClick={onProceedToDecision}
-            className="flex items-center gap-2 rounded-full bg-action px-8 py-4 font-bold text-lg text-white transition hover:bg-action-pressed disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center gap-2 rounded-full bg-action px-8 py-4 font-bold text-lg text-white transition hover:bg-action-pressed active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {t.nextDecision}
             <ArrowRight className="w-5 h-5" />
