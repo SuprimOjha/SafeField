@@ -14,6 +14,20 @@ from app.signals.status import read_status, write_status
 
 DEFAULT_KEEP_DAYS = 120
 DEFAULT_MAX_DATA_BYTES = 20 * 1024 * 1024
+BASELINE_MANIFEST = "baselines.json"
+
+
+def baseline_snapshot_paths(root: Path | None = None) -> set[Path]:
+    """Snapshot files shipped with the app; retention pruning must keep them."""
+    base = root or data_root()
+    try:
+        payload = json.loads((base / BASELINE_MANIFEST).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return set()
+    files = payload.get("files") if isinstance(payload, dict) else None
+    if not isinstance(files, list):
+        return set()
+    return {base / entry for entry in files if isinstance(entry, str)}
 
 
 class IngestReport(BaseModel):
@@ -107,8 +121,11 @@ def prune_snapshots(
         except ValueError:
             continue
     dated.sort(key=lambda item: item[0])
+    protected = baseline_snapshot_paths(root)
     removed = []
     for _, path in dated[: max(0, len(dated) - keep)]:
+        if path in protected:
+            continue
         path.unlink()
         removed.append(path)
     return removed
@@ -123,13 +140,14 @@ def prune_snapshots_older_than(
     directory = source_dir(source, root)
     if not directory.exists():
         return []
+    protected = baseline_snapshot_paths(root)
     removed: list[Path] = []
     for path in directory.glob("*.json"):
         try:
             day = date.fromisoformat(path.stem)
         except ValueError:
             continue
-        if day < cutoff:
+        if day < cutoff and path not in protected:
             path.unlink()
             removed.append(path)
     return removed

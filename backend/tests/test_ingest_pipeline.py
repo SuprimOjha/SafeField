@@ -12,6 +12,7 @@ from app.ingest.shared import (
     enforce_size_guard,
     latest_snapshot_date,
     prune_snapshots,
+    prune_snapshots_older_than,
     snapshot_files,
     walk_back_days,
     write_snapshot,
@@ -133,6 +134,26 @@ def test_prune_and_size_guard(data_env):
     assert len(snapshot_files("smap")) == 3
     with pytest.raises(DataTransferError):
         enforce_size_guard(max_bytes=10)
+
+
+def test_prune_keeps_baseline_snapshots(data_env):
+    """Shipped baselines survive retention pruning even when they are old."""
+    data_dir, _ = data_env
+    baseline, _ = write_snapshot("smap", date(2026, 10, 1), raw_smap_payload("2026-10-01"))
+    stale, _ = write_snapshot("smap", date(2026, 11, 1), raw_smap_payload("2026-11-01"))
+    (data_dir / "baselines.json").write_text(
+        json.dumps({"files": ["smap/2026-10-01.json"]}), encoding="utf-8"
+    )
+
+    removed = prune_snapshots_older_than("smap", date(2026, 11, 10))
+
+    assert removed == [stale]
+    assert baseline.exists()
+    assert not stale.exists()
+
+    removed_by_count = prune_snapshots("smap", keep=1)
+    assert removed_by_count == []
+    assert baseline.exists()
 
 
 def test_publish_data_mirrors_and_removes_stale_files(data_env, tmp_path):

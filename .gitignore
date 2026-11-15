@@ -17,6 +17,7 @@ backend/data/imerg/processed/
 # One verified baseline snapshot per source ships with the app so a fresh
 # deployment resolves every field signal without a download step.
 backend/data/signals/*
+!backend/data/signals/baselines.json
 !backend/data/signals/lst/
 !backend/data/signals/smap/
 !backend/data/signals/vegetation/
