@@ -50,10 +50,10 @@ export default function FarmerLogbook({
   const [date, setDate] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
-  const [ready, setReady] = useState(false);
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
 
   useEffect(() => {
-    setReady(false);
+    setLoadedKey(null);
     try {
       const raw = window.localStorage.getItem(key);
       if (raw) {
@@ -72,17 +72,17 @@ export default function FarmerLogbook({
       setSetup(EMPTY_SETUP);
       setLogs([]);
     }
-    setReady(true);
+    setLoadedKey(key);
   }, [key]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (loadedKey !== key) return;
     try {
       window.localStorage.setItem(key, JSON.stringify({ setup, logs }));
     } catch {
       // Keep this field log usable in memory if browser storage is unavailable.
     }
-  }, [key, setup, logs, ready]);
+  }, [key, setup, logs, loadedKey]);
 
   function addLog(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
