@@ -49,6 +49,7 @@
   --shadow-float: 0 4px 18px rgba(24, 44, 30, 0.1);
   --shadow-sheet: 0 8px 28px rgba(24, 44, 30, 0.12);
   --font-sans: var(--font-inter), var(--font-noto-devanagari), system-ui, -apple-system, "Segoe UI", sans-serif;
+}
 
 body {
   background-color: var(--color-warm);
@@ -65,8 +66,19 @@ body {
 /* Farmer-first touch target: controls remain easy to use with gloves. */
 button,
 select,
-input {
-  min-height: 44px;
+input,
+textarea {
+  min-height: 48px;
+}
+
+body {
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.secondary-text,
+small {
+  font-size: max(16px, 1em);
 }
 
 :focus-visible {
