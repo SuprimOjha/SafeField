@@ -89,7 +89,10 @@ The repository documentation states “V07B” (`docs/DATA_PROVENANCE.md:27`), w
 | `node scripts/check-i18n-parity.mjs` | `i18n key parity passed: 310 matching keys` |
 | CMR collection queries for 8 products | Versions listed in section 3 |
 | CMR latest-granule queries for 8 products | Dates listed in section 3 |
-| Frontend `npm ci`, `lint`, `build` | **COULD NOT COMPLETE in this run**; dependency installation did not finish before the audit was reported. CI config is present but unverified locally. |
+| `npm ci` (frontend) | Completed, exit 0 |
+| `npm run lint` (frontend) | Exit 0, no lint errors |
+| `npm run test:gps` (frontend) | 8 tests passed, 0 failed |
+| `npm run build` (frontend) | **Exit 1** — `prebuild` → `prepare-nepal-data.cjs` failed with `UND_ERR_CONNECT_TIMEOUT` fetching `raw.githubusercontent.com` (10 s connect timeout). Build did not reach `next build`. |
 
 ## 7. COULD NOT VERIFY
 
@@ -97,13 +100,15 @@ The repository documentation states “V07B” (`docs/DATA_PROVENANCE.md:27`), w
 - Earthdata authentication, granule download and the actual HDF5/NetCDF variable names and units inside V07C. CMR is public; Earthdata download needs credentials that are not present here.
 - Measured IMERG publication delay. The latest granule observed was 2026-11-13 on 2026-11-15, which is consistent with a lag but is a single observation, not a measured distribution.
 - Live SMAP, LST and NDVI file structures and QA/QC bit definitions.
-- Frontend lint/build results in this environment.
+- A full production build in this environment: `npm run build` is blocked before `next build` because `frontend/scripts/prepare-nepal-data.cjs:5-6` downloads district boundaries from `raw.githubusercontent.com`, which timed out here. This is an environment network restriction, not a code failure; CI has not been observed on this branch yet.
 
 Manual verification commands:
 
 ```bash
 cd backend && python -m app.cli fetch-imerg --days 2   # requires Earthdata credentials
-cd frontend && npm ci && npm run lint && npm run build && npm run test:i18n
+cd frontend && npm ci && npm run lint && npm run test:gps && npm run test:i18n
+# with network access to raw.githubusercontent.com:
+cd frontend && npm run build
 ```
 
 ## 8. Recommended implementation order and rough effort
