@@ -262,10 +262,10 @@ export default function ScreenAHome({
   }, [surveyPoints, mapReady]);
 
   useEffect(() => {
-    if (!pendingSurveyFix) { if (surveyWasOpenRef.current) { surveyWasOpenRef.current = false; surveyTriggerRef.current?.focus(); } return; }
+    if (!pendingSurveyFix && !pendingSoilSample) { if (surveyWasOpenRef.current) { surveyWasOpenRef.current = false; surveyTriggerRef.current?.focus(); } return; }
     surveyWasOpenRef.current = true;
     const handleKeys = (event: KeyboardEvent) => {
-      if (event.key === "Escape") { setPendingSurveyFix(null); return; }
+      if (event.key === "Escape") { setPendingSurveyFix(null); setPendingSoilSample(null); return; }
       if (event.key !== "Tab" || !surveyDialogRef.current) return;
       const items = surveyDialogRef.current.querySelectorAll<HTMLElement>("button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex='-1'])");
       if (!items.length) return;
@@ -275,7 +275,7 @@ export default function ScreenAHome({
     };
     window.addEventListener("keydown", handleKeys);
     return () => window.removeEventListener("keydown", handleKeys);
-  }, [pendingSurveyFix]);
+  }, [pendingSurveyFix, pendingSoilSample]);
 
   useEffect(() => { onLocationSelectRef.current = onLocationSelect; }, [onLocationSelect]);
   useEffect(() => { drawPointsRef.current = drawPoints; }, [drawPoints]);
@@ -878,7 +878,7 @@ export default function ScreenAHome({
         : `${walkCorners.length} ${walkCorners.length === 1 ? "corner" : "corners"} marked — ready to finish the field.`;
 
   return (
-      {pendingSoilSample && <div className="fixed inset-0 z-[120] flex items-end justify-center bg-charcoal/60 p-3 sm:items-center"><section role="dialog" aria-modal="true" aria-labelledby="soil-sample-title" className="w-full max-w-md rounded-2xl bg-white p-5 shadow-sheet">
+      {pendingSoilSample && <div className="fixed inset-0 z-[120] flex items-end justify-center bg-charcoal/60 p-3 sm:items-center"><section ref={surveyDialogRef} role="dialog" aria-modal="true" aria-labelledby="soil-sample-title" className="w-full max-w-md rounded-2xl bg-white p-5 shadow-sheet">
         <h2 id="soil-sample-title" className="text-xl font-extrabold text-forest">{t.surveySoilEntryTitle}</h2>
         <p className="mt-2 text-base text-ink-soft">{t.surveySoilEntryHelp}</p>
         <label className="mt-4 block text-base font-semibold text-ink">{t.surveySandPercent}<input type="number" min="0" max="100" step="1" inputMode="decimal" value={soilSandInput} onChange={(event)=>setSoilSandInput(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-line px-4 text-base" placeholder={t.surveySandPlaceholder}/></label>
