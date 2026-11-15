@@ -878,6 +878,7 @@ export default function ScreenAHome({
         : `${walkCorners.length} ${walkCorners.length === 1 ? "corner" : "corners"} marked — ready to finish the field.`;
 
   return (
+    <>
       {pendingSoilSample && <div className="fixed inset-0 z-[120] flex items-end justify-center bg-charcoal/60 p-3 sm:items-center"><section ref={surveyDialogRef} role="dialog" aria-modal="true" aria-labelledby="soil-sample-title" className="w-full max-w-md rounded-2xl bg-white p-5 shadow-sheet">
         <h2 id="soil-sample-title" className="text-xl font-extrabold text-forest">{t.surveySoilEntryTitle}</h2>
         <p className="mt-2 text-base text-ink-soft">{t.surveySoilEntryHelp}</p>
@@ -1090,5 +1091,6 @@ export default function ScreenAHome({
         </div>
       </section>
     </div>
+    </>
   );
 }
