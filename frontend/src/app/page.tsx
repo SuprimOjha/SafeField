@@ -282,6 +282,10 @@ export default function SafeFieldNepalApp() {
   // Browser-tab title follows the active screen; the home tab shows the
   // plain app name ("Safe Field Nepal").
   useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
+  useEffect(() => {
     const item = NAV_ITEMS.find((entry) => entry.id === activeTab);
     const label = lang === "ne" ? item?.labelNe : item?.labelEn;
     document.title = activeTab === "home" || !label
@@ -348,7 +352,7 @@ export default function SafeFieldNepalApp() {
     <main id="main-content" tabIndex={-1} className="flex min-h-screen flex-col bg-warm text-ink">
       <a href="#main-content" className="sr-only z-[100] rounded-full bg-white px-4 py-3 font-semibold text-forest focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:shadow-float focus:ring-2 focus:ring-action">Skip to main content</a>
       {!isOnline && (
-        <div className="flex items-center justify-center gap-2 bg-danger px-4 py-2.5 text-center text-xs font-semibold text-white">
+        <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 bg-danger px-4 py-2.5 text-center text-xs font-semibold text-white">
           <WifiOff className="h-4 w-4 shrink-0" />
           <span>{t.offlineBanner}</span>
         </div>
@@ -390,7 +394,7 @@ export default function SafeFieldNepalApp() {
                   }`}
                 >
                   <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${isActive ? "bg-action text-white" : "bg-soft text-ink-muted"}`}>
-                    <Icon className="h-4 w-4" />
+                    <Icon className="h-4 w-4" aria-hidden="true" />
                   </span>
                   <span className="truncate">{lang === "ne" ? item.labelNe : item.labelEn}</span>
                 </button>
@@ -495,7 +499,7 @@ export default function SafeFieldNepalApp() {
                 type="button"
                 onClick={() => selectTab(item.id)}
                 aria-current={isActive ? "page" : undefined}
-                className={`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-full px-1 py-1.5 text-[9px] font-medium transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+                className={`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-full px-1 py-1.5 text-[11px] leading-tight font-semibold transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
                   isActive ? "text-white" : "text-white/55 hover:text-white"
                 }`}
               >
@@ -504,7 +508,7 @@ export default function SafeFieldNepalApp() {
                     isActive ? "bg-action text-white" : "text-white/70"
                   }`}
                 >
-                  <Icon className="h-[17px] w-[17px]" />
+                  <Icon className="h-[17px] w-[17px]" aria-hidden="true" />
                 </span>
                 <span className="max-w-full truncate">{lang === "ne" ? item.labelNe : item.shortEn}</span>
               </button>
