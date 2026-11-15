@@ -36,3 +36,6 @@ venv/
 frontend/public/data/
 frontend/public/maplibre/
 frontend/bun.lock
+
+# Verified raw snapshots staged before publish
+backend/data/incoming/

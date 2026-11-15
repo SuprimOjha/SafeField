@@ -35,7 +35,7 @@ class SmapSnapshot(BaseModel):
     data_date: date
     fetched_at: datetime
     resolution_km: float = Field(gt=0)
-    model_only: bool = False
+    model_only: bool | None = None
     coverage_fraction: float | None = Field(default=None, ge=0, le=1)
     granule_ids: list[str] = Field(default_factory=list)
     cells: list[SmapCell] = Field(default_factory=list)
@@ -187,6 +187,18 @@ def valid_coverage(cells: list, valid: list[bool]) -> float:
     if not cells:
         return 0.0
     return sum(1 for item in valid if item) / len(cells)
+
+
+def within_coverage(cell, latitude: float, longitude: float, resolution_km: float) -> bool:
+    """Reject an edge-of-snapshot cell that does not actually cover the field.
+
+    A snapshot may only contain a pilot region. Returning the nearest edge cell
+    for a field outside that region would silently misreport a distant pixel as
+    local, so the distance is capped at two source pixels (never below 2 km).
+    """
+    return haversine_km(latitude, longitude, cell.latitude, cell.longitude) <= max(
+        2.0 * resolution_km, 2.0
+    )
 
 
 SIGNAL_SOURCES: dict[str, str] = {

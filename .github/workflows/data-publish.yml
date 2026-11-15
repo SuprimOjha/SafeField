@@ -1,0 +1,86 @@
+name: Publish validated data branch
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_bytes:
+        description: Maximum total bytes allowed on the data branch
+        required: false
+        default: "20971520"
+  schedule:
+    - cron: "45 3 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: safefield-data-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install backend dependencies
+        run: python -m pip install -r backend/requirements.txt
+
+      - name: Prepare data branch worktree
+        run: |
+          git config user.name "safefield-data-bot"
+          git config user.email "safefield-data-bot@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin data >/dev/null 2>&1; then
+            git worktree add ../data-branch origin/data -B data
+          else
+            echo "Data branch does not exist yet; creating an orphan branch."
+            git worktree add --detach ../data-branch
+            cd ../data-branch
+            git checkout --orphan data
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+
+      - name: Restore published data for validation
+        run: |
+          mkdir -p backend/data/signals
+          if [ -d ../data-branch/signals ]; then
+            cp -R ../data-branch/signals/. backend/data/signals/
+          fi
+          if [ -f ../data-branch/status.json ]; then
+            cp ../data-branch/status.json backend/data/status.json
+          fi
+
+      - name: Show installed data status
+        working-directory: backend
+        run: python -m app.cli status --json
+
+      - name: Mirror snapshots and status.json
+        working-directory: backend
+        run: python -m app.cli publish-data --data-dir ../data-branch --max-bytes ${{ github.event.inputs.max_bytes || '20971520' }}
+
+      - name: Commit and push with retries
+        run: |
+          cd ../data-branch
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No data changes to publish."
+            exit 0
+          fi
+          git commit -m "data: publish validated snapshots and status.json"
+          for attempt in 1 2 3; do
+            if git push origin data; then
+              exit 0
+            fi
+            echo "Push attempt ${attempt} failed; rebasing on the remote data branch."
+            git fetch origin data || true
+            if git rev-parse --verify origin/data >/dev/null 2>&1; then
+              git rebase origin/data || git rebase --abort
+            fi
+            sleep $((attempt * 5))
+          done
+          echo "Could not push the data branch after 3 attempts." >&2
+          exit 1

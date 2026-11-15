@@ -11,6 +11,7 @@ from app.signals.snapshots import (
     load_snapshot_on,
     nearest_cell,
     snapshot_dates,
+    within_coverage,
 )
 
 
@@ -56,6 +57,11 @@ class LstProvider:
         cell = nearest_cell(valid_cells, latitude, longitude)
         if cell is None:
             return _unavailable("No quality-approved clear LST cell is available for this field.")
+        if not within_coverage(cell, latitude, longitude, snapshot.resolution_km):
+            return _unavailable(
+                "The nearest installed LST cell does not cover this field. The installed "
+                "snapshot only covers a pilot area; it is not extrapolated to distant fields."
+            )
 
         age_days = (current - snapshot.data_date).days
         stale = age_days > self.gates.max_age_days_for(LST_SOURCE)
@@ -105,6 +111,10 @@ class LstProvider:
                 if cell.qc_good and cell.clear_sky and cell.lst_day_c is not None
             ]
             cell = nearest_cell(valid, latitude, longitude)
+            if cell is not None and not within_coverage(
+                cell, latitude, longitude, snapshot.resolution_km
+            ):
+                cell = None
             series.append((day, float(cell.lst_day_c) if cell is not None else None))
         return series
 

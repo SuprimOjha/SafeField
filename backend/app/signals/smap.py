@@ -12,6 +12,7 @@ from app.signals.snapshots import (
     nearest_cell,
     snapshot_dates,
     valid_coverage,
+    within_coverage,
 )
 
 
@@ -71,6 +72,12 @@ class SmapProvider:
             return _unavailable(
                 name,
                 "No quality-approved SMAP cell around this field has a valid value for the latest day.",
+            )
+        if not within_coverage(cell, latitude, longitude, snapshot.resolution_km):
+            return _unavailable(
+                name,
+                "The nearest installed SMAP cell does not cover this field. The installed "
+                "snapshot only covers a pilot area; it is not extrapolated to distant fields.",
             )
 
         value = getattr(cell, field)
@@ -139,6 +146,10 @@ class SmapProvider:
                 if cell.quality == "good" and getattr(cell, field) is not None
             ]
             cell = nearest_cell(valid, latitude, longitude)
+            if cell is not None and not within_coverage(
+                cell, latitude, longitude, snapshot.resolution_km
+            ):
+                cell = None
             series.append((day, float(getattr(cell, field)) if cell is not None else None))
         return series
 

@@ -140,6 +140,23 @@ def test_smap_low_coverage_is_partial(tmp_path):
     assert "below the" in (signal.quality_note or "")
 
 
+def test_smap_rejects_a_distant_edge_cell_instead_of_extrapolating(tmp_path):
+    payload = smap_payload("2026-11-10")
+    payload["cells"] = [
+        {
+            "latitude": 27.50,
+            "longitude": 85.00,
+            "surface_sm": 0.31,
+            "root_sm": 0.29,
+            "quality": "good",
+        }
+    ]
+    write_snapshot(tmp_path, "smap", "2026-11-10", payload)
+    signal = SmapProvider(root=tmp_path, gates=GATES).get_signal(26.45, 87.28, date(2026, 11, 11))
+    assert signal.status == "unavailable"
+    assert "does not cover" in (signal.unavailable_reason or "")
+
+
 def test_lst_requires_clear_quality_pixels(tmp_path):
     payload = lst_payload("2026-11-10")
     payload["cells"] = [{**payload["cells"][0], "clear_sky": False}]

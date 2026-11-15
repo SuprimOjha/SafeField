@@ -11,6 +11,7 @@ from app.signals.snapshots import (
     load_snapshot_on,
     nearest_cell,
     snapshot_dates,
+    within_coverage,
 )
 
 
@@ -70,6 +71,12 @@ class VegProvider:
         cell = nearest_cell(valid_cells, latitude, longitude)
         if cell is None:
             return _unavailable(name, "No quality-approved vegetation cell is available for this field.")
+        if not within_coverage(cell, latitude, longitude, snapshot.resolution_m / 1000.0):
+            return _unavailable(
+                name,
+                "The nearest installed vegetation cell does not cover this field. The installed "
+                "snapshot only covers a pilot area; it is not extrapolated to distant fields.",
+            )
 
         value = getattr(cell, field)
         age_days = (today - snapshot.composite_end).days
@@ -122,6 +129,10 @@ class VegProvider:
                 cell for cell in snapshot.cells if cell.qa_good and getattr(cell, field) is not None
             ]
             cell = nearest_cell(valid, latitude, longitude)
+            if cell is not None and not within_coverage(
+                cell, latitude, longitude, snapshot.resolution_m / 1000.0
+            ):
+                cell = None
             series.append(
                 (snapshot.composite_end, float(getattr(cell, field)) if cell is not None else None)
             )
