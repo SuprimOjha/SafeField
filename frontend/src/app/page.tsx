@@ -15,7 +15,6 @@ import {
   MapPin,
   SlidersHorizontal,
   TrendingUp,
-  Globe2,
   WifiOff,
   MessageCircleQuestion,
 } from "lucide-react";
@@ -147,33 +146,99 @@ function getServerSessionSnapshot(): PersistedSession | null {
   return null;
 }
 
+/** Simplified US flag tile — 13 stripes + canton; reads cleanly at 28px. */
+function FlagUSTile() {
+  const stripeH = 24 / 13;
+  const redIndexes = [0, 2, 4, 6, 8, 10, 12];
+  return (
+    <span
+      aria-hidden="true"
+      className="relative block h-6 w-7 shrink-0 overflow-hidden rounded-[6px] bg-white ring-1 ring-black/10"
+    >
+      <svg viewBox="0 0 28 24" className="block h-full w-full" preserveAspectRatio="none">
+        {redIndexes.map((i) => (
+          <rect key={i} x="0" y={i * stripeH} width="28" height={stripeH} fill="#B22234" />
+        ))}
+        <rect x="0" y="0" width="11.2" height={stripeH * 7} fill="#3C3B6E" />
+        {[1.9, 4.6, 7.3].map((y) =>
+          [2.2, 5.6, 9.0].map((x) => (
+            <circle key={`${x}-${y}`} cx={x} cy={y} r="0.75" fill="#ffffff" />
+          )),
+        )}
+      </svg>
+    </span>
+  );
+}
+
+/** Nepal flag tile — shape-accurate double pennant with moon and sun emblems. */
+function FlagNPTile() {
+  return (
+    <span
+      aria-hidden="true"
+      className="relative block h-6 w-7 shrink-0 overflow-hidden rounded-[6px] bg-white ring-1 ring-black/10"
+    >
+      <svg viewBox="0 0 20 16" className="block h-full w-full" preserveAspectRatio="xMidYMid meet">
+        <path
+          d="M2,1.4 L15.2,6.8 L6.8,8.2 L16.4,14.2 L2,14.2 Z"
+          fill="#DC143C"
+        />
+        {/* Moon (upper pennant, crescent horns up) */}
+        <circle cx="8.2" cy="5.6" r="1.4" fill="#ffffff" />
+        <circle cx="8.2" cy="4.9" r="1.4" fill="#DC143C" />
+        {/* Sun (lower pennant) with short rays */}
+        <g stroke="#ffffff" strokeWidth="0.5">
+          <line x1="8.4" y1="9.7" x2="8.4" y2="9.4" />
+          <line x1="8.4" y1="13.1" x2="8.4" y2="13.4" />
+          <line x1="6.7" y1="11.4" x2="6.4" y2="11.4" />
+          <line x1="10.1" y1="11.4" x2="10.4" y2="11.4" />
+          <line x1="7.2" y1="10.2" x2="7.0" y2="10.0" />
+          <line x1="9.6" y1="12.6" x2="9.8" y2="12.8" />
+          <line x1="9.6" y1="10.2" x2="9.8" y2="10.0" />
+          <line x1="7.2" y1="12.6" x2="7.0" y2="12.8" />
+        </g>
+        <circle cx="8.4" cy="11.4" r="1.3" fill="#ffffff" />
+        <path
+          d="M2,1.4 L15.2,6.8 L6.8,8.2 L16.4,14.2 L2,14.2 Z"
+          fill="none"
+          stroke="#003893"
+          strokeWidth="1.7"
+          strokeLinejoin="miter"
+        />
+      </svg>
+    </span>
+  );
+}
+
 function LanguageToggle({ lang, setLang }: { lang: Lang; setLang: (next: Lang) => void }) {
   return (
     <div
       role="group"
       aria-label={lang === "en" ? "Language selection" : "भाषा छनोट"}
-      className="inline-flex min-h-10 items-center rounded-full border border-line bg-white p-1"
+      className="inline-flex min-h-10 items-center gap-0.5 rounded-full border border-line bg-white p-1"
     >
-      <Globe2 className="mx-1.5 h-4 w-4 text-ink-soft" aria-hidden="true" />
       <button
         type="button"
         onClick={() => setLang("en")}
         aria-pressed={lang === "en"}
-        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
-          lang === "en" ? "bg-brand-blue-deep text-white shadow-card" : "text-ink-soft hover:text-ink"
+        aria-label="English"
+        title="English"
+        className={`inline-flex items-center rounded-full p-1.5 transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+          lang === "en" ? "bg-brand-blue-deep shadow-card" : "hover:bg-soft"
         }`}
       >
-        EN
+        <FlagUSTile />
       </button>
       <button
         type="button"
         onClick={() => setLang("ne")}
         aria-pressed={lang === "ne"}
-        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
-          lang === "ne" ? "bg-brand-blue-deep text-white shadow-card" : "text-ink-soft hover:text-ink"
+        aria-label="नेपाली"
+        title="नेपाली"
+        className={`inline-flex items-center rounded-full p-1.5 transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action ${
+          lang === "ne" ? "bg-brand-blue-deep shadow-card" : "hover:bg-soft"
         }`}
       >
-        ने
+        <FlagNPTile />
       </button>
     </div>
   );
